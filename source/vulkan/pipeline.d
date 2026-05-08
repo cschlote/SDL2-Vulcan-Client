@@ -1,20 +1,34 @@
+/** Vulkan render-pass and pipeline setup for the 3D scene and HUD overlay. */
 module vulkan.pipeline;
 
 import bindbc.vulkan;
 import std.exception : enforce;
 import std.file : read;
 
+/** Shared vertex format used by the scene and overlay pipelines. */
 struct Vertex
 {
     float[3] position;
     float[4] color;
 
+    /** Creates a vertex from RGB color data and adds an implicit opaque alpha channel.
+     *
+     * @param position = Vertex position in clip-space coordinates.
+     * @param color = Vertex color in RGB format.
+     * @returns Nothing.
+     */
     this(float[3] position, float[3] color)
     {
         this.position = position;
         this.color = [color[0], color[1], color[2], 1.0f];
     }
 
+    /** Creates a vertex from RGBA color data.
+     *
+     * @param position = Vertex position in clip-space coordinates.
+     * @param color = Vertex color in RGBA format.
+     * @returns Nothing.
+     */
     this(float[3] position, float[4] color)
     {
         this.position = position;
@@ -22,6 +36,7 @@ struct Vertex
     }
 }
 
+/** Owns the Vulkan render pass, descriptor layout, and scene/overlay pipelines. */
 struct PipelineResources
 {
     VkRenderPass renderPass = VK_NULL_HANDLE;
@@ -31,6 +46,16 @@ struct PipelineResources
     VkPipeline overlayPipeline = VK_NULL_HANDLE;
     VkPipeline linePipeline = VK_NULL_HANDLE;
 
+    /** Creates the descriptor set layout, render pass, and graphics pipelines.
+     *
+     * @param device = Logical Vulkan device.
+     * @param extent = Swapchain extent used for viewport state.
+     * @param colorFormat = Swapchain color format.
+     * @param depthFormat = Depth attachment format.
+     * @param vertexShaderPath = Path to the vertex shader SPIR-V file.
+     * @param fragmentShaderPath = Path to the fragment shader SPIR-V file.
+     * @returns Nothing.
+     */
     this(VkDevice device, VkExtent2D extent, VkFormat colorFormat, VkFormat depthFormat, string vertexShaderPath, string fragmentShaderPath)
     {
         createDescriptorSetLayout(device);
@@ -40,6 +65,11 @@ struct PipelineResources
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, false, linePipeline);
     }
 
+    /** Releases all pipeline-related Vulkan objects owned by the structure.
+     *
+     * @param device = Logical Vulkan device that owns the resources.
+     * @returns Nothing.
+     */
     void destroy(VkDevice device)
     {
         if (graphicsPipeline != VK_NULL_HANDLE)
@@ -80,6 +110,11 @@ struct PipelineResources
     }
 
 private:
+    /** Creates the descriptor set layout used by the renderer's uniform buffer binding.
+     *
+     * @param device = Logical Vulkan device.
+     * @returns Nothing.
+     */
     void createDescriptorSetLayout(VkDevice device)
     {
         VkDescriptorSetLayoutBinding binding;
@@ -96,6 +131,13 @@ private:
         enforce(vkCreateDescriptorSetLayout(device, &createInfo, null, &descriptorSetLayout) == VkResult.VK_SUCCESS, "vkCreateDescriptorSetLayout failed.");
     }
 
+    /** Creates the render pass with color and depth attachments.
+     *
+     * @param device = Logical Vulkan device.
+     * @param colorFormat = Swapchain color format.
+     * @param depthFormat = Depth attachment format.
+     * @returns Nothing.
+     */
     void createRenderPass(VkDevice device, VkFormat colorFormat, VkFormat depthFormat)
     {
         VkAttachmentDescription[2] attachments;
@@ -152,6 +194,20 @@ private:
         enforce(vkCreateRenderPass(device, &createInfo, null, &renderPass) == VkResult.VK_SUCCESS, "vkCreateRenderPass failed.");
     }
 
+    /** Creates a graphics pipeline with the requested raster and depth state.
+     *
+     * @param device = Logical Vulkan device.
+     * @param extent = Swapchain extent used for viewport state.
+     * @param vertexShaderPath = Path to the vertex shader SPIR-V file.
+     * @param fragmentShaderPath = Path to the fragment shader SPIR-V file.
+     * @param topology = Primitive topology for the pipeline.
+     * @param depthTestEnable = Enables depth testing when true.
+     * @param depthWriteEnable = Enables depth writes when true.
+     * @param depthBiasEnable = Enables depth bias when true.
+     * @param blendEnable = Enables alpha blending when true.
+     * @param pipeline = Receives the created Vulkan pipeline handle.
+     * @returns Nothing.
+     */
     void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, bool blendEnable, ref VkPipeline pipeline)
     {
         auto vertexShaderCode = cast(ubyte[])read(vertexShaderPath);
@@ -300,6 +356,12 @@ private:
         enforce(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &pipeline) == VkResult.VK_SUCCESS, "vkCreateGraphicsPipelines failed.");
     }
 
+    /** Creates a Vulkan shader module from SPIR-V bytecode.
+     *
+     * @param device = Logical Vulkan device.
+     * @param code = SPIR-V bytecode.
+     * @returns The created shader module handle.
+     */
     VkShaderModule createShaderModule(VkDevice device, const(ubyte)[] code)
     {
         VkShaderModuleCreateInfo createInfo;

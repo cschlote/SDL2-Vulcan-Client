@@ -1,8 +1,10 @@
+/** Swapchain creation, image-view setup, and surface capability helpers. */
 module vulkan.swapchain;
 
 import bindbc.vulkan;
 import std.exception : enforce;
 
+/** Owns the Vulkan swapchain and its image views. */
 struct Swapchain
 {
     VkSwapchainKHR handle = VK_NULL_HANDLE;
@@ -11,6 +13,17 @@ struct Swapchain
     VkImage[] images;
     VkImageView[] imageViews;
 
+    /** Creates the swapchain and image views for the current window extent.
+     *
+     * @param physicalDevice = Vulkan physical device used to query surface support.
+     * @param device = Logical Vulkan device.
+     * @param surface = Presentation surface.
+     * @param graphicsFamily = Graphics queue family index.
+     * @param presentFamily = Present queue family index.
+     * @param width = Requested swapchain width.
+     * @param height = Requested swapchain height.
+     * @returns Nothing.
+     */
     this(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface, uint graphicsFamily, uint presentFamily, uint width, uint height)
     {
         VkSurfaceCapabilitiesKHR capabilities;
@@ -80,6 +93,11 @@ struct Swapchain
         }
     }
 
+    /** Destroys the image views and swapchain handle if they are still alive.
+     *
+     * @param device = Logical Vulkan device that owns the resources.
+     * @returns Nothing.
+     */
     void destroy(VkDevice device)
     {
         foreach (view; imageViews)
@@ -97,6 +115,12 @@ struct Swapchain
     }
 }
 
+/** Chooses the most suitable surface format supported by the device.
+ *
+ * @param physicalDevice = Vulkan physical device handle.
+ * @param surface = Presentation surface.
+ * @returns A supported surface format.
+ */
 private VkSurfaceFormatKHR chooseSurfaceFormat(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     uint count = 0;
@@ -115,6 +139,12 @@ private VkSurfaceFormatKHR chooseSurfaceFormat(VkPhysicalDevice physicalDevice, 
     return formats[0];
 }
 
+/** Chooses the preferred present mode for the surface.
+ *
+ * @param physicalDevice = Vulkan physical device handle.
+ * @param surface = Presentation surface.
+ * @returns A supported present mode, preferring mailbox when available.
+ */
 private VkPresentModeKHR choosePresentMode(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
     uint count = 0;
@@ -133,6 +163,13 @@ private VkPresentModeKHR choosePresentMode(VkPhysicalDevice physicalDevice, VkSu
     return VkPresentModeKHR.VK_PRESENT_MODE_FIFO_KHR;
 }
 
+/** Chooses the final swapchain extent, clamping to surface capabilities.
+ *
+ * @param capabilities = Surface capability structure.
+ * @param width = Requested width.
+ * @param height = Requested height.
+ * @returns The extent that will be used for the swapchain.
+ */
 private VkExtent2D chooseExtent(VkSurfaceCapabilitiesKHR capabilities, uint width, uint height)
 {
     if (capabilities.currentExtent.width != uint.max)

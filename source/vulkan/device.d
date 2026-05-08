@@ -1,3 +1,4 @@
+/** Vulkan physical-device selection, queue discovery, and logical-device setup. */
 module vulkan.device;
 
 import bindbc.vulkan;
@@ -6,17 +7,28 @@ import std.string : fromStringz;
 
 enum swapchainExtensionName = "VK_KHR_swapchain";
 
+/** Stores the queue families needed by the renderer. */
 struct QueueFamilyIndices
 {
     uint graphicsFamily = uint.max;
     uint presentFamily = uint.max;
 
+    /** Reports whether both graphics and present queues were found.
+     *
+     * @returns `true` when both queue family indices are valid, otherwise `false`.
+     */
     bool isComplete() const
     {
         return graphicsFamily != uint.max && presentFamily != uint.max;
     }
 }
 
+/** Selects a Vulkan physical device and creates the logical device used by the renderer.
+ *
+ * @param instance = Vulkan instance handle.
+ * @param surface = SDL-created Vulkan surface.
+ * @returns Nothing.
+ */
 struct VulkanDevice
 {
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
@@ -55,6 +67,10 @@ struct VulkanDevice
         vkGetDeviceQueue(handle, queueFamilies.presentFamily, 0, &presentQueue);
     }
 
+    /** Destroys the logical Vulkan device if it is still alive.
+     *
+     * @returns Nothing.
+     */
     void destroy()
     {
         if (handle != VK_NULL_HANDLE)
@@ -65,6 +81,12 @@ struct VulkanDevice
     }
 }
 
+/** Builds a queue-create-info structure for the requested queue family.
+ *
+ * @param familyIndex = Queue family index.
+ * @param priority = Pointer to the queue priority value.
+ * @returns A populated queue-create-info structure.
+ */
 private VkDeviceQueueCreateInfo createQueueInfo(uint familyIndex, const float* priority)
 {
     VkDeviceQueueCreateInfo info;
@@ -75,6 +97,13 @@ private VkDeviceQueueCreateInfo createQueueInfo(uint familyIndex, const float* p
     return info;
 }
 
+/** Picks a suitable Vulkan physical device for the SDL surface.
+ *
+ * @param instance = Vulkan instance handle.
+ * @param surface = Presentation surface.
+ * @param indices = Receives the discovered queue family indices.
+ * @returns The selected physical device handle.
+ */
 private VkPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR surface, out QueueFamilyIndices indices)
 {
     uint deviceCount = 0;
@@ -101,6 +130,12 @@ private VkPhysicalDevice pickPhysicalDevice(VkInstance instance, VkSurfaceKHR su
     return VK_NULL_HANDLE;
 }
 
+/** Finds the graphics and present queue families for a physical device.
+ *
+ * @param device = Vulkan physical device handle.
+ * @param surface = Presentation surface.
+ * @returns The discovered queue family indices.
+ */
 private QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface)
 {
     QueueFamilyIndices indices;
@@ -129,6 +164,11 @@ private QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device, VkSurfaceK
     return indices;
 }
 
+/** Checks whether the physical device supports the required Vulkan device extensions.
+ *
+ * @param device = Vulkan physical device handle.
+ * @returns `true` when all required extensions are available, otherwise `false`.
+ */
 private bool supportsRequiredExtensions(VkPhysicalDevice device)
 {
     uint extensionCount = 0;
@@ -147,6 +187,11 @@ private bool supportsRequiredExtensions(VkPhysicalDevice device)
     return false;
 }
 
+/** Chooses a supported depth format for the device.
+ *
+ * @param device = Vulkan physical device handle.
+ * @returns A depth-capable Vulkan format.
+ */
 private VkFormat findDepthFormat(VkPhysicalDevice device)
 {
     foreach (format; [VkFormat.VK_FORMAT_D32_SFLOAT, VkFormat.VK_FORMAT_D24_UNORM_S8_UINT, VkFormat.VK_FORMAT_D16_UNORM])

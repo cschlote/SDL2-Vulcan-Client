@@ -1,3 +1,4 @@
+/** Minimal vector and matrix helpers used by the demo renderer. */
 module math.matrix;
 
 import std.math : PI, cos, sin, sqrt, tan;
@@ -26,11 +27,23 @@ struct Mat4
 
 pure nothrow @nogc:
 
+/** Computes the dot product of two 3D vectors.
+ *
+ * @param a = Left-hand vector.
+ * @param b = Right-hand vector.
+ * @returns The scalar dot product.
+ */
 float dot(Vec3 a, Vec3 b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+/** Computes the cross product of two 3D vectors.
+ *
+ * @param a = Left-hand vector.
+ * @param b = Right-hand vector.
+ * @returns The vector orthogonal to both inputs.
+ */
 Vec3 cross(Vec3 a, Vec3 b)
 {
     return Vec3(
@@ -39,17 +52,33 @@ Vec3 cross(Vec3 a, Vec3 b)
         a.x * b.y - a.y * b.x);
 }
 
+/** Computes the Euclidean length of a 3D vector.
+ *
+ * @param value = Vector to measure.
+ * @returns The vector magnitude.
+ */
 float length(Vec3 value)
 {
     return sqrt(dot(value, value));
 }
 
+/** Normalizes a 3D vector.
+ *
+ * @param value = Vector to normalize.
+ * @returns The unit-length vector.
+ */
 Vec3 normalize(Vec3 value)
 {
     const invLength = 1.0f / length(value);
     return Vec3(value.x * invLength, value.y * invLength, value.z * invLength);
 }
 
+/** Multiplies two 4x4 matrices.
+ *
+ * @param left = Left-hand matrix.
+ * @param right = Right-hand matrix.
+ * @returns The matrix product.
+ */
 Mat4 multiply(Mat4 left, Mat4 right)
 {
     Mat4 result;
@@ -68,6 +97,11 @@ Mat4 multiply(Mat4 left, Mat4 right)
     return result;
 }
 
+/** Creates a translation matrix.
+ *
+ * @param offset = Translation offset.
+ * @returns A matrix that translates by the given offset.
+ */
 Mat4 translation(Vec3 offset)
 {
     auto result = Mat4.identity();
@@ -77,6 +111,11 @@ Mat4 translation(Vec3 offset)
     return result;
 }
 
+/** Creates an X-axis rotation matrix.
+ *
+ * @param radians = Rotation angle in radians.
+ * @returns A matrix that rotates around the X axis.
+ */
 Mat4 rotationX(float radians)
 {
     auto result = Mat4.identity();
@@ -89,6 +128,11 @@ Mat4 rotationX(float radians)
     return result;
 }
 
+/** Creates a Y-axis rotation matrix.
+ *
+ * @param radians = Rotation angle in radians.
+ * @returns A matrix that rotates around the Y axis.
+ */
 Mat4 rotationY(float radians)
 {
     auto result = Mat4.identity();
@@ -101,6 +145,11 @@ Mat4 rotationY(float radians)
     return result;
 }
 
+/** Creates a Z-axis rotation matrix.
+ *
+ * @param radians = Rotation angle in radians.
+ * @returns A matrix that rotates around the Z axis.
+ */
 Mat4 rotationZ(float radians)
 {
     auto result = Mat4.identity();
@@ -113,6 +162,11 @@ Mat4 rotationZ(float radians)
     return result;
 }
 
+/** Creates a non-uniform scale matrix.
+ *
+ * @param factors = Scale factors per axis.
+ * @returns A matrix that scales along each axis.
+ */
 Mat4 scale(Vec3 factors)
 {
     Mat4 result;
@@ -123,6 +177,14 @@ Mat4 scale(Vec3 factors)
     return result;
 }
 
+/** Creates a right-handed perspective projection matrix.
+ *
+ * @param fovYRadians = Vertical field of view in radians.
+ * @param aspect = Aspect ratio of the viewport.
+ * @param nearPlane = Near clip plane distance.
+ * @param farPlane = Far clip plane distance.
+ * @returns The perspective projection matrix.
+ */
 Mat4 perspective(float fovYRadians, float aspect, float nearPlane, float farPlane)
 {
     Mat4 result;
@@ -135,6 +197,13 @@ Mat4 perspective(float fovYRadians, float aspect, float nearPlane, float farPlan
     return result;
 }
 
+/** Creates a look-at view matrix.
+ *
+ * @param eye = Camera position.
+ * @param center = Target position.
+ * @param up = Up direction.
+ * @returns The view matrix that looks from eye toward center.
+ */
 Mat4 lookAt(Vec3 eye, Vec3 center, Vec3 up)
 {
     const forward = normalize(Vec3(center.x - eye.x, center.y - eye.y, center.z - eye.z));

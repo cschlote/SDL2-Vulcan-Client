@@ -1,3 +1,4 @@
+/** Generates the selectable Platonic solid meshes used by the demo. */
 module vulkan.polyhedra;
 
 import std.algorithm : sort;
@@ -5,6 +6,7 @@ import std.math : abs, atan2, sqrt;
 
 import vulkan.pipeline : Vertex;
 
+/** Describes a mesh that can be uploaded to the renderer. */
 struct MeshData
 {
     string name;
@@ -12,6 +14,10 @@ struct MeshData
     uint[] indices;
 }
 
+/** Builds the set of selectable Platonic solids.
+ *
+ * @returns Mesh data for the tetrahedron, cube, octahedron, dodecahedron, and icosahedron.
+ */
 MeshData[] buildPlatonicSolids()
 {
     return [
@@ -23,6 +29,12 @@ MeshData[] buildPlatonicSolids()
     ];
 }
 
+/** Builds a convex solid mesh from a list of vertex positions.
+ *
+ * @param name = Human-readable mesh name.
+ * @param positions = Vertex positions of the solid.
+ * @returns Mesh data containing colored vertices and triangle indices.
+ */
 private MeshData buildConvexSolid(string name, const(float[3])[] positions)
 {
     auto faces = extractFaces(positions);
@@ -50,6 +62,7 @@ private MeshData buildConvexSolid(string name, const(float[3])[] positions)
     return MeshData(name, vertices, indices);
 }
 
+/** Stores a polygonal face discovered while reconstructing a convex solid. */
 private struct FacePolygon
 {
     uint[] vertexIndices;
@@ -57,6 +70,11 @@ private struct FacePolygon
     float distance;
 }
 
+/** Extracts the planar faces that make up a convex solid.
+ *
+ * @param positions = Vertex positions of the solid.
+ * @returns A list of polygon faces with consistent winding.
+ */
 private FacePolygon[] extractFaces(const(float[3])[] positions)
 {
     FacePolygon[] faces;
@@ -130,6 +148,13 @@ private FacePolygon[] extractFaces(const(float[3])[] positions)
     return faces;
 }
 
+/** Checks whether an equivalent face has already been recorded.
+ *
+ * @param faces = Faces already discovered.
+ * @param normal = Candidate face normal.
+ * @param distance = Candidate plane distance.
+ * @returns `true` when the face is already present, otherwise `false`.
+ */
 private bool containsFace(const(FacePolygon)[] faces, float[3] normal, float distance)
 {
     enum epsilon = 1e-3f;
@@ -143,6 +168,13 @@ private bool containsFace(const(FacePolygon)[] faces, float[3] normal, float dis
     return false;
 }
 
+/** Sorts face vertices around the face center for consistent triangle fan generation.
+ *
+ * @param faceVertices = Vertex indices to sort in place.
+ * @param normal = Face normal.
+ * @param positions = Source vertex positions.
+ * @returns Nothing.
+ */
 private void sortFaceVertices(ref uint[] faceVertices, float[3] normal, const(float[3])[] positions)
 {
     float[3] center = [0.0f, 0.0f, 0.0f];
@@ -180,6 +212,11 @@ private void sortFaceVertices(ref uint[] faceVertices, float[3] normal, const(fl
         faceVertices ~= entry.index;
 }
 
+/** Returns a palette color for a face index.
+ *
+ * @param index = Zero-based face index.
+ * @returns RGBA color used for the face.
+ */
 private float[4] paletteColor(size_t index)
 {
     static immutable float[4][] palette = [
@@ -200,31 +237,66 @@ private float[4] paletteColor(size_t index)
     return palette[index % palette.length];
 }
 
+/** Computes the dot product of two 3D vectors.
+ *
+ * @param left = Left-hand vector.
+ * @param right = Right-hand vector.
+ * @returns Scalar dot product.
+ */
 private float dot(float[3] left, float[3] right)
 {
     return left[0] * right[0] + left[1] * right[1] + left[2] * right[2];
 }
 
+/** Adds two 3D vectors.
+ *
+ * @param left = Left-hand vector.
+ * @param right = Right-hand vector.
+ * @returns Component-wise sum.
+ */
 private float[3] add(float[3] left, float[3] right)
 {
     return [left[0] + right[0], left[1] + right[1], left[2] + right[2]];
 }
 
+/** Subtracts two 3D vectors.
+ *
+ * @param left = Left-hand vector.
+ * @param right = Right-hand vector.
+ * @returns Component-wise difference.
+ */
 private float[3] subtract(float[3] left, float[3] right)
 {
     return [left[0] - right[0], left[1] - right[1], left[2] - right[2]];
 }
 
+/** Multiplies a 3D vector by a scalar.
+ *
+ * @param value = Input vector.
+ * @param factor = Scalar multiplier.
+ * @returns Scaled vector.
+ */
 private float[3] scale(float[3] value, float factor)
 {
     return [value[0] * factor, value[1] * factor, value[2] * factor];
 }
 
+/** Negates a 3D vector.
+ *
+ * @param value = Input vector.
+ * @returns Negated vector.
+ */
 private float[3] negate(float[3] value)
 {
     return [-value[0], -value[1], -value[2]];
 }
 
+/** Computes the cross product of two 3D vectors.
+ *
+ * @param left = Left-hand vector.
+ * @param right = Right-hand vector.
+ * @returns Orthogonal vector.
+ */
 private float[3] cross(float[3] left, float[3] right)
 {
     return [
@@ -234,11 +306,21 @@ private float[3] cross(float[3] left, float[3] right)
     ];
 }
 
+/** Computes the length of a 3D vector.
+ *
+ * @param value = Input vector.
+ * @returns Vector magnitude.
+ */
 private float length(float[3] value)
 {
     return sqrt(dot(value, value));
 }
 
+/** Normalizes a 3D vector.
+ *
+ * @param value = Input vector.
+ * @returns Unit-length vector.
+ */
 private float[3] normalize(float[3] value)
 {
     const magnitude = length(value);

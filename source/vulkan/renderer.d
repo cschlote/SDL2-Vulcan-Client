@@ -1,3 +1,4 @@
+/** Main Vulkan renderer that owns the scene buffers, swapchain resources, and HUD overlay. */
 module vulkan.renderer;
 
 import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetTicks, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
@@ -120,6 +121,11 @@ class VulkanRenderer
         20, 21, 22, 20, 22, 23,
     ];
 
+    /// Creates the full renderer stack for the current SDL window and build version.
+    ///
+    /// Params:
+    ///   window = SDL window used for surface creation and size queries.
+    ///   buildVersion = Git describe string used in the window title.
     this(SdlWindow* window, string buildVersion)
     {
         this.window = window;
@@ -170,6 +176,7 @@ class VulkanRenderer
         fpsStartTicks = SDL_GetTicks();
     }
 
+    /// Destroys all renderer-owned Vulkan resources and the SDL surface.
     void destroy()
     {
         if (device.handle != VK_NULL_HANDLE)
@@ -196,6 +203,7 @@ class VulkanRenderer
         instance.destroy();
     }
 
+    /// Runs the SDL event loop and renders frames until the application quits.
     void run()
     {
         bool running = true;
@@ -220,6 +228,11 @@ class VulkanRenderer
         vkDeviceWaitIdle(device.handle);
     }
 
+    /// Handles a single SDL event and updates renderer state.
+    ///
+    /// Params:
+    ///   event = SDL event to process.
+    /// Returns: `true` when the event requests shutdown, otherwise `false`.
     bool handleEvent(ref SDL_Event event)
     {
         switch (event.type)
@@ -262,6 +275,7 @@ class VulkanRenderer
         }
     }
 
+    /// Acquires a swapchain image, updates buffers, submits rendering work, and presents the frame.
     void drawFrame()
     {
         vkWaitForFences(device.handle, 1, &inFlightFences[currentFrame], VK_TRUE, ulong.max);
@@ -330,6 +344,7 @@ class VulkanRenderer
         }
     }
 
+    /// Recreates the swapchain and dependent resources after a resize or out-of-date presentation.
     private void recreateSwapchain()
     {
         uint width = 0;
@@ -359,6 +374,7 @@ class VulkanRenderer
         imagesInFlight[] = VK_NULL_HANDLE;
     }
 
+    /// Creates the Vulkan command pool used for per-frame command buffers.
     private void createCommandPool()
     {
         VkCommandPoolCreateInfo createInfo;
@@ -369,6 +385,7 @@ class VulkanRenderer
         enforce(vkCreateCommandPool(device.handle, &createInfo, null, &commandPool) == VkResult.VK_SUCCESS, "vkCreateCommandPool failed.");
     }
 
+    /// Destroys the command pool if it is still alive.
     private void destroyCommandPool()
     {
         if (commandPool != VK_NULL_HANDLE)
@@ -378,6 +395,7 @@ class VulkanRenderer
         }
     }
 
+    /// Allocates one primary command buffer per swapchain image.
     private void allocateCommandBuffers()
     {
         commandBuffers.length = swapchain.images.length;
@@ -394,6 +412,7 @@ class VulkanRenderer
         imagesInFlight[] = VK_NULL_HANDLE;
     }
 
+    /// Frees all allocated command buffers.
     private void destroyCommandBuffers()
     {
         if (commandBuffers.length > 0 && commandPool != VK_NULL_HANDLE)
@@ -403,12 +422,14 @@ class VulkanRenderer
         }
     }
 
+    /// Allocates the vertex and index buffers used by the current polyhedron mesh.
     private void createGeometryBuffers()
     {
         createBuffer(meshVertexBuffer, maxShapeVertexCount * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         createBuffer(meshIndexBuffer, maxShapeIndexCount * uint.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
+    /// Allocates the per-frame vertex buffers used by the HUD overlay.
     private void createOverlayBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -417,18 +438,21 @@ class VulkanRenderer
         }
     }
 
+    /// Releases the scene geometry buffers.
     private void destroyGeometryBuffers()
     {
         destroyBuffer(meshVertexBuffer);
         destroyBuffer(meshIndexBuffer);
     }
 
+    /// Releases the HUD overlay buffers.
     private void destroyOverlayBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
             destroyBuffer(overlayVertexBuffers[frameIndex]);
     }
 
+    /// Allocates the per-frame uniform buffers used for the 3D scene.
     private void createUniformBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -437,6 +461,7 @@ class VulkanRenderer
         }
     }
 
+    /// Creates the descriptor pool and descriptor sets for the uniform buffers.
     private void createDescriptorPoolAndSets()
     {
         VkDescriptorPoolSize poolSize;
@@ -482,6 +507,7 @@ class VulkanRenderer
         }
     }
 
+    /// Releases the descriptor pool and uniform buffers.
     private void destroyDescriptors()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -494,6 +520,7 @@ class VulkanRenderer
         }
     }
 
+    /// Creates one framebuffer per swapchain image view.
     private void createFramebuffers()
     {
         framebuffers.length = swapchain.imageViews.length;
@@ -514,6 +541,7 @@ class VulkanRenderer
         }
     }
 
+    /// Destroys the framebuffers created for the swapchain images.
     private void destroyFramebuffers()
     {
         foreach (framebuffer; framebuffers)
@@ -524,6 +552,7 @@ class VulkanRenderer
         framebuffers.length = 0;
     }
 
+    /// Creates the depth attachment image, image view, and backing memory.
     private void createDepthResources()
     {
         VkImageCreateInfo imageInfo;
@@ -570,6 +599,7 @@ class VulkanRenderer
         transitionImageLayout(depthImage, VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
+    /// Releases the depth attachment image, image view, and backing memory.
     private void destroyDepthResources()
     {
         if (depthImageView != VK_NULL_HANDLE)
@@ -591,6 +621,7 @@ class VulkanRenderer
         }
     }
 
+    /// Creates the per-frame semaphores and fences used for frame submission.
     private void createSyncObjects()
     {
         VkSemaphoreCreateInfo semaphoreInfo;
@@ -608,6 +639,7 @@ class VulkanRenderer
         }
     }
 
+    /// Destroys the semaphores and fences used for frame submission.
     private void destroySyncObjects()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -621,6 +653,10 @@ class VulkanRenderer
         }
     }
 
+    /// Updates the current mesh transform, uniform buffer, and HUD vertex data.
+    ///
+    /// Params:
+    ///   frameIndex = Index of the current in-flight frame.
     private void updateGeometryBuffer(size_t frameIndex)
     {
         Mat4 identity = Mat4.identity();
@@ -682,6 +718,11 @@ class VulkanRenderer
         memcpy(overlayVertexBuffers[frameIndex].mapped, overlayVertices.ptr, Vertex.sizeof * overlayVertices.length);
     }
 
+    /// Records the render pass commands for the current frame.
+    ///
+    /// Params:
+    ///   commandBuffer = Command buffer to record into.
+    ///   imageIndex = Swapchain image index that is being rendered.
     private void recordCommandBuffer(VkCommandBuffer commandBuffer, uint imageIndex)
     {
         VkCommandBufferBeginInfo beginInfo;
@@ -740,6 +781,12 @@ class VulkanRenderer
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
     }
 
+    /// Inserts a pipeline barrier that transitions an image layout.
+    ///
+    /// Params:
+    ///   image = Image to transition.
+    ///   oldLayout = Previous image layout.
+    ///   newLayout = Target image layout.
     private void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -764,6 +811,9 @@ class VulkanRenderer
         endSingleTimeCommands(commandBuffer);
     }
 
+    /// Allocates and begins a one-time-use command buffer.
+    ///
+    /// Returns: The begun command buffer.
     private VkCommandBuffer beginSingleTimeCommands()
     {
         VkCommandBufferAllocateInfo allocateInfo;
@@ -782,6 +832,10 @@ class VulkanRenderer
         return commandBuffer;
     }
 
+    /// Ends, submits, waits for, and frees a one-time-use command buffer.
+    ///
+    /// Params:
+    ///   commandBuffer = Command buffer to submit and free.
     private void endSingleTimeCommands(VkCommandBuffer commandBuffer)
     {
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
@@ -796,6 +850,10 @@ class VulkanRenderer
         vkFreeCommandBuffers(device.handle, commandPool, 1, &commandBuffer);
     }
 
+    /// Advances or reverses the selected polyhedron and updates the window title.
+    ///
+    /// Params:
+    ///   direction = Positive for the next shape and negative for the previous shape.
     private void advanceShape(int direction)
     {
         if (shapeMeshes.length == 0)
@@ -814,6 +872,7 @@ class VulkanRenderer
         updateWindowTitle();
     }
 
+    /// Rebuilds the window title from the build version, shape name, and FPS value.
     private void updateWindowTitle()
     {
         if (fpsValue > 0)
@@ -822,6 +881,12 @@ class VulkanRenderer
             window.setTitle(format("%s - %s", baseTitle, currentShapeName));
     }
 
+    /// Creates and maps a host-visible Vulkan buffer from initial data.
+    ///
+    /// Params:
+    ///   resource = Receives the buffer, memory, and mapped pointer.
+    ///   data = Initial contents copied into the mapped buffer.
+    ///   usage = Vulkan buffer usage flags.
     private void createBuffer(T)(ref BufferResource resource, const(T)[] data, VkBufferUsageFlags usage)
     {
         const size = data.length * T.sizeof;
@@ -849,6 +914,12 @@ class VulkanRenderer
         memcpy(resource.mapped, data.ptr, size);
     }
 
+    /// Creates and maps a host-visible Vulkan buffer of the requested size.
+    ///
+    /// Params:
+    ///   resource = Receives the buffer, memory, and mapped pointer.
+    ///   size = Buffer size in bytes.
+    ///   usage = Vulkan buffer usage flags.
     private void createBuffer(ref BufferResource resource, size_t size, VkBufferUsageFlags usage)
     {
         VkBufferCreateInfo bufferInfo;
@@ -873,6 +944,10 @@ class VulkanRenderer
         enforce(vkMapMemory(device.handle, resource.memory, 0, size, 0, &resource.mapped) == VkResult.VK_SUCCESS, "vkMapMemory failed.");
     }
 
+    /// Releases a mapped Vulkan buffer together with its memory.
+    ///
+    /// Params:
+    ///   resource = Buffer resource to destroy.
     private void destroyBuffer(ref BufferResource resource)
     {
         if (resource.mapped !is null)
@@ -894,6 +969,12 @@ class VulkanRenderer
         }
     }
 
+    /// Finds a memory type that satisfies the requested property flags.
+    ///
+    /// Params:
+    ///   typeFilter = Bitmask of supported memory types.
+    ///   properties = Required memory properties.
+    /// Returns: The selected memory type index.
     private uint findMemoryType(uint typeFilter, VkMemoryPropertyFlags properties)
     {
         VkPhysicalDeviceMemoryProperties memoryProperties;

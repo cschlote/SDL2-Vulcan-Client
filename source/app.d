@@ -1,3 +1,4 @@
+/** Application bootstrap that loads SDL and Vulkan, creates the window, and drives the renderer. */
 module app;
 
 import bindbc.loader : LoadMsg;
@@ -10,6 +11,10 @@ import window;
 import vulkan.renderer : VulkanRenderer;
 import version_info : getGitDescribeVersion;
 
+/** Loads the SDL shared library bindings and reports failures on standard error.
+ *
+ * @returns `true` when the bindings were loaded successfully, otherwise `false`.
+ */
 private bool loadSdlBindings()
 {
     const result = loadSDL();
@@ -22,6 +27,10 @@ private bool loadSdlBindings()
     return true;
 }
 
+/** Loads the Vulkan shared library bindings and reports failures on standard error.
+ *
+ * @returns `true` when the bindings were loaded successfully, otherwise `false`.
+ */
 private bool loadVulkanBindings()
 {
     const result = loadVulkan();
@@ -34,6 +43,11 @@ private bool loadVulkanBindings()
     return true;
 }
 
+/** Runs the SDL/Vulkan demo application and returns a process exit code.
+ *
+ * @param args = Command-line arguments passed to the executable.
+ * @returns `0` on success or `1` if initialization or runtime setup fails.
+ */
 int runApplication(string[] args)
 {
     if (!loadSdlBindings())

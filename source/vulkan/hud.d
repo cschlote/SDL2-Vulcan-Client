@@ -1,3 +1,4 @@
+/** CPU-generated HUD overlay text and panels drawn above the 3D scene. */
 module vulkan.hud;
 
 import std.format : format;
@@ -5,6 +6,16 @@ import std.math : PI;
 
 import vulkan.pipeline : Vertex;
 
+/** Builds the HUD overlay vertices for the current frame.
+ *
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @param fps = Last measured frame rate.
+ * @param yawAngle = Current yaw angle in radians.
+ * @param pitchAngle = Current pitch angle in radians.
+ * @param shapeName = Name of the active polyhedron.
+ * @returns A list of overlay vertices that can be uploaded to the GPU.
+ */
 Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName)
 {
     Vertex[] vertices;
@@ -30,6 +41,18 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
     return vertices;
 }
 
+/** Renders a text string as a sequence of glyph quads.
+ *
+ * @param vertices = Destination vertex list.
+ * @param text = Text to append.
+ * @param x = Starting x position in pixels.
+ * @param y = Starting y position in pixels.
+ * @param scale = Glyph cell size in pixels.
+ * @param color = Glyph color in RGBA format.
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @returns Nothing.
+ */
 private void appendText(ref Vertex[] vertices, string text, float x, float y, float scale, float[4] color, float extentWidth, float extentHeight)
 {
     float cursorX = x;
@@ -48,6 +71,18 @@ private void appendText(ref Vertex[] vertices, string text, float x, float y, fl
     }
 }
 
+/** Renders a single glyph as a grid of rectangles.
+ *
+ * @param vertices = Destination vertex list.
+ * @param ch = Glyph character.
+ * @param x = Starting x position in pixels.
+ * @param y = Starting y position in pixels.
+ * @param scale = Glyph cell size in pixels.
+ * @param color = Glyph color in RGBA format.
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @returns Nothing.
+ */
 private void appendGlyph(ref Vertex[] vertices, char ch, float x, float y, float scale, float[4] color, float extentWidth, float extentHeight)
 {
     const rows = glyphRows(ch);
@@ -67,6 +102,19 @@ private void appendGlyph(ref Vertex[] vertices, char ch, float x, float y, float
     }
 }
 
+/** Appends a solid rectangle as two triangles in NDC coordinates.
+ *
+ * @param vertices = Destination vertex list.
+ * @param left = Left edge in pixels.
+ * @param top = Top edge in pixels.
+ * @param right = Right edge in pixels.
+ * @param bottom = Bottom edge in pixels.
+ * @param z = Depth value in clip space.
+ * @param color = Rectangle color in RGBA format.
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @returns Nothing.
+ */
 private void appendRect(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float[4] color, float extentWidth, float extentHeight)
 {
     const x0 = toNdcX(left, extentWidth);
@@ -83,16 +131,33 @@ private void appendRect(ref Vertex[] vertices, float left, float top, float righ
     vertices ~= Vertex([x0, y1, z], color);
 }
 
+/** Converts a pixel x coordinate into normalized device coordinates.
+ *
+ * @param pixelX = X coordinate in pixels.
+ * @param extentWidth = Swapchain width in pixels.
+ * @returns X in NDC space.
+ */
 private float toNdcX(float pixelX, float extentWidth)
 {
     return pixelX / extentWidth * 2.0f - 1.0f;
 }
 
+/** Converts a pixel y coordinate into normalized device coordinates.
+ *
+ * @param pixelY = Y coordinate in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @returns Y in NDC space.
+ */
 private float toNdcY(float pixelY, float extentHeight)
 {
     return pixelY / extentHeight * 2.0f - 1.0f;
 }
 
+/** Returns a seven-row, five-column bitmap for the requested glyph.
+ *
+ * @param ch = Glyph character.
+ * @returns A compact bitmap representation of the glyph.
+ */
 private ubyte[7] glyphRows(char ch)
 {
     switch (ch)
