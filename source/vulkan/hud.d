@@ -1,4 +1,4 @@
-/** CPU-generated HUD overlay text and panels drawn above the 3D scene. */
+/** CPU-generated overlay text and panels drawn in native window pixels above the 3D scene. */
 module vulkan.hud;
 
 import std.format : format;
@@ -21,30 +21,57 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
 {
     Vertex[] vertices;
 
-    const panelLeft = 18.0f;
-    const panelTop = 18.0f;
-    const panelRight = extentWidth > 520.0f ? 520.0f : extentWidth - 18.0f;
-    const panelBottom = extentHeight > 372.0f ? 372.0f : extentHeight - 18.0f;
+    const float margin = 18.0f;
 
-    if (panelRight > panelLeft && panelBottom > panelTop)
-    {
-        appendRect(vertices, panelLeft, panelTop, panelRight, panelBottom, 0.0f, [0.06f, 0.08f, 0.11f, 0.62f], extentWidth, extentHeight);
-        appendRect(vertices, panelLeft, panelTop, panelRight, panelTop + 6.0f, 0.0f, [0.20f, 0.48f, 0.88f, 0.88f], extentWidth, extentHeight);
-    }
+    appendWindow(vertices, margin, margin, extentWidth - margin < 612.0f ? extentWidth - margin : 612.0f, extentHeight - margin < 244.0f ? extentHeight - margin : 244.0f, "STATUS", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.58f], [0.20f, 0.48f, 0.88f, 0.90f]);
+    appendWindow(vertices, margin, 264.0f, extentWidth - margin < 352.0f ? extentWidth - margin : 352.0f, extentHeight - margin < 452.0f ? extentHeight - margin : 452.0f, "MODES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.56f], [0.20f, 0.48f, 0.88f, 0.86f]);
+    appendWindow(vertices, 366.0f, 264.0f, extentWidth - margin < 632.0f ? extentWidth - margin : 632.0f, extentHeight - margin < 452.0f ? extentHeight - margin : 452.0f, "HELP", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.50f], [0.20f, 0.48f, 0.88f, 0.80f]);
 
-    appendText(vertices, "HUD TEST", 32.0f, 34.0f, 5.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
-    appendText(vertices, format("FPS %.0f", fps), 34.0f, 90.0f, 3.4f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 132.0f, 3.4f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 174.0f, 3.4f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("SHAPE %s", shapeName), 34.0f, 214.0f, 3.4f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("MODE %s", renderModeName), 34.0f, 252.0f, 3.4f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "F FLAT COLOR", 34.0f, 292.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "T LIT TEXTURED", 34.0f, 324.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "W WIREFRAME", 272.0f, 292.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "H HIDDEN LINE", 272.0f, 324.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "+ / -", 34.0f, 356.0f, 3.8f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "UI", 34.0f, 32.0f, 4.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(vertices, format("FPS %.0f", fps), 36.0f, 86.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 36.0f, 124.0f, 3.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 36.0f, 162.0f, 3.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("SHAPE %s", shapeName), 36.0f, 198.0f, 3.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("MODE %s", renderModeName), 36.0f, 224.0f, 3.0f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
+
+    appendText(vertices, "F FLAT COLOR", 36.0f, 290.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "T LIT TEXTURED", 36.0f, 324.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "W WIREFRAME", 36.0f, 358.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "H HIDDEN LINE", 36.0f, 392.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+
+    appendText(vertices, "ARROWS ROTATE", 384.0f, 292.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "+ / - SWITCH", 384.0f, 326.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "ESC CLOSE", 384.0f, 360.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
 
     return vertices;
+}
+
+/** Appends a translucent UI window frame with a title bar.
+ *
+ * @param vertices = Destination vertex list.
+ * @param left = Left edge in pixels.
+ * @param top = Top edge in pixels.
+ * @param right = Right edge in pixels.
+ * @param bottom = Bottom edge in pixels.
+ * @param title = Window title text.
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @param bodyColor = Window body color in RGBA format.
+ * @param headerColor = Window header color in RGBA format.
+ * @returns Nothing.
+ */
+private void appendWindow(ref Vertex[] vertices, float left, float top, float right, float bottom, string title, float extentWidth, float extentHeight, float[4] bodyColor, float[4] headerColor)
+{
+    if (right <= left || bottom <= top)
+        return;
+
+    appendRect(vertices, left, top, right, bottom, 0.0f, bodyColor, extentWidth, extentHeight);
+    appendRect(vertices, left, top, right, top + 7.0f, 0.0f, headerColor, extentWidth, extentHeight);
+    appendRect(vertices, left, top, right, top + 1.0f, 0.01f, [0.98f, 0.98f, 1.0f, 0.46f], extentWidth, extentHeight);
+    appendRect(vertices, left, bottom - 1.0f, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
+    appendRect(vertices, left, top, left + 1.0f, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
+    appendRect(vertices, right - 1.0f, top, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
+    appendText(vertices, title, left + 10.0f, top + 7.0f, 2.6f, [0.98f, 0.98f, 1.0f, 0.94f], extentWidth, extentHeight);
 }
 
 /** Renders a text string as a sequence of glyph quads.
@@ -210,10 +237,14 @@ private ubyte[7] glyphRows(char ch)
             return [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F];
         case 'F':
             return [0x1F, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10];
+        case 'G':
+            return [0x0E, 0x11, 0x10, 0x10, 0x13, 0x11, 0x0E];
         case 'H':
             return [0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11];
         case 'I':
             return [0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E];
+        case 'J':
+            return [0x1F, 0x02, 0x02, 0x02, 0x12, 0x12, 0x0C];
         case 'K':
             return [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11];
         case 'L':
@@ -226,6 +257,8 @@ private ubyte[7] glyphRows(char ch)
             return [0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E];
         case 'P':
             return [0x1E, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10];
+        case 'Q':
+            return [0x0E, 0x11, 0x11, 0x11, 0x15, 0x12, 0x0D];
         case 'R':
             return [0x1E, 0x11, 0x11, 0x1E, 0x14, 0x12, 0x11];
         case 'S':
@@ -242,6 +275,8 @@ private ubyte[7] glyphRows(char ch)
             return [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11];
         case 'Y':
             return [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04];
+        case 'Z':
+            return [0x1F, 0x01, 0x02, 0x04, 0x08, 0x10, 0x1F];
         default:
             return [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     }
