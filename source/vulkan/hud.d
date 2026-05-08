@@ -23,25 +23,26 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
 
     const float margin = 18.0f;
 
-    appendWindow(vertices, margin, margin, extentWidth - margin < 612.0f ? extentWidth - margin : 612.0f, extentHeight - margin < 244.0f ? extentHeight - margin : 244.0f, "STATUS", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.58f], [0.20f, 0.48f, 0.88f, 0.90f]);
-    appendWindow(vertices, margin, 264.0f, extentWidth - margin < 352.0f ? extentWidth - margin : 352.0f, extentHeight - margin < 452.0f ? extentHeight - margin : 452.0f, "MODES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.56f], [0.20f, 0.48f, 0.88f, 0.86f]);
-    appendWindow(vertices, 366.0f, 264.0f, extentWidth - margin < 632.0f ? extentWidth - margin : 632.0f, extentHeight - margin < 452.0f ? extentHeight - margin : 452.0f, "HELP", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.50f], [0.20f, 0.48f, 0.88f, 0.80f]);
+    appendWindow(vertices, margin, margin, extentWidth - margin < 612.0f ? extentWidth - margin : 612.0f, extentHeight - margin < 256.0f ? extentHeight - margin : 256.0f, "DESKTOP OVERLAY", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.58f], [0.20f, 0.48f, 0.88f, 0.90f]);
+    appendWindow(vertices, margin, 272.0f, extentWidth - margin < 352.0f ? extentWidth - margin : 352.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, "VIEW MODES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.56f], [0.20f, 0.48f, 0.88f, 0.86f]);
+    appendWindow(vertices, 366.0f, 272.0f, extentWidth - margin < 632.0f ? extentWidth - margin : 632.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, "FONT SAMPLES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.50f], [0.20f, 0.48f, 0.88f, 0.80f]);
 
-    appendText(vertices, "UI", 34.0f, 32.0f, 4.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
-    appendText(vertices, format("FPS %.0f", fps), 36.0f, 86.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 36.0f, 124.0f, 3.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 36.0f, 162.0f, 3.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("SHAPE %s", shapeName), 36.0f, 198.0f, 3.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("MODE %s", renderModeName), 36.0f, 224.0f, 3.0f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "WINDOWED 2D GUI", 34.0f, 32.0f, 2.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(vertices, "NATIVE PIXEL LAYOUT", 34.0f, 60.0f, 1.0f, [0.86f, 0.90f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("FRAME RATE: %.0f FRAMES PER SECOND", fps), 36.0f, 98.0f, 2.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 36.0f, 138.0f, 1.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 36.0f, 170.0f, 1.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("ACTIVE SHAPE: %s", shapeName), 36.0f, 202.0f, 1.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("CURRENT MODE: %s", renderModeName), 36.0f, 232.0f, 1.0f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
 
-    appendText(vertices, "F FLAT COLOR", 36.0f, 290.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "T LIT TEXTURED", 36.0f, 324.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "W WIREFRAME", 36.0f, 358.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "H HIDDEN LINE", 36.0f, 392.0f, 3.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "FLAT COLOR RENDERING", 36.0f, 302.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "LIT AND TEXTURED RENDERING", 36.0f, 334.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "WIREFRAME RENDERING", 36.0f, 366.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "HIDDEN LINE RENDERING", 36.0f, 398.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
 
-    appendText(vertices, "ARROWS ROTATE", 384.0f, 292.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "+ / - SWITCH", 384.0f, 326.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "ESC CLOSE", 384.0f, 360.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "SMALL FONT SAMPLE", 384.0f, 302.0f, 1.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "MEDIUM FONT SAMPLE", 384.0f, 336.0f, 2.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "LARGE FONT SAMPLE", 384.0f, 386.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
 
     return vertices;
 }
@@ -71,7 +72,7 @@ private void appendWindow(ref Vertex[] vertices, float left, float top, float ri
     appendRect(vertices, left, bottom - 1.0f, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
     appendRect(vertices, left, top, left + 1.0f, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
     appendRect(vertices, right - 1.0f, top, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
-    appendText(vertices, title, left + 10.0f, top + 7.0f, 2.6f, [0.98f, 0.98f, 1.0f, 0.94f], extentWidth, extentHeight);
+    appendText(vertices, title, left + 10.0f, top + 7.0f, 1.0f, [0.98f, 0.98f, 1.0f, 0.94f], extentWidth, extentHeight);
 }
 
 /** Renders a text string as a sequence of glyph quads.
