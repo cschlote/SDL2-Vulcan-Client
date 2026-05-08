@@ -1,3 +1,4 @@
+#!/usr/bin/env rdmd
 module scripts.compile_shaders;
 
 import std.file : exists, mkdirRecurse, timeLastModified;
