@@ -8,15 +8,16 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Match the existing code style in nearby files and avoid unrelated formatting changes.
 - Keep APIs small and explicit. Favor simple, readable code over clever abstractions.
 - Preserve user changes and do not rewrite unrelated parts of the workspace.
+- Use English for all comments and documentation.
 
 ## D-specific guidance
 
 - Prefer value semantics, ranges, and Phobos algorithms where they fit naturally.
-- Use `immutable`, `const`, and `scope` when they clarify intent and help correctness.
+- Use `immutable`, `const`, and `scope` when they clarify intent and improve correctness.
 - Apply `@safe`, `nothrow`, `pure`, and `@nogc` only when they are a natural fit for the code; do not force them if they make the code harder to read.
 - Use `unittest` blocks for behavior verification when adding or changing D modules.
 - Keep module dependencies minimal and prefer small helper functions over large monolithic functions.
-- Use DDoc tags for modules and any documentable element of the language
+- Use DDoc tags for modules and other documentable language elements.
 
 ## Resource management
 
@@ -36,10 +37,11 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Add or update tests when behavior changes.
 - If a change affects public APIs or build steps, update the documentation alongside the code.
 
-# Releases
+# Release guidelines
 
-- Changed shall be merged by MergeRequests und semi-linear history
-- For the version we use the scheme YY.CW.FFFF with YY=Year-2000, CM is the calendary week and FF is a fraction
-  0.9999 for the running week. (note: the D module va-toolbox should container some helper code to create this scheme from current
-  time stamp.
-- Any feature branch adds a comment about the change in simple non-technical english to the CHANGELOG.md
+- Changes should be merged through merge requests and semi-linear history.
+- For versioning, use the scheme YY.CW.FFFF, where YY is the year minus 2000, CW is the calendar week, and FF is a fraction.
+- The FF value should be 0.9999 for the current week.
+- The D module va-toolbox should contain helper code to generate this scheme from the current timestamp.
+- Any feature branch should add a simple, non-technical English note about the change to CHANGELOG.md.
+- Tag versions in GitLab with a leading v character.
