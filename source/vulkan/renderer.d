@@ -531,7 +531,11 @@ class VulkanRenderer
     private void updateUniformBuffer(size_t frameIndex)
     {
         const now = cast(float)SDL_GetTicks() / 1_000.0f;
-        const model = multiply(rotationY(now), rotationX(now * 0.65f));
+        const model = multiply(
+            translation(Vec3(0, 0, -3.5f)),
+            multiply(
+                rotationY(now),
+                multiply(rotationX(now * 0.65f), scale(Vec3(1.5f, 1.5f, 1.5f)))));
         const view = lookAt(Vec3(3.2f, 2.2f, 4.0f), Vec3(0, 0, 0), Vec3(0, 1, 0));
         const projection = perspective(cast(float)PI / 3.0f, cast(float)swapchain.extent.width / cast(float)swapchain.extent.height, 0.1f, 100.0f);
         const mvp = multiply(projection, multiply(view, model));
@@ -546,9 +550,9 @@ class VulkanRenderer
         enforce(vkBeginCommandBuffer(commandBuffer, &beginInfo) == VkResult.VK_SUCCESS, "vkBeginCommandBuffer failed.");
 
         VkClearValue[2] clearValues;
-        clearValues[0].color.float32[0] = 0.02f;
-        clearValues[0].color.float32[1] = 0.02f;
-        clearValues[0].color.float32[2] = 0.04f;
+        clearValues[0].color.float32[0] = 0.08f;
+        clearValues[0].color.float32[1] = 0.12f;
+        clearValues[0].color.float32[2] = 0.18f;
         clearValues[0].color.float32[3] = 1.0f;
         clearValues[1].depthStencil.depth = 1.0f;
         clearValues[1].depthStencil.stencil = 0;
