@@ -56,6 +56,13 @@ class VulkanRenderer
     private bool framebufferResized;
     private uint frameCounter;
     private ulong fpsStartTicks;
+    private bool rotateLeft;
+    private bool rotateRight;
+    private bool rotateUp;
+    private bool rotateDown;
+    private float yawAngle = 0.22f;
+    private float pitchAngle = 0.14f;
+    private ulong lastRotationTicks;
 
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
@@ -133,6 +140,7 @@ class VulkanRenderer
         allocateCommandBuffers();
         createSyncObjects();
 
+        lastRotationTicks = SDL_GetTicks();
         fpsStartTicks = SDL_GetTicks();
     }
 
@@ -194,6 +202,24 @@ class VulkanRenderer
             case SDL_EventType.keyDown:
                 if (event.key.scancode == SDL_Scancode.escape)
                     return true;
+                if (event.key.scancode == SDL_Scancode.left)
+                    rotateLeft = true;
+                else if (event.key.scancode == SDL_Scancode.right)
+                    rotateRight = true;
+                else if (event.key.scancode == SDL_Scancode.up)
+                    rotateUp = true;
+                else if (event.key.scancode == SDL_Scancode.down)
+                    rotateDown = true;
+                return false;
+            case SDL_EventType.keyUp:
+                if (event.key.scancode == SDL_Scancode.left)
+                    rotateLeft = false;
+                else if (event.key.scancode == SDL_Scancode.right)
+                    rotateRight = false;
+                else if (event.key.scancode == SDL_Scancode.up)
+                    rotateUp = false;
+                else if (event.key.scancode == SDL_Scancode.down)
+                    rotateDown = false;
                 return false;
             case SDL_EventType.windowResized:
             case SDL_EventType.windowPixelSizeChanged:
@@ -554,8 +580,22 @@ class VulkanRenderer
         Mat4 identity = Mat4.identity();
         memcpy(uniformBuffers[frameIndex].mapped, identity.m.ptr, Mat4.sizeof);
 
-        const angleY = 0.22f;
-        const angleX = 0.14f;
+        const currentTicks = SDL_GetTicks();
+        const elapsedTicks = currentTicks - lastRotationTicks;
+        lastRotationTicks = currentTicks;
+
+        const clampedElapsedTicks = elapsedTicks > 50 ? 50 : elapsedTicks;
+        const deltaSeconds = cast(float)clampedElapsedTicks / 1_000.0f;
+        const rotationSpeed = 0.55f;
+
+        if (rotateLeft)
+            yawAngle -= rotationSpeed * deltaSeconds;
+        if (rotateRight)
+            yawAngle += rotationSpeed * deltaSeconds;
+        if (rotateUp)
+            pitchAngle -= rotationSpeed * deltaSeconds;
+        if (rotateDown)
+            pitchAngle += rotationSpeed * deltaSeconds;
 
         Vertex[cubeVertices.length] cubeTransformed;
         foreach (index, source; cubeVertices)
@@ -565,20 +605,22 @@ class VulkanRenderer
             const y = source.position[1] * scaleFactor;
             const z = source.position[2] * scaleFactor;
 
-            const cy = cos(angleY);
-            const sy = sin(angleY);
-            const cx = cos(angleX);
-            const sx = sin(angleX);
+            const cy = cos(yawAngle);
+            const sy = sin(yawAngle);
+            const cx = cos(pitchAngle);
+            const sx = sin(pitchAngle);
 
             const rotatedX = x * cy + z * sy;
             const rotatedZ = -x * sy + z * cy;
             const rotatedY = y * cx - rotatedZ * sx;
             const rotatedDepth = y * sx + rotatedZ * cx;
+            const cameraDistance = 2.8f;
+            const perspective = cameraDistance / (cameraDistance - rotatedDepth);
 
-            const screenX = rotatedX * 0.56f * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
-            const screenY = rotatedY * 0.56f;
+            const screenX = rotatedX * 0.56f * perspective * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
+            const screenY = rotatedY * 0.56f * perspective;
 
-            cubeTransformed[index] = Vertex([screenX, screenY, rotatedDepth * 0.18f + 0.5f], source.color);
+            cubeTransformed[index] = Vertex([screenX, screenY, 0.5f - rotatedDepth * 0.18f], source.color);
         }
 
         memcpy(cubeVertexBuffer.mapped, cubeTransformed.ptr, Vertex.sizeof * cubeTransformed.length);
