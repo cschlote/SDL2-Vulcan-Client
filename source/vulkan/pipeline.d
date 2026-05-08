@@ -10,6 +10,8 @@ struct Vertex
 {
     float[3] position;
     float[4] color;
+    float[3] normal;
+    float[2] uv;
 
     /** Creates a vertex from RGB color data and adds an implicit opaque alpha channel.
      *
@@ -17,10 +19,12 @@ struct Vertex
      * @param color = Vertex color in RGB format.
      * @returns Nothing.
      */
-    this(float[3] position, float[3] color)
+    this(float[3] position, float[3] color, float[3] normal = [0.0f, 0.0f, 1.0f], float[2] uv = [0.0f, 0.0f])
     {
         this.position = position;
         this.color = [color[0], color[1], color[2], 1.0f];
+        this.normal = normal;
+        this.uv = uv;
     }
 
     /** Creates a vertex from RGBA color data.
@@ -29,10 +33,12 @@ struct Vertex
      * @param color = Vertex color in RGBA format.
      * @returns Nothing.
      */
-    this(float[3] position, float[4] color)
+    this(float[3] position, float[4] color, float[3] normal = [0.0f, 0.0f, 1.0f], float[2] uv = [0.0f, 0.0f])
     {
         this.position = position;
         this.color = color;
+        this.normal = normal;
+        this.uv = uv;
     }
 }
 
@@ -44,7 +50,7 @@ struct PipelineResources
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
     VkPipeline overlayPipeline = VK_NULL_HANDLE;
-    VkPipeline linePipeline = VK_NULL_HANDLE;
+    VkPipeline wireframePipeline = VK_NULL_HANDLE;
 
     /** Creates the descriptor set layout, render pass, and graphics pipelines.
      *
@@ -60,9 +66,9 @@ struct PipelineResources
     {
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, false, false, graphicsPipeline);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false, false, false, true, overlayPipeline);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, false, linePipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_FILL, true, true, false, false, graphicsPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_FILL, false, false, false, true, overlayPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_LINE, false, false, false, false, wireframePipeline);
     }
 
     /** Releases all pipeline-related Vulkan objects owned by the structure.
@@ -84,10 +90,10 @@ struct PipelineResources
             overlayPipeline = VK_NULL_HANDLE;
         }
 
-        if (linePipeline != VK_NULL_HANDLE)
+        if (wireframePipeline != VK_NULL_HANDLE)
         {
-            vkDestroyPipeline(device, linePipeline, null);
-            linePipeline = VK_NULL_HANDLE;
+            vkDestroyPipeline(device, wireframePipeline, null);
+            wireframePipeline = VK_NULL_HANDLE;
         }
 
         if (pipelineLayout != VK_NULL_HANDLE)
@@ -117,16 +123,21 @@ private:
      */
     void createDescriptorSetLayout(VkDevice device)
     {
-        VkDescriptorSetLayoutBinding binding;
-        binding.binding = 0;
-        binding.descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        binding.descriptorCount = 1;
-        binding.stageFlags = VkShaderStageFlagBits.VK_SHADER_STAGE_VERTEX_BIT;
+        VkDescriptorSetLayoutBinding[2] bindings;
+        bindings[0].binding = 0;
+        bindings[0].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        bindings[0].descriptorCount = 1;
+        bindings[0].stageFlags = VkShaderStageFlagBits.VK_SHADER_STAGE_VERTEX_BIT | VkShaderStageFlagBits.VK_SHADER_STAGE_FRAGMENT_BIT;
+
+        bindings[1].binding = 1;
+        bindings[1].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        bindings[1].descriptorCount = 1;
+        bindings[1].stageFlags = VkShaderStageFlagBits.VK_SHADER_STAGE_FRAGMENT_BIT;
 
         VkDescriptorSetLayoutCreateInfo createInfo;
         createInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        createInfo.bindingCount = 1;
-        createInfo.pBindings = &binding;
+        createInfo.bindingCount = cast(uint)bindings.length;
+        createInfo.pBindings = bindings.ptr;
 
         enforce(vkCreateDescriptorSetLayout(device, &createInfo, null, &descriptorSetLayout) == VkResult.VK_SUCCESS, "vkCreateDescriptorSetLayout failed.");
     }
@@ -208,7 +219,7 @@ private:
      * @param pipeline = Receives the created Vulkan pipeline handle.
      * @returns Nothing.
      */
-    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, bool blendEnable, ref VkPipeline pipeline)
+    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, VkPolygonMode polygonMode, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, bool blendEnable, ref VkPipeline pipeline)
     {
         auto vertexShaderCode = cast(ubyte[])read(vertexShaderPath);
         auto fragmentShaderCode = cast(ubyte[])read(fragmentShaderPath);
@@ -248,13 +259,24 @@ private:
         attributes[1].location = 1;
         attributes[1].format = VkFormat.VK_FORMAT_R32G32B32A32_SFLOAT;
         attributes[1].offset = Vertex.color.offsetof;
+        VkVertexInputAttributeDescription[2] extraAttributes;
+        extraAttributes[0].binding = 0;
+        extraAttributes[0].location = 2;
+        extraAttributes[0].format = VkFormat.VK_FORMAT_R32G32B32_SFLOAT;
+        extraAttributes[0].offset = Vertex.normal.offsetof;
+        extraAttributes[1].binding = 0;
+        extraAttributes[1].location = 3;
+        extraAttributes[1].format = VkFormat.VK_FORMAT_R32G32_SFLOAT;
+        extraAttributes[1].offset = Vertex.uv.offsetof;
+
+        VkVertexInputAttributeDescription[4] allAttributes = [attributes[0], attributes[1], extraAttributes[0], extraAttributes[1]];
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo;
         vertexInputInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
         vertexInputInfo.vertexBindingDescriptionCount = 1;
         vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = cast(uint)attributes.length;
-        vertexInputInfo.pVertexAttributeDescriptions = attributes.ptr;
+        vertexInputInfo.vertexAttributeDescriptionCount = cast(uint)allAttributes.length;
+        vertexInputInfo.pVertexAttributeDescriptions = allAttributes.ptr;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly;
         inputAssembly.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -283,7 +305,7 @@ private:
         rasterizer.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
         rasterizer.depthClampEnable = VK_FALSE;
         rasterizer.rasterizerDiscardEnable = VK_FALSE;
-        rasterizer.polygonMode = VkPolygonMode.VK_POLYGON_MODE_FILL;
+        rasterizer.polygonMode = polygonMode;
         rasterizer.lineWidth = 1;
         rasterizer.cullMode = VkCullModeFlagBits.VK_CULL_MODE_NONE;
         rasterizer.frontFace = VkFrontFace.VK_FRONT_FACE_COUNTER_CLOCKWISE;

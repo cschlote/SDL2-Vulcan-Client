@@ -20,6 +20,28 @@ import vulkan.swapchain;
 
 enum maxFramesInFlight = 2;
 
+enum RenderMode
+{
+    flatColor,
+    litTextured,
+    wireframe,
+    hiddenLine,
+}
+
+struct SceneUniforms
+{
+    float[4] lightDirectionMode;
+    float[4] shadingParams;
+}
+
+struct TextureResource
+{
+    VkImage image = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView imageView = VK_NULL_HANDLE;
+    VkSampler sampler = VK_NULL_HANDLE;
+}
+
 struct BufferResource
 {
     VkBuffer buffer = VK_NULL_HANDLE;
@@ -48,6 +70,8 @@ class VulkanRenderer
     private MeshData[] shapeMeshes;
     private size_t currentShapeIndex;
     private string currentShapeName;
+    private RenderMode currentRenderMode = RenderMode.litTextured;
+    private string currentRenderModeName = "LIT TEXTURED";
     private uint currentIndexCount;
     private size_t maxShapeVertexCount;
     private size_t maxShapeIndexCount;
@@ -59,6 +83,9 @@ class VulkanRenderer
     private BufferResource[maxFramesInFlight] uniformBuffers;
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
+    private TextureResource texture;
+    private enum textureWidth = 64;
+    private enum textureHeight = 64;
 
     private VkSemaphore[maxFramesInFlight] imageAvailableSemaphores;
     private VkSemaphore[maxFramesInFlight] renderFinishedSemaphores;
@@ -165,6 +192,7 @@ class VulkanRenderer
         createDepthResources();
         createGeometryBuffers();
         createOverlayBuffers();
+        createTextureResources();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -184,6 +212,7 @@ class VulkanRenderer
 
         destroySyncObjects();
         destroyDescriptors();
+        destroyTextureResources();
         destroyOverlayBuffers();
         destroyGeometryBuffers();
         destroyDepthResources();
@@ -246,6 +275,14 @@ class VulkanRenderer
                     advanceShape(1);
                 else if (!event.key.repeat && (event.key.scancode == SDL_Scancode.minus || event.key.scancode == SDL_Scancode.kpMinus))
                     advanceShape(-1);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.f)
+                    setRenderMode(RenderMode.flatColor);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.t)
+                    setRenderMode(RenderMode.litTextured);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.w)
+                    setRenderMode(RenderMode.wireframe);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.h)
+                    setRenderMode(RenderMode.hiddenLine);
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = true;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -438,6 +475,78 @@ class VulkanRenderer
         }
     }
 
+    private void createTextureResources()
+    {
+        auto textureData = buildCheckerboardTextureData();
+
+        BufferResource stagingBuffer;
+        createBuffer(stagingBuffer, textureData, VkBufferUsageFlagBits.VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        scope (exit)
+            destroyBuffer(stagingBuffer);
+
+        VkImageCreateInfo imageInfo;
+        imageInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imageInfo.imageType = VkImageType.VK_IMAGE_TYPE_2D;
+        imageInfo.format = VkFormat.VK_FORMAT_R8G8B8A8_UNORM;
+        imageInfo.extent.width = textureWidth;
+        imageInfo.extent.height = textureHeight;
+        imageInfo.extent.depth = 1;
+        imageInfo.mipLevels = 1;
+        imageInfo.arrayLayers = 1;
+        imageInfo.samples = VkSampleCountFlagBits.VK_SAMPLE_COUNT_1_BIT;
+        imageInfo.tiling = VkImageTiling.VK_IMAGE_TILING_OPTIMAL;
+        imageInfo.usage = VkImageUsageFlagBits.VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits.VK_IMAGE_USAGE_SAMPLED_BIT;
+        imageInfo.sharingMode = VkSharingMode.VK_SHARING_MODE_EXCLUSIVE;
+        imageInfo.initialLayout = VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED;
+
+        enforce(vkCreateImage(device.handle, &imageInfo, null, &texture.image) == VkResult.VK_SUCCESS, "vkCreateImage for texture failed.");
+
+        VkMemoryRequirements memoryRequirements;
+        vkGetImageMemoryRequirements(device.handle, texture.image, &memoryRequirements);
+
+        VkMemoryAllocateInfo allocateInfo;
+        allocateInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocateInfo.allocationSize = memoryRequirements.size;
+        allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, VkMemoryPropertyFlagBits.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+        enforce(vkAllocateMemory(device.handle, &allocateInfo, null, &texture.memory) == VkResult.VK_SUCCESS, "vkAllocateMemory for texture failed.");
+        enforce(vkBindImageMemory(device.handle, texture.image, texture.memory, 0) == VkResult.VK_SUCCESS, "vkBindImageMemory for texture failed.");
+
+        transitionImageLayout(texture.image, VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
+        copyBufferToImage(stagingBuffer.buffer, texture.image, textureWidth, textureHeight);
+        transitionImageLayout(texture.image, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageLayout.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
+
+        VkImageViewCreateInfo viewInfo;
+        viewInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewInfo.image = texture.image;
+        viewInfo.viewType = VkImageViewType.VK_IMAGE_VIEW_TYPE_2D;
+        viewInfo.format = VkFormat.VK_FORMAT_R8G8B8A8_UNORM;
+        viewInfo.subresourceRange.aspectMask = VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT;
+        viewInfo.subresourceRange.baseMipLevel = 0;
+        viewInfo.subresourceRange.levelCount = 1;
+        viewInfo.subresourceRange.baseArrayLayer = 0;
+        viewInfo.subresourceRange.layerCount = 1;
+        enforce(vkCreateImageView(device.handle, &viewInfo, null, &texture.imageView) == VkResult.VK_SUCCESS, "vkCreateImageView for texture failed.");
+
+        VkSamplerCreateInfo samplerInfo;
+        samplerInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        samplerInfo.magFilter = VkFilter.VK_FILTER_LINEAR;
+        samplerInfo.minFilter = VkFilter.VK_FILTER_LINEAR;
+        samplerInfo.addressModeU = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeV = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeW = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.anisotropyEnable = VK_FALSE;
+        samplerInfo.maxAnisotropy = 1.0f;
+        samplerInfo.borderColor = VkBorderColor.VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+        samplerInfo.unnormalizedCoordinates = VK_FALSE;
+        samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.mipmapMode = VkSamplerMipmapMode.VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        samplerInfo.mipLodBias = 0.0f;
+        samplerInfo.minLod = 0.0f;
+        samplerInfo.maxLod = 0.0f;
+        enforce(vkCreateSampler(device.handle, &samplerInfo, null, &texture.sampler) == VkResult.VK_SUCCESS, "vkCreateSampler failed.");
+    }
+
     /// Releases the scene geometry buffers.
     private void destroyGeometryBuffers()
     {
@@ -452,26 +561,55 @@ class VulkanRenderer
             destroyBuffer(overlayVertexBuffers[frameIndex]);
     }
 
+    private void destroyTextureResources()
+    {
+        if (texture.sampler != VK_NULL_HANDLE)
+        {
+            vkDestroySampler(device.handle, texture.sampler, null);
+            texture.sampler = VK_NULL_HANDLE;
+        }
+
+        if (texture.imageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(device.handle, texture.imageView, null);
+            texture.imageView = VK_NULL_HANDLE;
+        }
+
+        if (texture.image != VK_NULL_HANDLE)
+        {
+            vkDestroyImage(device.handle, texture.image, null);
+            texture.image = VK_NULL_HANDLE;
+        }
+
+        if (texture.memory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(device.handle, texture.memory, null);
+            texture.memory = VK_NULL_HANDLE;
+        }
+    }
+
     /// Allocates the per-frame uniform buffers used for the 3D scene.
     private void createUniformBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
         {
-            createBuffer(uniformBuffers[frameIndex], Mat4.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            createBuffer(uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
         }
     }
 
     /// Creates the descriptor pool and descriptor sets for the uniform buffers.
     private void createDescriptorPoolAndSets()
     {
-        VkDescriptorPoolSize poolSize;
-        poolSize.type = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSize.descriptorCount = maxFramesInFlight;
+        VkDescriptorPoolSize[2] poolSizes;
+        poolSizes[0].type = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[0].descriptorCount = maxFramesInFlight;
+        poolSizes[1].type = VkDescriptorType.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = maxFramesInFlight;
 
         VkDescriptorPoolCreateInfo poolInfo;
         poolInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-        poolInfo.poolSizeCount = 1;
-        poolInfo.pPoolSizes = &poolSize;
+        poolInfo.poolSizeCount = cast(uint)poolSizes.length;
+        poolInfo.pPoolSizes = poolSizes.ptr;
         poolInfo.maxSets = maxFramesInFlight;
 
         enforce(vkCreateDescriptorPool(device.handle, &poolInfo, null, &descriptorPool) == VkResult.VK_SUCCESS, "vkCreateDescriptorPool failed.");
@@ -492,18 +630,31 @@ class VulkanRenderer
             VkDescriptorBufferInfo bufferInfo;
             bufferInfo.buffer = uniformBuffers[frameIndex].buffer;
             bufferInfo.offset = 0;
-            bufferInfo.range = Mat4.sizeof;
+            bufferInfo.range = SceneUniforms.sizeof;
 
-            VkWriteDescriptorSet write;
-            write.sType = VkStructureType.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            write.dstSet = descriptorSets[frameIndex];
-            write.dstBinding = 0;
-            write.dstArrayElement = 0;
-            write.descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            write.descriptorCount = 1;
-            write.pBufferInfo = &bufferInfo;
+            VkDescriptorImageInfo imageInfo;
+            imageInfo.sampler = texture.sampler;
+            imageInfo.imageView = texture.imageView;
+            imageInfo.imageLayout = VkImageLayout.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            vkUpdateDescriptorSets(device.handle, 1, &write, 0, null);
+            VkWriteDescriptorSet[2] writes;
+            writes[0].sType = VkStructureType.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[0].dstSet = descriptorSets[frameIndex];
+            writes[0].dstBinding = 0;
+            writes[0].dstArrayElement = 0;
+            writes[0].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            writes[0].descriptorCount = 1;
+            writes[0].pBufferInfo = &bufferInfo;
+
+            writes[1].sType = VkStructureType.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            writes[1].dstSet = descriptorSets[frameIndex];
+            writes[1].dstBinding = 1;
+            writes[1].dstArrayElement = 0;
+            writes[1].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            writes[1].descriptorCount = 1;
+            writes[1].pImageInfo = &imageInfo;
+
+            vkUpdateDescriptorSets(device.handle, cast(uint)writes.length, writes.ptr, 0, null);
         }
     }
 
@@ -659,8 +810,10 @@ class VulkanRenderer
     ///   frameIndex = Index of the current in-flight frame.
     private void updateGeometryBuffer(size_t frameIndex)
     {
-        Mat4 identity = Mat4.identity();
-        memcpy(uniformBuffers[frameIndex].mapped, identity.m.ptr, Mat4.sizeof);
+        SceneUniforms uniforms;
+        uniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, currentRenderMode == RenderMode.flatColor ? 0.0f : 1.0f];
+        uniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
+        memcpy(uniformBuffers[frameIndex].mapped, &uniforms, SceneUniforms.sizeof);
 
         const currentTicks = SDL_GetTicks();
         const elapsedTicks = currentTicks - lastRotationTicks;
@@ -684,17 +837,16 @@ class VulkanRenderer
 
         Vertex[] meshTransformed;
         meshTransformed.length = mesh.vertices.length;
+        const cy = cos(yawAngle);
+        const sy = sin(yawAngle);
+        const cx = cos(pitchAngle);
+        const sx = sin(pitchAngle);
         foreach (index, source; mesh.vertices)
         {
             const scaleFactor = 0.58f;
             const x = source.position[0] * scaleFactor;
             const y = source.position[1] * scaleFactor;
             const z = source.position[2] * scaleFactor;
-
-            const cy = cos(yawAngle);
-            const sy = sin(yawAngle);
-            const cx = cos(pitchAngle);
-            const sx = sin(pitchAngle);
 
             const rotatedX = x * cy + z * sy;
             const rotatedZ = -x * sy + z * cy;
@@ -706,13 +858,21 @@ class VulkanRenderer
             const screenX = rotatedX * 0.56f * perspective * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
             const screenY = rotatedY * 0.56f * perspective;
 
-            meshTransformed[index] = Vertex([screenX, screenY, 0.5f - rotatedDepth * 0.18f], source.color);
+            const normalX = source.normal[0];
+            const normalY = source.normal[1];
+            const normalZ = source.normal[2];
+            const rotatedNormalX = normalX * cy + normalZ * sy;
+            const rotatedNormalZ = -normalX * sy + normalZ * cy;
+            const rotatedNormalY = normalY * cx - rotatedNormalZ * sx;
+            const finalNormalZ = normalY * sx + rotatedNormalZ * cx;
+
+            meshTransformed[index] = Vertex([screenX, screenY, 0.5f - rotatedDepth * 0.18f], source.color, [rotatedNormalX, rotatedNormalY, finalNormalZ], source.uv);
         }
 
         memcpy(meshVertexBuffer.mapped, meshTransformed.ptr, Vertex.sizeof * meshTransformed.length);
         memcpy(meshIndexBuffer.mapped, mesh.indices.ptr, uint.sizeof * mesh.indices.length);
 
-        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName);
+        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName);
         enforce(overlayVertices.length <= maxOverlayVertices, "HUD overlay vertex limit exceeded.");
         overlayVertexCounts[frameIndex] = cast(uint)overlayVertices.length;
         memcpy(overlayVertexBuffers[frameIndex].mapped, overlayVertices.ptr, Vertex.sizeof * overlayVertices.length);
@@ -762,11 +922,23 @@ class VulkanRenderer
 
         VkBuffer[1] meshVertexBuffers = [meshVertexBuffer.buffer];
         VkDeviceSize[1] offsets = [0];
-        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
         vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, meshVertexBuffers.ptr, offsets.ptr);
-        vkCmdBindIndexBuffer(commandBuffer, meshIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
+
+        if (currentRenderMode != RenderMode.wireframe)
+        {
+            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, meshVertexBuffers.ptr, offsets.ptr);
+            vkCmdBindIndexBuffer(commandBuffer, meshIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
+        }
+
+        if (currentRenderMode == RenderMode.wireframe || currentRenderMode == RenderMode.hiddenLine)
+        {
+            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.wireframePipeline);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, meshVertexBuffers.ptr, offsets.ptr);
+            vkCmdBindIndexBuffer(commandBuffer, meshIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
+        }
 
         const overlayCount = overlayVertexCounts[currentFrame];
         if (overlayCount > 0)
@@ -787,7 +959,8 @@ class VulkanRenderer
     ///   image = Image to transition.
     ///   oldLayout = Previous image layout.
     ///   newLayout = Target image layout.
-    private void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout)
+    ///   aspectMask = Image aspect mask to apply.
+    private void transitionImageLayout(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectMask = VkImageAspectFlagBits.VK_IMAGE_ASPECT_DEPTH_BIT)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
 
@@ -798,7 +971,7 @@ class VulkanRenderer
         barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         barrier.image = image;
-        barrier.subresourceRange.aspectMask = VkImageAspectFlagBits.VK_IMAGE_ASPECT_DEPTH_BIT;
+        barrier.subresourceRange.aspectMask = aspectMask;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = 1;
         barrier.subresourceRange.baseArrayLayer = 0;
@@ -806,6 +979,15 @@ class VulkanRenderer
 
         VkPipelineStageFlags sourceStage = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         VkPipelineStageFlags destinationStage = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        if (newLayout == VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+        {
+            destinationStage = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_TRANSFER_BIT;
+        }
+        if (newLayout == VkImageLayout.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+        {
+            sourceStage = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VkPipelineStageFlagBits.VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        }
 
         vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, null, 0, null, 1, &barrier);
         endSingleTimeCommands(commandBuffer);
@@ -850,6 +1032,49 @@ class VulkanRenderer
         vkFreeCommandBuffers(device.handle, commandPool, 1, &commandBuffer);
     }
 
+    private void copyBufferToImage(VkBuffer buffer, VkImage image, uint width, uint height)
+    {
+        VkCommandBuffer commandBuffer = beginSingleTimeCommands();
+
+        VkBufferImageCopy region;
+        region.bufferOffset = 0;
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+        region.imageSubresource.aspectMask = VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT;
+        region.imageSubresource.mipLevel = 0;
+        region.imageSubresource.baseArrayLayer = 0;
+        region.imageSubresource.layerCount = 1;
+        region.imageOffset.x = 0;
+        region.imageOffset.y = 0;
+        region.imageOffset.z = 0;
+        region.imageExtent.width = width;
+        region.imageExtent.height = height;
+        region.imageExtent.depth = 1;
+
+        vkCmdCopyBufferToImage(commandBuffer, buffer, image, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        endSingleTimeCommands(commandBuffer);
+    }
+
+    private ubyte[] buildCheckerboardTextureData()
+    {
+        ubyte[] data;
+        data.length = textureWidth * textureHeight * 4;
+        foreach (y; 0 .. textureHeight)
+        {
+            foreach (x; 0 .. textureWidth)
+            {
+                const cell = ((x / 8) + (y / 8)) % 2;
+                const base = (y * textureWidth + x) * 4;
+                data[base + 0] = cell == 0 ? cast(ubyte)42 : cast(ubyte)218;
+                data[base + 1] = cell == 0 ? cast(ubyte)78 : cast(ubyte)198;
+                data[base + 2] = cell == 0 ? cast(ubyte)168 : cast(ubyte)248;
+                data[base + 3] = 255;
+            }
+        }
+
+        return data;
+    }
+
     /// Advances or reverses the selected polyhedron and updates the window title.
     ///
     /// Params:
@@ -872,13 +1097,31 @@ class VulkanRenderer
         updateWindowTitle();
     }
 
+    private void setRenderMode(RenderMode mode)
+    {
+        currentRenderMode = mode;
+        currentRenderModeName = renderModeLabel(mode);
+        updateWindowTitle();
+    }
+
+    private static string renderModeLabel(RenderMode mode)
+    {
+        final switch (mode)
+        {
+            case RenderMode.flatColor: return "FLAT COLOR";
+            case RenderMode.litTextured: return "LIT TEXTURED";
+            case RenderMode.wireframe: return "WIREFRAME";
+            case RenderMode.hiddenLine: return "HIDDEN LINE";
+        }
+    }
+
     /// Rebuilds the window title from the build version, shape name, and FPS value.
     private void updateWindowTitle()
     {
         if (fpsValue > 0)
-            window.setTitle(format("%s - %s - %.0f FPS", baseTitle, currentShapeName, fpsValue));
+            window.setTitle(format("%s - %s - %s - %.0f FPS", baseTitle, currentShapeName, currentRenderModeName, fpsValue));
         else
-            window.setTitle(format("%s - %s", baseTitle, currentShapeName));
+            window.setTitle(format("%s - %s - %s", baseTitle, currentShapeName, currentRenderModeName));
     }
 
     /// Creates and maps a host-visible Vulkan buffer from initial data.

@@ -14,16 +14,17 @@ import vulkan.pipeline : Vertex;
  * @param yawAngle = Current yaw angle in radians.
  * @param pitchAngle = Current pitch angle in radians.
  * @param shapeName = Name of the active polyhedron.
+ * @param renderModeName = Name of the active render mode.
  * @returns A list of overlay vertices that can be uploaded to the GPU.
  */
-Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName)
+Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName)
 {
     Vertex[] vertices;
 
     const panelLeft = 18.0f;
     const panelTop = 18.0f;
-    const panelRight = extentWidth > 454.0f ? 454.0f : extentWidth - 18.0f;
-    const panelBottom = extentHeight > 246.0f ? 246.0f : extentHeight - 18.0f;
+    const panelRight = extentWidth > 520.0f ? 520.0f : extentWidth - 18.0f;
+    const panelBottom = extentHeight > 372.0f ? 372.0f : extentHeight - 18.0f;
 
     if (panelRight > panelLeft && panelBottom > panelTop)
     {
@@ -31,12 +32,17 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
         appendRect(vertices, panelLeft, panelTop, panelRight, panelTop + 6.0f, 0.0f, [0.20f, 0.48f, 0.88f, 0.88f], extentWidth, extentHeight);
     }
 
-    appendText(vertices, "HUD TEST", 32.0f, 34.0f, 6.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
-    appendText(vertices, format("FPS %.0f", fps), 34.0f, 96.0f, 4.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 142.0f, 5.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 190.0f, 5.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("SHAPE %s", shapeName), 34.0f, 230.0f, 4.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "+ / -", 34.0f, 276.0f, 5.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "HUD TEST", 32.0f, 34.0f, 5.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(vertices, format("FPS %.0f", fps), 34.0f, 90.0f, 3.4f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 132.0f, 3.4f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 174.0f, 3.4f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("SHAPE %s", shapeName), 34.0f, 214.0f, 3.4f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("MODE %s", renderModeName), 34.0f, 252.0f, 3.4f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "F FLAT COLOR", 34.0f, 292.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "T LIT TEXTURED", 34.0f, 324.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "W WIREFRAME", 272.0f, 292.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "H HIDDEN LINE", 272.0f, 324.0f, 3.2f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "+ / -", 34.0f, 356.0f, 3.8f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
 
     return vertices;
 }
@@ -212,6 +218,8 @@ private ubyte[7] glyphRows(char ch)
             return [0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11];
         case 'L':
             return [0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F];
+        case 'M':
+            return [0x11, 0x1B, 0x15, 0x11, 0x11, 0x11, 0x11];
         case 'N':
             return [0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11];
         case 'O':
@@ -230,6 +238,8 @@ private ubyte[7] glyphRows(char ch)
             return [0x11, 0x11, 0x11, 0x11, 0x0A, 0x0A, 0x04];
         case 'W':
             return [0x11, 0x11, 0x11, 0x15, 0x15, 0x1B, 0x11];
+        case 'X':
+            return [0x11, 0x11, 0x0A, 0x04, 0x0A, 0x11, 0x11];
         case 'Y':
             return [0x11, 0x11, 0x0A, 0x04, 0x04, 0x04, 0x04];
         default:

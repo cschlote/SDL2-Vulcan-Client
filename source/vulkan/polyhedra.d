@@ -46,9 +46,53 @@ private MeshData buildConvexSolid(string name, const(float[3])[] positions)
     {
         const color = paletteColor(faceIndex);
         const baseVertex = cast(uint)vertices.length;
-
+        float[3] center = [0.0f, 0.0f, 0.0f];
         foreach (vertexIndex; face.vertexIndices)
-            vertices ~= Vertex(positions[vertexIndex], color);
+            center = add(center, positions[vertexIndex]);
+        center = scale(center, 1.0f / cast(float)face.vertexIndices.length);
+
+        float[3] helper;
+        if (abs(face.normal[1]) < 0.9f)
+            helper = [0.0f, 1.0f, 0.0f];
+        else
+            helper = [1.0f, 0.0f, 0.0f];
+
+        auto axisX = normalize(cross(helper, face.normal));
+        auto axisY = cross(face.normal, axisX);
+
+        float[2][] rawUvs;
+        rawUvs.length = face.vertexIndices.length;
+        foreach (index, vertexIndex; face.vertexIndices)
+        {
+            const relative = subtract(positions[vertexIndex], center);
+            rawUvs[index] = [dot(relative, axisX), dot(relative, axisY)];
+        }
+
+        float minU = rawUvs[0][0];
+        float maxU = rawUvs[0][0];
+        float minV = rawUvs[0][1];
+        float maxV = rawUvs[0][1];
+        foreach (rawUv; rawUvs)
+        {
+            if (rawUv[0] < minU)
+                minU = rawUv[0];
+            if (rawUv[0] > maxU)
+                maxU = rawUv[0];
+            if (rawUv[1] < minV)
+                minV = rawUv[1];
+            if (rawUv[1] > maxV)
+                maxV = rawUv[1];
+        }
+
+        const uRange = maxU - minU > 1e-5f ? maxU - minU : 1.0f;
+        const vRange = maxV - minV > 1e-5f ? maxV - minV : 1.0f;
+
+        foreach (index, vertexIndex; face.vertexIndices)
+        {
+            const rawUv = rawUvs[index];
+            float[2] uv = [(rawUv[0] - minU) / uRange, (rawUv[1] - minV) / vRange];
+            vertices ~= Vertex(positions[vertexIndex], color, face.normal, uv);
+        }
 
         const cornerCount = cast(uint)face.vertexIndices.length;
         foreach (triangleIndex; 1 .. cornerCount - 1)
