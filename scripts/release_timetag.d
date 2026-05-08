@@ -9,7 +9,11 @@ import std.stdio : writefln;
 
 import va_toolbox.timetags : getTimeTagString;
 
+enum gitTagPrefix = "v";
+
 void main()
 {
-    writefln("Release timetag: %s", getTimeTagString());
+    const timeTag = getTimeTagString();
+    writefln("Release timetag: %s", timeTag);
+    writefln("Git tag: %s%s", gitTagPrefix, timeTag);
 }
