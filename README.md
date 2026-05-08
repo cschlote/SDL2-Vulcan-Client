@@ -74,6 +74,12 @@ The application prints the current Git describe string at startup and includes i
 
 For release tagging, use the helper scripts in [scripts/](scripts): [scripts/version.d](scripts/version.d) writes `build/git-describe.txt` and logs the generated Git-describe version in the shell, [scripts/compile_shaders.d](scripts/compile_shaders.d) compiles the GLSL shaders into `build/shaders/`, and [scripts/release_timetag.d](scripts/release_timetag.d) derives the release timetag from `va_toolbox.timetags.getTimeTagString()`.
 
+## Commit Workflow
+
+Keep commits small and single-purpose. Stage only the files that belong to the change, write a technical English subject, and add a short body when the commit needs context.
+
+For release commits, move the new note into `CHANGELOG.md` under `## Release <timetag>`, leave `## Unreleased` at the top, generate the timetag with [scripts/release_timetag.d](scripts/release_timetag.d), and tag the commit with a leading `v`.
+
 ## Notes
 
 - The code is structured to keep resource ownership explicit and cleanup deterministic.

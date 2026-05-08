@@ -8,6 +8,7 @@ import std.format : format;
 import std.math : PI, cos, sin;
 import std.string : fromStringz;
 
+import vulkan.hud : buildHudOverlayVertices;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -44,6 +45,9 @@ class VulkanRenderer
 
     private BufferResource cubeVertexBuffer;
     private BufferResource cubeIndexBuffer;
+    private enum maxOverlayVertices = 32_768;
+    private BufferResource[maxFramesInFlight] overlayVertexBuffers;
+    private uint[maxFramesInFlight] overlayVertexCounts;
     private BufferResource[maxFramesInFlight] uniformBuffers;
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
@@ -62,6 +66,7 @@ class VulkanRenderer
     private bool rotateDown;
     private float yawAngle = 0.22f;
     private float pitchAngle = 0.14f;
+    private double fpsValue;
     private ulong lastRotationTicks;
 
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
@@ -134,6 +139,7 @@ class VulkanRenderer
         createCommandPool();
         createDepthResources();
         createGeometryBuffers();
+        createOverlayBuffers();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -151,6 +157,7 @@ class VulkanRenderer
 
         destroySyncObjects();
         destroyDescriptors();
+        destroyOverlayBuffers();
         destroyGeometryBuffers();
         destroyDepthResources();
         destroyFramebuffers();
@@ -292,6 +299,7 @@ class VulkanRenderer
         if (now - fpsStartTicks >= 1_000)
         {
             const fps = cast(double)frameCounter * 1_000.0 / cast(double)(now - fpsStartTicks);
+            fpsValue = fps;
             window.setTitle(format("%s - %.0f FPS", baseTitle, fps));
             fpsStartTicks = now;
             frameCounter = 0;
@@ -377,10 +385,24 @@ class VulkanRenderer
         createBuffer(cubeIndexBuffer, cubeIndices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
+    private void createOverlayBuffers()
+    {
+        foreach (frameIndex; 0 .. maxFramesInFlight)
+        {
+            createBuffer(overlayVertexBuffers[frameIndex], maxOverlayVertices * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        }
+    }
+
     private void destroyGeometryBuffers()
     {
         destroyBuffer(cubeVertexBuffer);
         destroyBuffer(cubeIndexBuffer);
+    }
+
+    private void destroyOverlayBuffers()
+    {
+        foreach (frameIndex; 0 .. maxFramesInFlight)
+            destroyBuffer(overlayVertexBuffers[frameIndex]);
     }
 
     private void createUniformBuffers()
@@ -624,6 +646,11 @@ class VulkanRenderer
         }
 
         memcpy(cubeVertexBuffer.mapped, cubeTransformed.ptr, Vertex.sizeof * cubeTransformed.length);
+
+        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle);
+        enforce(overlayVertices.length <= maxOverlayVertices, "HUD overlay vertex limit exceeded.");
+        overlayVertexCounts[frameIndex] = cast(uint)overlayVertices.length;
+        memcpy(overlayVertexBuffers[frameIndex].mapped, overlayVertices.ptr, Vertex.sizeof * overlayVertices.length);
     }
 
     private void recordCommandBuffer(VkCommandBuffer commandBuffer, uint imageIndex)
@@ -670,6 +697,15 @@ class VulkanRenderer
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, cubeVertexBuffers.ptr, offsets.ptr);
         vkCmdBindIndexBuffer(commandBuffer, cubeIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(commandBuffer, cast(uint)cubeIndices.length, 1, 0, 0, 0);
+
+        const overlayCount = overlayVertexCounts[currentFrame];
+        if (overlayCount > 0)
+        {
+            VkBuffer[1] overlayVertexBufferHandles = [overlayVertexBuffers[currentFrame].buffer];
+            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, overlayVertexBufferHandles.ptr, offsets.ptr);
+            vkCmdDraw(commandBuffer, overlayCount, 1, 0, 0);
+        }
 
         vkCmdEndRenderPass(commandBuffer);
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");

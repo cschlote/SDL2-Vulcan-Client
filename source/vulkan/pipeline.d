@@ -16,6 +16,7 @@ struct PipelineResources
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+    VkPipeline overlayPipeline = VK_NULL_HANDLE;
     VkPipeline linePipeline = VK_NULL_HANDLE;
 
     this(VkDevice device, VkExtent2D extent, VkFormat colorFormat, VkFormat depthFormat, string vertexShaderPath, string fragmentShaderPath)
@@ -23,6 +24,7 @@ struct PipelineResources
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, false, graphicsPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false, false, false, overlayPipeline);
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, linePipeline);
     }
 
@@ -32,6 +34,12 @@ struct PipelineResources
         {
             vkDestroyPipeline(device, graphicsPipeline, null);
             graphicsPipeline = VK_NULL_HANDLE;
+        }
+
+        if (overlayPipeline != VK_NULL_HANDLE)
+        {
+            vkDestroyPipeline(device, overlayPipeline, null);
+            overlayPipeline = VK_NULL_HANDLE;
         }
 
         if (linePipeline != VK_NULL_HANDLE)

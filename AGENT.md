@@ -37,6 +37,14 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Add or update tests when behavior changes.
 - If a change affects public APIs or build steps, update the documentation alongside the code.
 
+## Commit workflow
+
+- Keep each commit focused on one coherent change.
+- Stage only the files that belong to that change.
+- Write commit subjects in technical English and add a body when the change needs context.
+- For release commits, update `CHANGELOG.md`, generate the release timetag with `scripts/release_timetag.d`, and tag the commit with a leading `v`.
+- Do not commit generated build artifacts such as compiled helper binaries.
+
 ## Patchstack and commits
 
 - Organize larger changes as a clean patchstack where each commit covers one coherent technical change.
