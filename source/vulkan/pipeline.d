@@ -7,7 +7,19 @@ import std.file : read;
 struct Vertex
 {
     float[3] position;
-    float[3] color;
+    float[4] color;
+
+    this(float[3] position, float[3] color)
+    {
+        this.position = position;
+        this.color = [color[0], color[1], color[2], 1.0f];
+    }
+
+    this(float[3] position, float[4] color)
+    {
+        this.position = position;
+        this.color = color;
+    }
 }
 
 struct PipelineResources
@@ -23,9 +35,9 @@ struct PipelineResources
     {
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, false, graphicsPipeline);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false, false, false, overlayPipeline);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, linePipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, false, false, graphicsPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, false, false, false, true, overlayPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, false, linePipeline);
     }
 
     void destroy(VkDevice device)
@@ -140,7 +152,7 @@ private:
         enforce(vkCreateRenderPass(device, &createInfo, null, &renderPass) == VkResult.VK_SUCCESS, "vkCreateRenderPass failed.");
     }
 
-    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, ref VkPipeline pipeline)
+    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, bool blendEnable, ref VkPipeline pipeline)
     {
         auto vertexShaderCode = cast(ubyte[])read(vertexShaderPath);
         auto fragmentShaderCode = cast(ubyte[])read(fragmentShaderPath);
@@ -178,7 +190,7 @@ private:
         attributes[0].offset = Vertex.position.offsetof;
         attributes[1].binding = 0;
         attributes[1].location = 1;
-        attributes[1].format = VkFormat.VK_FORMAT_R32G32B32_SFLOAT;
+        attributes[1].format = VkFormat.VK_FORMAT_R32G32B32A32_SFLOAT;
         attributes[1].offset = Vertex.color.offsetof;
 
         VkPipelineVertexInputStateCreateInfo vertexInputInfo;
@@ -243,7 +255,13 @@ private:
             VkColorComponentFlagBits.VK_COLOR_COMPONENT_G_BIT |
             VkColorComponentFlagBits.VK_COLOR_COMPONENT_B_BIT |
             VkColorComponentFlagBits.VK_COLOR_COMPONENT_A_BIT;
-        colorBlendAttachment.blendEnable = VK_FALSE;
+        colorBlendAttachment.blendEnable = blendEnable ? VK_TRUE : VK_FALSE;
+        colorBlendAttachment.srcColorBlendFactor = VkBlendFactor.VK_BLEND_FACTOR_SRC_ALPHA;
+        colorBlendAttachment.dstColorBlendFactor = VkBlendFactor.VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.colorBlendOp = VkBlendOp.VK_BLEND_OP_ADD;
+        colorBlendAttachment.srcAlphaBlendFactor = VkBlendFactor.VK_BLEND_FACTOR_ONE;
+        colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor.VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        colorBlendAttachment.alphaBlendOp = VkBlendOp.VK_BLEND_OP_ADD;
 
         VkPipelineColorBlendStateCreateInfo colorBlending;
         colorBlending.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

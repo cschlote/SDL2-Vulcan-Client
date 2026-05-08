@@ -16,19 +16,19 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
 
     if (panelRight > panelLeft && panelBottom > panelTop)
     {
-        appendRect(vertices, panelLeft, panelTop, panelRight, panelBottom, 0.0f, [0.06f, 0.08f, 0.11f], extentWidth, extentHeight);
-        appendRect(vertices, panelLeft, panelTop, panelRight, panelTop + 6.0f, 0.0f, [0.20f, 0.48f, 0.88f], extentWidth, extentHeight);
+        appendRect(vertices, panelLeft, panelTop, panelRight, panelBottom, 0.0f, [0.06f, 0.08f, 0.11f, 0.62f], extentWidth, extentHeight);
+        appendRect(vertices, panelLeft, panelTop, panelRight, panelTop + 6.0f, 0.0f, [0.20f, 0.48f, 0.88f, 0.88f], extentWidth, extentHeight);
     }
 
-    appendText(vertices, "HUD TEST", 32.0f, 34.0f, 6.0f, [0.96f, 0.72f, 0.18f], extentWidth, extentHeight);
-    appendText(vertices, format("FPS %.0f", fps), 34.0f, 96.0f, 4.0f, [0.95f, 0.95f, 0.95f], extentWidth, extentHeight);
-    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 142.0f, 5.0f, [0.40f, 0.92f, 0.58f], extentWidth, extentHeight);
-    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 190.0f, 5.0f, [0.38f, 0.80f, 0.98f], extentWidth, extentHeight);
+    appendText(vertices, "HUD TEST", 32.0f, 34.0f, 6.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(vertices, format("FPS %.0f", fps), 34.0f, 96.0f, 4.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 142.0f, 5.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 190.0f, 5.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
 
     return vertices;
 }
 
-private void appendText(ref Vertex[] vertices, string text, float x, float y, float scale, float[3] color, float extentWidth, float extentHeight)
+private void appendText(ref Vertex[] vertices, string text, float x, float y, float scale, float[4] color, float extentWidth, float extentHeight)
 {
     float cursorX = x;
     const advance = scale * 6.0f;
@@ -46,7 +46,7 @@ private void appendText(ref Vertex[] vertices, string text, float x, float y, fl
     }
 }
 
-private void appendGlyph(ref Vertex[] vertices, char ch, float x, float y, float scale, float[3] color, float extentWidth, float extentHeight)
+private void appendGlyph(ref Vertex[] vertices, char ch, float x, float y, float scale, float[4] color, float extentWidth, float extentHeight)
 {
     const rows = glyphRows(ch);
 
@@ -65,7 +65,7 @@ private void appendGlyph(ref Vertex[] vertices, char ch, float x, float y, float
     }
 }
 
-private void appendRect(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float[3] color, float extentWidth, float extentHeight)
+private void appendRect(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float[4] color, float extentWidth, float extentHeight)
 {
     const x0 = toNdcX(left, extentWidth);
     const y0 = toNdcY(top, extentHeight);
