@@ -23,7 +23,7 @@
 		"."
 	],
 	"preBuildCommands": [
-		"rdmd scripts/version.d",
+		"rdmd scripts/git_describe_version.d",
 		"rdmd scripts/compile_shaders.d"
 	]
 }

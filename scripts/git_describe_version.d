@@ -1,4 +1,5 @@
-module git_describe_version;
+#!/usr/bin/env rdmd
+module scripts.git_describe_version;
 
 import std.file : mkdirRecurse, write;
 import std.process : executeShell;
