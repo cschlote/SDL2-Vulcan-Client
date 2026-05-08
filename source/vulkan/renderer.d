@@ -13,6 +13,7 @@ import math.matrix;
 import window;
 import vulkan.device;
 import vulkan.instance;
+import vulkan.polyhedra : MeshData, buildPlatonicSolids;
 import vulkan.pipeline;
 import vulkan.swapchain;
 
@@ -43,8 +44,14 @@ class VulkanRenderer
     private VkCommandBuffer[] commandBuffers;
     private VkFramebuffer[] framebuffers;
 
-    private BufferResource cubeVertexBuffer;
-    private BufferResource cubeIndexBuffer;
+    private MeshData[] shapeMeshes;
+    private size_t currentShapeIndex;
+    private string currentShapeName;
+    private uint currentIndexCount;
+    private size_t maxShapeVertexCount;
+    private size_t maxShapeIndexCount;
+    private BufferResource meshVertexBuffer;
+    private BufferResource meshIndexBuffer;
     private enum maxOverlayVertices = 32_768;
     private BufferResource[maxFramesInFlight] overlayVertexBuffers;
     private uint[maxFramesInFlight] overlayVertexCounts;
@@ -136,6 +143,18 @@ class VulkanRenderer
         swapchain = Swapchain(device.physicalDevice, device.handle, surface, device.queueFamilies.graphicsFamily, device.queueFamilies.presentFamily, width, height);
         pipeline = PipelineResources(device.handle, swapchain.extent, swapchain.imageFormat, device.depthFormat, vertexShaderPath, fragmentShaderPath);
 
+        shapeMeshes = buildPlatonicSolids();
+        currentShapeIndex = 1;
+        currentShapeName = shapeMeshes[currentShapeIndex].name;
+        currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        foreach (mesh; shapeMeshes)
+        {
+            if (mesh.vertices.length > maxShapeVertexCount)
+                maxShapeVertexCount = mesh.vertices.length;
+            if (mesh.indices.length > maxShapeIndexCount)
+                maxShapeIndexCount = mesh.indices.length;
+        }
+
         createCommandPool();
         createDepthResources();
         createGeometryBuffers();
@@ -146,6 +165,7 @@ class VulkanRenderer
         allocateCommandBuffers();
         createSyncObjects();
 
+        updateWindowTitle();
         lastRotationTicks = SDL_GetTicks();
         fpsStartTicks = SDL_GetTicks();
     }
@@ -209,6 +229,10 @@ class VulkanRenderer
             case SDL_EventType.keyDown:
                 if (event.key.scancode == SDL_Scancode.escape)
                     return true;
+                if (!event.key.repeat && (event.key.scancode == SDL_Scancode.equals || event.key.scancode == SDL_Scancode.kpPlus))
+                    advanceShape(1);
+                else if (!event.key.repeat && (event.key.scancode == SDL_Scancode.minus || event.key.scancode == SDL_Scancode.kpMinus))
+                    advanceShape(-1);
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = true;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -300,7 +324,7 @@ class VulkanRenderer
         {
             const fps = cast(double)frameCounter * 1_000.0 / cast(double)(now - fpsStartTicks);
             fpsValue = fps;
-            window.setTitle(format("%s - %.0f FPS", baseTitle, fps));
+            updateWindowTitle();
             fpsStartTicks = now;
             frameCounter = 0;
         }
@@ -381,8 +405,8 @@ class VulkanRenderer
 
     private void createGeometryBuffers()
     {
-        createBuffer(cubeVertexBuffer, cubeVertices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        createBuffer(cubeIndexBuffer, cubeIndices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        createBuffer(meshVertexBuffer, maxShapeVertexCount * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        createBuffer(meshIndexBuffer, maxShapeIndexCount * uint.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
     private void createOverlayBuffers()
@@ -395,8 +419,8 @@ class VulkanRenderer
 
     private void destroyGeometryBuffers()
     {
-        destroyBuffer(cubeVertexBuffer);
-        destroyBuffer(cubeIndexBuffer);
+        destroyBuffer(meshVertexBuffer);
+        destroyBuffer(meshIndexBuffer);
     }
 
     private void destroyOverlayBuffers()
@@ -619,8 +643,12 @@ class VulkanRenderer
         if (rotateDown)
             pitchAngle += rotationSpeed * deltaSeconds;
 
-        Vertex[cubeVertices.length] cubeTransformed;
-        foreach (index, source; cubeVertices)
+        const mesh = shapeMeshes[currentShapeIndex];
+        currentIndexCount = cast(uint)mesh.indices.length;
+
+        Vertex[] meshTransformed;
+        meshTransformed.length = mesh.vertices.length;
+        foreach (index, source; mesh.vertices)
         {
             const scaleFactor = 0.58f;
             const x = source.position[0] * scaleFactor;
@@ -642,12 +670,13 @@ class VulkanRenderer
             const screenX = rotatedX * 0.56f * perspective * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
             const screenY = rotatedY * 0.56f * perspective;
 
-            cubeTransformed[index] = Vertex([screenX, screenY, 0.5f - rotatedDepth * 0.18f], source.color);
+            meshTransformed[index] = Vertex([screenX, screenY, 0.5f - rotatedDepth * 0.18f], source.color);
         }
 
-        memcpy(cubeVertexBuffer.mapped, cubeTransformed.ptr, Vertex.sizeof * cubeTransformed.length);
+        memcpy(meshVertexBuffer.mapped, meshTransformed.ptr, Vertex.sizeof * meshTransformed.length);
+        memcpy(meshIndexBuffer.mapped, mesh.indices.ptr, uint.sizeof * mesh.indices.length);
 
-        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle);
+        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName);
         enforce(overlayVertices.length <= maxOverlayVertices, "HUD overlay vertex limit exceeded.");
         overlayVertexCounts[frameIndex] = cast(uint)overlayVertices.length;
         memcpy(overlayVertexBuffers[frameIndex].mapped, overlayVertices.ptr, Vertex.sizeof * overlayVertices.length);
@@ -690,13 +719,13 @@ class VulkanRenderer
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer[1] cubeVertexBuffers = [cubeVertexBuffer.buffer];
+        VkBuffer[1] meshVertexBuffers = [meshVertexBuffer.buffer];
         VkDeviceSize[1] offsets = [0];
         vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
         vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, cubeVertexBuffers.ptr, offsets.ptr);
-        vkCmdBindIndexBuffer(commandBuffer, cubeIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, cast(uint)cubeIndices.length, 1, 0, 0, 0);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, meshVertexBuffers.ptr, offsets.ptr);
+        vkCmdBindIndexBuffer(commandBuffer, meshIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
 
         const overlayCount = overlayVertexCounts[currentFrame];
         if (overlayCount > 0)
@@ -765,6 +794,32 @@ class VulkanRenderer
         enforce(vkQueueSubmit(device.graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE) == VkResult.VK_SUCCESS, "vkQueueSubmit failed.");
         enforce(vkQueueWaitIdle(device.graphicsQueue) == VkResult.VK_SUCCESS, "vkQueueWaitIdle failed.");
         vkFreeCommandBuffers(device.handle, commandPool, 1, &commandBuffer);
+    }
+
+    private void advanceShape(int direction)
+    {
+        if (shapeMeshes.length == 0)
+            return;
+
+        const shapeCount = shapeMeshes.length;
+        if (direction > 0)
+            currentShapeIndex = (currentShapeIndex + 1) % shapeCount;
+        else if (currentShapeIndex == 0)
+            currentShapeIndex = shapeCount - 1;
+        else
+            currentShapeIndex -= 1;
+
+        currentShapeName = shapeMeshes[currentShapeIndex].name;
+        currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        updateWindowTitle();
+    }
+
+    private void updateWindowTitle()
+    {
+        if (fpsValue > 0)
+            window.setTitle(format("%s - %s - %.0f FPS", baseTitle, currentShapeName, fpsValue));
+        else
+            window.setTitle(format("%s - %s", baseTitle, currentShapeName));
     }
 
     private void createBuffer(T)(ref BufferResource resource, const(T)[] data, VkBufferUsageFlags usage)

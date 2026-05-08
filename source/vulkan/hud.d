@@ -5,7 +5,7 @@ import std.math : PI;
 
 import vulkan.pipeline : Vertex;
 
-Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle)
+Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName)
 {
     Vertex[] vertices;
 
@@ -24,6 +24,8 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
     appendText(vertices, format("FPS %.0f", fps), 34.0f, 96.0f, 4.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
     appendText(vertices, format("YAW %.1f", yawAngle * 180.0f / cast(float)PI), 34.0f, 142.0f, 5.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
     appendText(vertices, format("PITCH %.1f", pitchAngle * 180.0f / cast(float)PI), 34.0f, 190.0f, 5.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, format("SHAPE %s", shapeName), 34.0f, 230.0f, 4.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(vertices, "+ / -", 34.0f, 276.0f, 5.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
 
     return vertices;
 }
@@ -99,6 +101,12 @@ private ubyte[7] glyphRows(char ch)
             return [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
         case '.':
             return [0x00, 0x00, 0x00, 0x00, 0x00, 0x06, 0x06];
+        case '+':
+            return [0x00, 0x04, 0x04, 0x1F, 0x04, 0x04, 0x00];
+        case '-':
+            return [0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00];
+        case '/':
+            return [0x01, 0x02, 0x04, 0x08, 0x10, 0x00, 0x00];
         case '0':
             return [0x0E, 0x11, 0x13, 0x15, 0x19, 0x11, 0x0E];
         case '1':
@@ -121,6 +129,8 @@ private ubyte[7] glyphRows(char ch)
             return [0x0E, 0x11, 0x11, 0x0F, 0x01, 0x01, 0x0E];
         case 'A':
             return [0x0E, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11];
+        case 'B':
+            return [0x1E, 0x11, 0x11, 0x1E, 0x11, 0x11, 0x1E];
         case 'C':
             return [0x0E, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0E];
         case 'D':
