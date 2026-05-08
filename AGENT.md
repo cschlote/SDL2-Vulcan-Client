@@ -37,6 +37,14 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Add or update tests when behavior changes.
 - If a change affects public APIs or build steps, update the documentation alongside the code.
 
+## SDL findings
+
+- Check the installed `bindbc-sdl` binding before using SDL names from online examples; this workspace has SDL3-style naming in a few places.
+- Treat `SDL_KeyboardEvent.repeat` as important for one-shot shortcuts like object switching.
+- For plus/minus shortcuts, support both `equals` / `minus` and keypad `kpPlus` / `kpMinus` scancodes.
+- Keep overlay math and screen-space conversion explicit; Y should be flipped exactly once when converting from window pixels to NDC.
+- Keep SDL/Vulkan resource ownership balanced and deterministic, especially for mapped buffers and window-surface cleanup.
+
 ## Commit workflow
 
 - Keep each commit focused on one coherent change.

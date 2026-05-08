@@ -80,6 +80,17 @@ Keep commits small and single-purpose. Stage only the files that belong to the c
 
 For release commits, move the new note into `CHANGELOG.md` under `## Release <timetag>`, leave `## Unreleased` at the top, generate the timetag with [scripts/release_timetag.d](scripts/release_timetag.d), and tag the commit with a leading `v`.
 
+## SDL Findings
+
+The project surfaced a few SDL-in-D gotchas that are worth keeping in mind:
+
+- `bindbc-sdl` 2.3.5 exposes SDL3-style names in some places, so check the installed binding instead of relying on older SDL2 examples.
+- Keyboard shortcuts should account for both the main keyboard and the keypad; plus/minus live under `equals` / `minus` and `kpPlus` / `kpMinus` here.
+- Use the `repeat` flag on `SDL_KeyboardEvent` for one-shot actions like object switching, otherwise a held key will trigger multiple times.
+- SDL window coordinates start in the upper-left corner, so HUD or overlay code should only flip the Y axis once when converting to NDC.
+- Keep SDL/Vulkan ownership explicit and deterministic: create, map, unmap, destroy, and free buffers in balanced pairs.
+- When writing overlay or HUD text in D, keep the glyph set explicit and add the missing characters early, otherwise simple labels can render incompletely.
+
 ## Notes
 
 - The code is structured to keep resource ownership explicit and cleanup deterministic.
