@@ -16,12 +16,14 @@ struct PipelineResources
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+    VkPipeline linePipeline = VK_NULL_HANDLE;
 
     this(VkDevice device, VkExtent2D extent, VkFormat colorFormat, VkFormat depthFormat, string vertexShaderPath, string fragmentShaderPath)
     {
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, true, graphicsPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, linePipeline);
     }
 
     void destroy(VkDevice device)
@@ -30,6 +32,12 @@ struct PipelineResources
         {
             vkDestroyPipeline(device, graphicsPipeline, null);
             graphicsPipeline = VK_NULL_HANDLE;
+        }
+
+        if (linePipeline != VK_NULL_HANDLE)
+        {
+            vkDestroyPipeline(device, linePipeline, null);
+            linePipeline = VK_NULL_HANDLE;
         }
 
         if (pipelineLayout != VK_NULL_HANDLE)
@@ -124,7 +132,7 @@ private:
         enforce(vkCreateRenderPass(device, &createInfo, null, &renderPass) == VkResult.VK_SUCCESS, "vkCreateRenderPass failed.");
     }
 
-    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath)
+    void createGraphicsPipeline(VkDevice device, VkExtent2D extent, string vertexShaderPath, string fragmentShaderPath, VkPrimitiveTopology topology, bool depthTestEnable, bool depthWriteEnable, bool depthBiasEnable, ref VkPipeline pipeline)
     {
         auto vertexShaderCode = cast(ubyte[])read(vertexShaderPath);
         auto fragmentShaderCode = cast(ubyte[])read(fragmentShaderPath);
@@ -174,7 +182,7 @@ private:
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly;
         inputAssembly.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-        inputAssembly.topology = VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        inputAssembly.topology = topology;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
 
         VkViewport viewport;
@@ -203,7 +211,10 @@ private:
         rasterizer.lineWidth = 1;
         rasterizer.cullMode = VkCullModeFlagBits.VK_CULL_MODE_NONE;
         rasterizer.frontFace = VkFrontFace.VK_FRONT_FACE_COUNTER_CLOCKWISE;
-        rasterizer.depthBiasEnable = VK_FALSE;
+        rasterizer.depthBiasEnable = depthBiasEnable ? VK_TRUE : VK_FALSE;
+        rasterizer.depthBiasConstantFactor = depthBiasEnable ? 1.0f : 0.0f;
+        rasterizer.depthBiasClamp = 0.0f;
+        rasterizer.depthBiasSlopeFactor = depthBiasEnable ? 1.0f : 0.0f;
 
         VkPipelineMultisampleStateCreateInfo multisampling;
         multisampling.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -212,9 +223,9 @@ private:
 
         VkPipelineDepthStencilStateCreateInfo depthStencil;
         depthStencil.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-        depthStencil.depthTestEnable = VK_TRUE;
-        depthStencil.depthWriteEnable = VK_TRUE;
-        depthStencil.depthCompareOp = VkCompareOp.VK_COMPARE_OP_LESS;
+        depthStencil.depthTestEnable = depthTestEnable ? VK_TRUE : VK_FALSE;
+        depthStencil.depthWriteEnable = depthWriteEnable ? VK_TRUE : VK_FALSE;
+        depthStencil.depthCompareOp = VkCompareOp.VK_COMPARE_OP_LESS_OR_EQUAL;
         depthStencil.depthBoundsTestEnable = VK_FALSE;
         depthStencil.stencilTestEnable = VK_FALSE;
 
@@ -260,7 +271,7 @@ private:
         pipelineInfo.renderPass = renderPass;
         pipelineInfo.subpass = 0;
 
-        enforce(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &graphicsPipeline) == VkResult.VK_SUCCESS, "vkCreateGraphicsPipelines failed.");
+        enforce(vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, null, &pipeline) == VkResult.VK_SUCCESS, "vkCreateGraphicsPipelines failed.");
     }
 
     VkShaderModule createShaderModule(VkDevice device, const(ubyte)[] code)

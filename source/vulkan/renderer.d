@@ -5,7 +5,7 @@ import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
 import std.format : format;
-import std.math : PI;
+import std.math : PI, cos, sin;
 import std.string : fromStringz;
 
 import math.matrix;
@@ -42,8 +42,8 @@ class VulkanRenderer
     private VkCommandBuffer[] commandBuffers;
     private VkFramebuffer[] framebuffers;
 
-    private BufferResource vertexBuffer;
-    private BufferResource indexBuffer;
+    private BufferResource edgeVertexBuffer;
+    private BufferResource edgeIndexBuffer;
     private BufferResource[maxFramesInFlight] uniformBuffers;
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
@@ -60,18 +60,21 @@ class VulkanRenderer
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
-    private enum Vertex[] vertices = [
-        Vertex([ 0,  1,  0], [1, 0, 0]),
-        Vertex([-1, -1,  1], [0, 1, 0]),
-        Vertex([ 1, -1,  1], [0, 0, 1]),
-        Vertex([ 0, -1, -1], [1, 1, 0]),
+    private enum Vertex[] edgeVertices = [
+        Vertex([-1, -1, -1], [0.0f, 0.0f, 0.0f]),
+        Vertex([ 1, -1, -1], [0.0f, 0.0f, 0.0f]),
+        Vertex([ 1,  1, -1], [0.0f, 0.0f, 0.0f]),
+        Vertex([-1,  1, -1], [0.0f, 0.0f, 0.0f]),
+        Vertex([-1, -1,  1], [0.0f, 0.0f, 0.0f]),
+        Vertex([ 1, -1,  1], [0.0f, 0.0f, 0.0f]),
+        Vertex([ 1,  1,  1], [0.0f, 0.0f, 0.0f]),
+        Vertex([-1,  1,  1], [0.0f, 0.0f, 0.0f]),
     ];
 
-    private enum uint[] indices = [
-        0, 1, 2,
-        0, 2, 3,
-        0, 3, 1,
-        1, 3, 2,
+    private enum uint[] edgeIndices = [
+        0, 1, 1, 2, 2, 3, 3, 0,
+        4, 5, 5, 6, 6, 7, 7, 4,
+        0, 4, 1, 5, 2, 6, 3, 7,
     ];
 
     this(SdlWindow* window, string buildVersion)
@@ -194,7 +197,7 @@ class VulkanRenderer
             vkWaitForFences(device.handle, 1, &imagesInFlight[imageIndex], VK_TRUE, ulong.max);
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
-        updateUniformBuffer(currentFrame);
+        updateGeometryBuffer(currentFrame);
 
         vkResetFences(device.handle, 1, &inFlightFences[currentFrame]);
         vkResetCommandBuffer(commandBuffers[imageIndex], 0);
@@ -320,14 +323,14 @@ class VulkanRenderer
 
     private void createGeometryBuffers()
     {
-        createBuffer(vertexBuffer, vertices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        createBuffer(indexBuffer, indices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        createBuffer(edgeVertexBuffer, edgeVertices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        createBuffer(edgeIndexBuffer, edgeIndices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
     private void destroyGeometryBuffers()
     {
-        destroyBuffer(vertexBuffer);
-        destroyBuffer(indexBuffer);
+        destroyBuffer(edgeVertexBuffer);
+        destroyBuffer(edgeIndexBuffer);
     }
 
     private void createUniformBuffers()
@@ -522,19 +525,36 @@ class VulkanRenderer
         }
     }
 
-    private void updateUniformBuffer(size_t frameIndex)
+    private void updateGeometryBuffer(size_t frameIndex)
     {
         const now = cast(float)SDL_GetTicks() / 1_000.0f;
-        const model = multiply(
-            translation(Vec3(0, 0, -4.0f)),
-            multiply(
-                rotationY(now * 0.35f),
-                multiply(rotationX(now * 0.2f), scale(Vec3(1.4f, 1.4f, 1.4f)))));
-        const view = lookAt(Vec3(0, 0.25f, 0), Vec3(0, 0, -4), Vec3(0, 1, 0));
-        const projection = perspective(cast(float)PI / 3.0f, cast(float)swapchain.extent.width / cast(float)swapchain.extent.height, 0.1f, 100.0f);
-        const mvp = multiply(projection, multiply(view, model));
+        const angleY = now * 0.45f;
+        const angleX = now * 0.25f;
+        const aspectCorrection = cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
+        Vertex[edgeVertices.length] edgeTransformed;
+        foreach (index, source; edgeVertices)
+        {
+            const scaleFactor = 0.85f;
+            const x = source.position[0] * scaleFactor;
+            const y = source.position[1] * scaleFactor;
+            const z = source.position[2] * scaleFactor;
 
-        memcpy(uniformBuffers[frameIndex].mapped, mvp.m.ptr, Mat4.sizeof);
+            const cy = cos(angleY);
+            const sy = sin(angleY);
+            const cx = cos(angleX);
+            const sx = sin(angleX);
+
+            const rotatedX = x * cy + z * sy;
+            const rotatedZ = -x * sy + z * cy;
+            const rotatedY = y * cx - rotatedZ * sx;
+
+            const screenX = rotatedX * 0.8f * aspectCorrection;
+            const screenY = rotatedY * 0.8f;
+
+            edgeTransformed[index] = Vertex([screenX, screenY, 0.0f], [0.0f, 0.0f, 0.0f]);
+        }
+
+        memcpy(edgeVertexBuffer.mapped, edgeTransformed.ptr, Vertex.sizeof * edgeTransformed.length);
     }
 
     private void recordCommandBuffer(VkCommandBuffer commandBuffer, uint imageIndex)
@@ -548,8 +568,6 @@ class VulkanRenderer
         clearValues[0].color.float32[1] = 0.12f;
         clearValues[0].color.float32[2] = 0.18f;
         clearValues[0].color.float32[3] = 1.0f;
-        clearValues[1].depthStencil.depth = 1.0f;
-        clearValues[1].depthStencil.stencil = 0;
 
         VkRenderPassBeginInfo renderPassInfo;
         renderPassInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -560,8 +578,6 @@ class VulkanRenderer
         renderPassInfo.pClearValues = clearValues.ptr;
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents.VK_SUBPASS_CONTENTS_INLINE);
-        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
-
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
@@ -576,12 +592,12 @@ class VulkanRenderer
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer[1] vertexBuffers = [vertexBuffer.buffer];
+        VkBuffer[1] edgeVertexBuffers = [edgeVertexBuffer.buffer];
         VkDeviceSize[1] offsets = [0];
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.ptr, offsets.ptr);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
-        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
-        vkCmdDrawIndexed(commandBuffer, cast(uint)indices.length, 1, 0, 0, 0);
+        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.linePipeline);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, edgeVertexBuffers.ptr, offsets.ptr);
+        vkCmdBindIndexBuffer(commandBuffer, edgeIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, cast(uint)edgeIndices.length, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
