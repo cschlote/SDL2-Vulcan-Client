@@ -22,7 +22,7 @@ struct PipelineResources
     {
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, true, graphicsPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, true, true, false, graphicsPipeline);
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_LINE_LIST, false, false, false, linePipeline);
     }
 

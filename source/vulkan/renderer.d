@@ -42,8 +42,8 @@ class VulkanRenderer
     private VkCommandBuffer[] commandBuffers;
     private VkFramebuffer[] framebuffers;
 
-    private BufferResource edgeVertexBuffer;
-    private BufferResource edgeIndexBuffer;
+    private BufferResource cubeVertexBuffer;
+    private BufferResource cubeIndexBuffer;
     private BufferResource[maxFramesInFlight] uniformBuffers;
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
@@ -60,21 +60,45 @@ class VulkanRenderer
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
-    private enum Vertex[] edgeVertices = [
-        Vertex([-1, -1, -1], [0.0f, 0.0f, 0.0f]),
-        Vertex([ 1, -1, -1], [0.0f, 0.0f, 0.0f]),
-        Vertex([ 1,  1, -1], [0.0f, 0.0f, 0.0f]),
-        Vertex([-1,  1, -1], [0.0f, 0.0f, 0.0f]),
-        Vertex([-1, -1,  1], [0.0f, 0.0f, 0.0f]),
-        Vertex([ 1, -1,  1], [0.0f, 0.0f, 0.0f]),
-        Vertex([ 1,  1,  1], [0.0f, 0.0f, 0.0f]),
-        Vertex([-1,  1,  1], [0.0f, 0.0f, 0.0f]),
+    private enum Vertex[] cubeVertices = [
+        Vertex([-1, -1,  1], [0.95f, 0.25f, 0.25f]),
+        Vertex([ 1, -1,  1], [0.95f, 0.25f, 0.25f]),
+        Vertex([ 1,  1,  1], [0.95f, 0.25f, 0.25f]),
+        Vertex([-1,  1,  1], [0.95f, 0.25f, 0.25f]),
+
+        Vertex([ 1, -1, -1], [0.25f, 0.85f, 0.35f]),
+        Vertex([-1, -1, -1], [0.25f, 0.85f, 0.35f]),
+        Vertex([-1,  1, -1], [0.25f, 0.85f, 0.35f]),
+        Vertex([ 1,  1, -1], [0.25f, 0.85f, 0.35f]),
+
+        Vertex([-1, -1, -1], [0.25f, 0.45f, 0.95f]),
+        Vertex([-1, -1,  1], [0.25f, 0.45f, 0.95f]),
+        Vertex([-1,  1,  1], [0.25f, 0.45f, 0.95f]),
+        Vertex([-1,  1, -1], [0.25f, 0.45f, 0.95f]),
+
+        Vertex([ 1, -1,  1], [0.95f, 0.85f, 0.25f]),
+        Vertex([ 1, -1, -1], [0.95f, 0.85f, 0.25f]),
+        Vertex([ 1,  1, -1], [0.95f, 0.85f, 0.25f]),
+        Vertex([ 1,  1,  1], [0.95f, 0.85f, 0.25f]),
+
+        Vertex([-1,  1,  1], [0.80f, 0.35f, 0.95f]),
+        Vertex([ 1,  1,  1], [0.80f, 0.35f, 0.95f]),
+        Vertex([ 1,  1, -1], [0.80f, 0.35f, 0.95f]),
+        Vertex([-1,  1, -1], [0.80f, 0.35f, 0.95f]),
+
+        Vertex([-1, -1, -1], [0.25f, 0.90f, 0.90f]),
+        Vertex([ 1, -1, -1], [0.25f, 0.90f, 0.90f]),
+        Vertex([ 1, -1,  1], [0.25f, 0.90f, 0.90f]),
+        Vertex([-1, -1,  1], [0.25f, 0.90f, 0.90f]),
     ];
 
-    private enum uint[] edgeIndices = [
-        0, 1, 1, 2, 2, 3, 3, 0,
-        4, 5, 5, 6, 6, 7, 7, 4,
-        0, 4, 1, 5, 2, 6, 3, 7,
+    private enum uint[] cubeIndices = [
+        0, 1, 2, 0, 2, 3,
+        4, 5, 6, 4, 6, 7,
+        8, 9, 10, 8, 10, 11,
+        12, 13, 14, 12, 14, 15,
+        16, 17, 18, 16, 18, 19,
+        20, 21, 22, 20, 22, 23,
     ];
 
     this(SdlWindow* window, string buildVersion)
@@ -323,14 +347,14 @@ class VulkanRenderer
 
     private void createGeometryBuffers()
     {
-        createBuffer(edgeVertexBuffer, edgeVertices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        createBuffer(edgeIndexBuffer, edgeIndices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        createBuffer(cubeVertexBuffer, cubeVertices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        createBuffer(cubeIndexBuffer, cubeIndices, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
     private void destroyGeometryBuffers()
     {
-        destroyBuffer(edgeVertexBuffer);
-        destroyBuffer(edgeIndexBuffer);
+        destroyBuffer(cubeVertexBuffer);
+        destroyBuffer(cubeIndexBuffer);
     }
 
     private void createUniformBuffers()
@@ -527,14 +551,16 @@ class VulkanRenderer
 
     private void updateGeometryBuffer(size_t frameIndex)
     {
-        const now = cast(float)SDL_GetTicks() / 1_000.0f;
-        const angleY = now * 0.45f;
-        const angleX = now * 0.25f;
-        const aspectCorrection = cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
-        Vertex[edgeVertices.length] edgeTransformed;
-        foreach (index, source; edgeVertices)
+        Mat4 identity = Mat4.identity();
+        memcpy(uniformBuffers[frameIndex].mapped, identity.m.ptr, Mat4.sizeof);
+
+        const angleY = 0.22f;
+        const angleX = 0.14f;
+
+        Vertex[cubeVertices.length] cubeTransformed;
+        foreach (index, source; cubeVertices)
         {
-            const scaleFactor = 0.85f;
+            const scaleFactor = 0.58f;
             const x = source.position[0] * scaleFactor;
             const y = source.position[1] * scaleFactor;
             const z = source.position[2] * scaleFactor;
@@ -547,14 +573,15 @@ class VulkanRenderer
             const rotatedX = x * cy + z * sy;
             const rotatedZ = -x * sy + z * cy;
             const rotatedY = y * cx - rotatedZ * sx;
+            const rotatedDepth = y * sx + rotatedZ * cx;
 
-            const screenX = rotatedX * 0.8f * aspectCorrection;
-            const screenY = rotatedY * 0.8f;
+            const screenX = rotatedX * 0.56f * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
+            const screenY = rotatedY * 0.56f;
 
-            edgeTransformed[index] = Vertex([screenX, screenY, 0.0f], [0.0f, 0.0f, 0.0f]);
+            cubeTransformed[index] = Vertex([screenX, screenY, rotatedDepth * 0.18f + 0.5f], source.color);
         }
 
-        memcpy(edgeVertexBuffer.mapped, edgeTransformed.ptr, Vertex.sizeof * edgeTransformed.length);
+        memcpy(cubeVertexBuffer.mapped, cubeTransformed.ptr, Vertex.sizeof * cubeTransformed.length);
     }
 
     private void recordCommandBuffer(VkCommandBuffer commandBuffer, uint imageIndex)
@@ -568,6 +595,8 @@ class VulkanRenderer
         clearValues[0].color.float32[1] = 0.12f;
         clearValues[0].color.float32[2] = 0.18f;
         clearValues[0].color.float32[3] = 1.0f;
+        clearValues[1].depthStencil.depth = 1.0f;
+        clearValues[1].depthStencil.stencil = 0;
 
         VkRenderPassBeginInfo renderPassInfo;
         renderPassInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -592,12 +621,13 @@ class VulkanRenderer
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer[1] edgeVertexBuffers = [edgeVertexBuffer.buffer];
+        VkBuffer[1] cubeVertexBuffers = [cubeVertexBuffer.buffer];
         VkDeviceSize[1] offsets = [0];
-        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.linePipeline);
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, edgeVertexBuffers.ptr, offsets.ptr);
-        vkCmdBindIndexBuffer(commandBuffer, edgeIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(commandBuffer, cast(uint)edgeIndices.length, 1, 0, 0, 0);
+        vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.graphicsPipeline);
+        vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, cubeVertexBuffers.ptr, offsets.ptr);
+        vkCmdBindIndexBuffer(commandBuffer, cubeIndexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(commandBuffer, cast(uint)cubeIndices.length, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
