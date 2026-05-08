@@ -27,6 +27,7 @@ struct BufferResource
 class VulkanRenderer
 {
     private SdlWindow* window;
+    private string baseTitle;
     private VulkanInstance instance;
     private VkSurfaceKHR surface = VK_NULL_HANDLE;
     private VulkanDevice device;
@@ -79,10 +80,11 @@ class VulkanRenderer
         4, 5, 1, 1, 0, 4,
     ];
 
-    this(SdlWindow* window)
+    this(SdlWindow* window, string buildVersion)
     {
         this.window = window;
-        window.setTitle("SDL2 Vulkan Demo");
+        baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
+        window.setTitle(baseTitle);
 
         instance = VulkanInstance(window.handle);
         enforce(window.createVulkanSurface(instance.handle, surface), "SDL_Vulkan_CreateSurface failed: " ~ fromStringz(SDL_GetError()).idup);
@@ -243,7 +245,7 @@ class VulkanRenderer
         if (now - fpsStartTicks >= 1_000)
         {
             const fps = cast(double)frameCounter * 1_000.0 / cast(double)(now - fpsStartTicks);
-            window.setTitle(format("SDL2 Vulkan Demo - %.0f FPS", fps));
+            window.setTitle(format("%s - %.0f FPS", baseTitle, fps));
             fpsStartTicks = now;
             frameCounter = 0;
         }

@@ -4,6 +4,8 @@
 		"bindbc-common": "1.0.5",
 		"bindbc-loader": "1.1.5",
 		"bindbc-sdl": "2.3.5",
-		"bindbc-vulkan": "0.0.1"
+		"bindbc-vulkan": "0.0.1",
+		"silly": "1.2.0-dev.2",
+		"va_toolbox": "0.4.0"
 	}
 }

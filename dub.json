@@ -1,14 +1,21 @@
 {
-    "name": "sdl2-vulcan-client",
-    "description": "Minimal SDL and Vulkan 3D demo in D",
-    "authors": ["GitHub Copilot"],
-    "license": "BSL-1.0",
-    "targetType": "executable",
-    "targetPath": "bin",
-    "sourcePaths": ["source"],
-    "importPaths": ["source"],
-    "dependencies": {
-        "bindbc-sdl": "~>2.3.5",
-        "bindbc-vulkan": "~>0.0.1"
-    }
+	"authors": [
+		"GitHub Copilot"
+	],
+	"license": "BSL-1.0",
+	"targetPath": "bin",
+	"name": "sdl2-vulcan-client",
+	"sourcePaths": [
+		"source"
+	],
+	"description": "Minimal SDL and Vulkan 3D demo in D",
+	"dependencies": {
+		"bindbc-vulkan": "~>0.0.1",
+		"va_toolbox": "~>0.4.0",
+		"bindbc-sdl": "~>2.3.5"
+	},
+	"targetType": "executable",
+	"importPaths": [
+		"source"
+	]
 }

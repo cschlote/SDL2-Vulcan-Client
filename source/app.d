@@ -8,6 +8,7 @@ import std.string : fromStringz;
 
 import window;
 import vulkan.renderer : VulkanRenderer;
+import version_info : getGitDescribeVersion;
 
 private bool loadSdlBindings()
 {
@@ -50,11 +51,14 @@ int runApplication(string[] args)
     int exitCode = 0;
     try
     {
-        auto window = SdlWindow("SDL2 Vulkan Demo", 1280, 720);
+        const buildVersion = getGitDescribeVersion();
+        stderr.writeln("Build version: ", buildVersion);
+
+        auto window = SdlWindow("SDL2 Vulkan Demo " ~ buildVersion, 1280, 720);
         scope (exit)
             window.destroy();
 
-        auto renderer = new VulkanRenderer(&window);
+        auto renderer = new VulkanRenderer(&window, buildVersion);
         scope (exit)
             renderer.destroy();
 
