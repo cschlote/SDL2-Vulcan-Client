@@ -37,6 +37,15 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Add or update tests when behavior changes.
 - If a change affects public APIs or build steps, update the documentation alongside the code.
 
+## Patchstack and commits
+
+- Organize larger changes as a clean patchstack where each commit covers one coherent technical change.
+- Keep related edits together in the same commit instead of splitting a single behavioral change across multiple commits.
+- Write commit summaries and descriptions in technical English.
+- Explain both what changed and why it was necessary.
+- When a commit contains more than a trivial change, add a fuller body that gives the relevant technical context, tradeoffs, and any implementation notes needed for review.
+- Prefer a linear sequence of self-contained commits that can be reviewed and reverted independently.
+
 # Release guidelines
 
 - Changes should be merged through merge requests and semi-linear history.
