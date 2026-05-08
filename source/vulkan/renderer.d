@@ -61,23 +61,17 @@ class VulkanRenderer
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
     private enum Vertex[] vertices = [
-        Vertex([-1, -1,  1], [1, 0, 0]),
-        Vertex([ 1, -1,  1], [0, 1, 0]),
-        Vertex([ 1,  1,  1], [0, 0, 1]),
-        Vertex([-1,  1,  1], [1, 1, 0]),
-        Vertex([-1, -1, -1], [1, 0, 1]),
-        Vertex([ 1, -1, -1], [0, 1, 1]),
-        Vertex([ 1,  1, -1], [1, 1, 1]),
-        Vertex([-1,  1, -1], [0.1f, 0.1f, 0.1f]),
+        Vertex([ 0,  1,  0], [1, 0, 0]),
+        Vertex([-1, -1,  1], [0, 1, 0]),
+        Vertex([ 1, -1,  1], [0, 0, 1]),
+        Vertex([ 0, -1, -1], [1, 1, 0]),
     ];
 
     private enum uint[] indices = [
-        0, 1, 2, 2, 3, 0,
-        1, 5, 6, 6, 2, 1,
-        5, 4, 7, 7, 6, 5,
-        4, 0, 3, 3, 7, 4,
-        3, 2, 6, 6, 7, 3,
-        4, 5, 1, 1, 0, 4,
+        0, 1, 2,
+        0, 2, 3,
+        0, 3, 1,
+        1, 3, 2,
     ];
 
     this(SdlWindow* window, string buildVersion)
@@ -532,11 +526,11 @@ class VulkanRenderer
     {
         const now = cast(float)SDL_GetTicks() / 1_000.0f;
         const model = multiply(
-            translation(Vec3(0, 0, -2.8f)),
+            translation(Vec3(0, 0, -4.0f)),
             multiply(
-                rotationY(now),
-                multiply(rotationX(now * 0.65f), scale(Vec3(1.8f, 1.8f, 1.8f)))));
-        const view = Mat4.identity();
+                rotationY(now * 0.35f),
+                multiply(rotationX(now * 0.2f), scale(Vec3(1.4f, 1.4f, 1.4f)))));
+        const view = lookAt(Vec3(0, 0.25f, 0), Vec3(0, 0, -4), Vec3(0, 1, 0));
         const projection = perspective(cast(float)PI / 3.0f, cast(float)swapchain.extent.width / cast(float)swapchain.extent.height, 0.1f, 100.0f);
         const mvp = multiply(projection, multiply(view, model));
 
@@ -582,8 +576,12 @@ class VulkanRenderer
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
+        VkBuffer[1] vertexBuffers = [vertexBuffer.buffer];
+        VkDeviceSize[1] offsets = [0];
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.ptr, offsets.ptr);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
-        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, cast(uint)indices.length, 1, 0, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
