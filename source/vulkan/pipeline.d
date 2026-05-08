@@ -150,27 +150,12 @@ private:
         shaderStages[1].module_ = fragmentShaderModule;
         shaderStages[1].pName = entryPoint;
 
-        VkVertexInputBindingDescription bindingDescription;
-        bindingDescription.binding = 0;
-        bindingDescription.stride = Vertex.sizeof;
-        bindingDescription.inputRate = VkVertexInputRate.VK_VERTEX_INPUT_RATE_VERTEX;
-
-        VkVertexInputAttributeDescription[2] attributes;
-        attributes[0].binding = 0;
-        attributes[0].location = 0;
-        attributes[0].format = VkFormat.VK_FORMAT_R32G32B32_SFLOAT;
-        attributes[0].offset = Vertex.position.offsetof;
-        attributes[1].binding = 0;
-        attributes[1].location = 1;
-        attributes[1].format = VkFormat.VK_FORMAT_R32G32B32_SFLOAT;
-        attributes[1].offset = Vertex.color.offsetof;
-
         VkPipelineVertexInputStateCreateInfo vertexInputInfo;
         vertexInputInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-        vertexInputInfo.vertexBindingDescriptionCount = 1;
-        vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
-        vertexInputInfo.vertexAttributeDescriptionCount = cast(uint)attributes.length;
-        vertexInputInfo.pVertexAttributeDescriptions = attributes.ptr;
+        vertexInputInfo.vertexBindingDescriptionCount = 0;
+        vertexInputInfo.pVertexBindingDescriptions = null;
+        vertexInputInfo.vertexAttributeDescriptionCount = 0;
+        vertexInputInfo.pVertexAttributeDescriptions = null;
 
         VkPipelineInputAssemblyStateCreateInfo inputAssembly;
         inputAssembly.sType = VkStructureType.VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

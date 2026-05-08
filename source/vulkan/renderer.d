@@ -582,12 +582,8 @@ class VulkanRenderer
         vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
         vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-        VkBuffer[1] vertexBuffers = [vertexBuffer.buffer];
-        VkDeviceSize[1] offsets = [0];
-        vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers.ptr, offsets.ptr);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.buffer, 0, VkIndexType.VK_INDEX_TYPE_UINT32);
         vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &descriptorSets[currentFrame], 0, null);
-        vkCmdDrawIndexed(commandBuffer, cast(uint)indices.length, 1, 0, 0, 0);
+        vkCmdDraw(commandBuffer, 3, 1, 0, 0);
 
         vkCmdEndRenderPass(commandBuffer);
         enforce(vkEndCommandBuffer(commandBuffer) == VkResult.VK_SUCCESS, "vkEndCommandBuffer failed.");
