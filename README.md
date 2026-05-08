@@ -26,6 +26,7 @@ The project is intentionally small and direct:
 - [source/vulkan/](source/vulkan) contains the Vulkan instance, device, swapchain, pipeline, and renderer code.
 - [shaders/](shaders) contains the GLSL sources used by the pipeline.
 - [scripts/](scripts) contains small D helpers for the Git-describe version string and the release timetag.
+- [build/](build) contains generated build data such as `build/git-describe.txt`, compiled shaders in `build/shaders/`, and the application binary in `build/bin/`.
 
 ## Requirements
 
@@ -43,35 +44,35 @@ dub build
 ```
 
 The current workspace compiles the application successfully with `dub build`.
+The build generates `build/git-describe.txt` and compiles the shaders into `build/shaders/` first, then writes the executable to `build/bin/`.
 
 ## Shader Compilation
 
-The renderer loads SPIR-V shader binaries from `shaders/main.vert.spv` and `shaders/main.frag.spv`. These files are not generated automatically by DUB, so compile the GLSL sources before running the application:
+The renderer loads SPIR-V shader binaries from `build/shaders/main.vert.spv` and `build/shaders/main.frag.spv`. These files are generated automatically by the pre-build helper, but you can also run the helper directly if needed:
 
 ```bash
-glslangValidator -V shaders/main.vert -o shaders/main.vert.spv
-glslangValidator -V shaders/main.frag -o shaders/main.frag.spv
+rdmd scripts/compile_shaders.d
 ```
 
-If you prefer a different GLSL compiler, keep the output paths aligned with the renderer configuration.
+If you prefer a different GLSL compiler, keep the output paths aligned with the renderer configuration and still write to `build/shaders/`.
 
-The executable expects those paths to exist relative to the repository root. Run the binary from the project directory, not from inside `bin/`, unless you adjust the paths in the renderer.
+The executable expects those paths to exist relative to the repository root. Run the binary from the project directory, not from inside `build/bin/`, unless you adjust the paths in the renderer.
 
 ## Run
 
 After building the binary and compiling the shaders, run the executable from the repository root:
 
 ```bash
-./bin/sdl2-vulcan-client
+./build/bin/sdl2-vulcan-client
 ```
 
 On startup the window should appear, the scene should animate, and the title bar will show a simple FPS readout. If the shader files are missing, the program exits immediately with a file-not-found error.
 
 ## Versioning
 
-The application prints the current Git describe string at startup and includes it in the window title. That value comes from `git describe --tag --always --long`, so a build at `v26.19.0000-2-gbfd646b` will report that exact version string.
+The application prints the current Git describe string at startup and includes it in the window title. The value is read from `build/git-describe.txt`, which is generated from `git describe --tag --always --long` before the build. A build at `v26.19.0000-2-gbfd646b` will therefore report that exact version string.
 
-For release tagging, use the helper scripts in [scripts/](scripts): [scripts/version.d](scripts/version.d) prints the Git-describe version in the shell, and [scripts/release_timetag.d](scripts/release_timetag.d) derives the release timetag from `va_toolbox.timetags.getTimeTagString()`.
+For release tagging, use the helper scripts in [scripts/](scripts): [scripts/version.d](scripts/version.d) writes `build/git-describe.txt` and logs the generated Git-describe version in the shell, [scripts/compile_shaders.d](scripts/compile_shaders.d) compiles the GLSL shaders into `build/shaders/`, and [scripts/release_timetag.d](scripts/release_timetag.d) derives the release timetag from `va_toolbox.timetags.getTimeTagString()`.
 
 ## Notes
 

@@ -3,7 +3,7 @@
 		"GitHub Copilot"
 	],
 	"license": "BSL-1.0",
-	"targetPath": "bin",
+	"targetPath": "build/bin",
 	"name": "sdl2-vulcan-client",
 	"sourcePaths": [
 		"source"
@@ -16,6 +16,14 @@
 	},
 	"targetType": "executable",
 	"importPaths": [
+		".",
 		"source"
+	],
+	"stringImportPaths": [
+		"."
+	],
+	"preBuildCommands": [
+		"rdmd scripts/version.d",
+		"rdmd scripts/compile_shaders.d"
 	]
 }

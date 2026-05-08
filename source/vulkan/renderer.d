@@ -57,8 +57,8 @@ class VulkanRenderer
     private uint frameCounter;
     private ulong fpsStartTicks;
 
-    private enum vertexShaderPath = "shaders/main.vert.spv";
-    private enum fragmentShaderPath = "shaders/main.frag.spv";
+    private enum vertexShaderPath = "build/shaders/main.vert.spv";
+    private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
     private enum Vertex[] vertices = [
         Vertex([-1, -1,  1], [1, 0, 0]),
