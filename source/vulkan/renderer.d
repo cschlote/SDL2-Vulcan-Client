@@ -532,11 +532,11 @@ class VulkanRenderer
     {
         const now = cast(float)SDL_GetTicks() / 1_000.0f;
         const model = multiply(
-            translation(Vec3(0, 0, -3.5f)),
+            translation(Vec3(0, 0, -2.8f)),
             multiply(
                 rotationY(now),
-                multiply(rotationX(now * 0.65f), scale(Vec3(1.5f, 1.5f, 1.5f)))));
-        const view = lookAt(Vec3(3.2f, 2.2f, 4.0f), Vec3(0, 0, 0), Vec3(0, 1, 0));
+                multiply(rotationX(now * 0.65f), scale(Vec3(1.8f, 1.8f, 1.8f)))));
+        const view = Mat4.identity();
         const projection = perspective(cast(float)PI / 3.0f, cast(float)swapchain.extent.width / cast(float)swapchain.extent.height, 0.1f, 100.0f);
         const mvp = multiply(projection, multiply(view, model));
 
