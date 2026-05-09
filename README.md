@@ -1,6 +1,6 @@
 # SDL2 Vulkan Demo in D
 
-A minimal but clean Vulkan-based 3D demo written in D. The application opens a resizable SDL window, creates a Vulkan device and swapchain, and renders a small animated 3D scene so it is immediately visible that the rendering path works.
+A minimal but clean Vulkan-based 3D demo written in D. The application opens a resizable SDL window, creates a Vulkan device and swapchain, renders a small animated 3D scene, and overlays a native-resolution 2D interface above it.
 
 The project is intentionally small and direct:
 
@@ -8,13 +8,14 @@ The project is intentionally small and direct:
 - SDL is used for the window, event loop, and Vulkan surface integration.
 - Vulkan handles all rendering.
 - The math layer is hand-written and kept minimal.
-- Shaders are stored as GLSL sources and loaded as SPIR-V at runtime.
+- Shaders are written as GLSL sources, pre-compiled to SPIR-V during the build, and loaded from `build/shaders/` at runtime.
 
 ## What it shows
 
 - A resizable window with a Vulkan swapchain.
 - A simple animated indexed mesh.
 - Per-frame uniform updates for model, view, and projection matrices.
+- A native-resolution overlay with translucent panels and bitmap text.
 - Basic depth buffering and explicit GPU resource cleanup.
 
 ## Repository Layout
@@ -23,7 +24,7 @@ The project is intentionally small and direct:
 - [source/app.d](source/app.d) handles bootstrap and shutdown.
 - [source/window.d](source/window.d) wraps SDL window ownership and Vulkan surface creation.
 - [source/math/matrix.d](source/math/matrix.d) contains the small matrix/vector helper layer.
-- [source/vulkan/](source/vulkan) contains the Vulkan instance, device, swapchain, pipeline, and renderer code.
+- [source/vulkan/](source/vulkan) contains the Vulkan instance, device, swapchain, pipeline, renderer, overlay, and mesh-generation code.
 - [shaders/](shaders) contains the GLSL sources used by the pipeline.
 - [scripts/](scripts) contains small D helpers for the Git-describe version string and the release timetag.
 - [build/](build) contains generated build data such as `build/git-describe.txt`, compiled shaders in `build/shaders/`, and the application binary in `build/bin/`.
@@ -66,13 +67,27 @@ After building the binary and compiling the shaders, run the executable from the
 ./build/bin/sdl2-vulcan-client
 ```
 
-On startup the window should appear, the scene should animate, and the title bar will show a simple FPS readout. If the shader files are missing, the program exits immediately with a file-not-found error.
+On startup the window should appear, the scene should animate, and the title bar will show FPS, camera yaw and pitch, the active shape, and the current render mode. If the shader files are missing, the program exits immediately with a file-not-found error.
 
 ## Versioning
 
 The application prints the current Git describe string at startup and includes it in the window title. The value is read from `build/git-describe.txt`, which is generated from `git describe --tag --always --long` before the build. A build at `v26.19.0000-2-gbfd646b` will therefore report that exact version string.
 
-For release tagging, use the helper scripts in [scripts/](scripts): [scripts/version.d](scripts/version.d) writes `build/git-describe.txt` and logs the generated Git-describe version in the shell, [scripts/compile_shaders.d](scripts/compile_shaders.d) compiles the GLSL shaders into `build/shaders/`, and [scripts/release_timetag.d](scripts/release_timetag.d) derives the release timetag from `va_toolbox.timetags.getTimeTagString()`.
+For release tagging, use the helper scripts in [scripts/](scripts): [scripts/git_describe_version.d](scripts/git_describe_version.d) writes `build/git-describe.txt`, [scripts/compile_shaders.d](scripts/compile_shaders.d) compiles the GLSL shaders into `build/shaders/`, and [scripts/release_timetag.d](scripts/release_timetag.d) derives the release timetag from `va_toolbox.timetags.getTimeTagString()`.
+
+## Controls
+
+- `F` selects flat-color rendering.
+- `T` selects the lit and textured render mode.
+- `W` selects wireframe rendering.
+- `H` selects hidden-line rendering.
+- Arrow keys rotate the camera.
+- `+` and `-` switch the active Platonic solid, including keypad variants.
+- `Esc` closes the application.
+
+## Overlay
+
+The overlay is drawn in screen space at the native window resolution, not as a scaled texture. That keeps the text crisp and makes the panels behave like a simple in-game desktop GUI.
 
 ## Commit Workflow
 

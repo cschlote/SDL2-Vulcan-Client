@@ -5,15 +5,20 @@ import std.math : PI, cos, sin, sqrt, tan;
 
 struct Vec3
 {
+    /** X coordinate. */
     float x;
+    /** Y coordinate. */
     float y;
+    /** Z coordinate. */
     float z;
 }
 
 struct Mat4
 {
+    /** Matrix values stored in column-major order. */
     float[16] m;
 
+    /** Returns the 4x4 identity matrix. */
     static Mat4 identity() pure nothrow @nogc @safe
     {
         Mat4 result;

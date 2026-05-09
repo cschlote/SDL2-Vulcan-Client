@@ -45,11 +45,17 @@ struct Vertex
 /** Owns the Vulkan render pass, descriptor layout, and scene/overlay pipelines. */
 struct PipelineResources
 {
+    /** Render pass shared by the scene and overlay pipelines. */
     VkRenderPass renderPass = VK_NULL_HANDLE;
+    /** Descriptor set layout used for the scene uniforms and texture sampler. */
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
+    /** Pipeline layout shared by all graphics pipelines. */
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
+    /** Main filled 3D scene pipeline. */
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
+    /** Alpha-blended overlay pipeline used for HUD rendering. */
     VkPipeline overlayPipeline = VK_NULL_HANDLE;
+    /** Wireframe pipeline used for diagnostic rendering. */
     VkPipeline wireframePipeline = VK_NULL_HANDLE;
 
     /** Creates the descriptor set layout, render pass, and graphics pipelines.

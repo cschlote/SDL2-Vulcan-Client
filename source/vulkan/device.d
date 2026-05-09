@@ -10,7 +10,9 @@ enum swapchainExtensionName = "VK_KHR_swapchain";
 /** Stores the queue families needed by the renderer. */
 struct QueueFamilyIndices
 {
+    /** Graphics queue family index. */
     uint graphicsFamily = uint.max;
+    /** Present queue family index. */
     uint presentFamily = uint.max;
 
     /** Reports whether both graphics and present queues were found.
@@ -31,13 +33,24 @@ struct QueueFamilyIndices
  */
 struct VulkanDevice
 {
+    /** Selected physical device that passed the capability checks. */
     VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+    /** Logical device created from the selected physical device. */
     VkDevice handle = VK_NULL_HANDLE;
+    /** Graphics queue retrieved from the logical device. */
     VkQueue graphicsQueue = VK_NULL_HANDLE;
+    /** Present queue retrieved from the logical device. */
     VkQueue presentQueue = VK_NULL_HANDLE;
+    /** Queue family indices used to create the logical device. */
     QueueFamilyIndices queueFamilies;
+    /** Depth format chosen for the renderer's depth attachment. */
     VkFormat depthFormat;
 
+    /** Creates the logical device and resolves the renderer queues.
+     *
+     * @param instance = Vulkan instance handle.
+     * @param surface = SDL-created Vulkan surface.
+     */
     this(VkInstance instance, VkSurfaceKHR surface)
     {
         physicalDevice = pickPhysicalDevice(instance, surface, queueFamilies);

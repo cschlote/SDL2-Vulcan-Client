@@ -4,8 +4,8 @@ module vulkan.instance;
 import bindbc.sdl : SDL_Vulkan_GetInstanceExtensions, SDL_Window;
 import bindbc.vulkan;
 
-static immutable char[17] applicationName = "SDL2 Vulkan Demo";
-static immutable char[17] engineName = "SDL2 Vulkan Demo";
+private static immutable char[17] applicationName = "SDL2 Vulkan Demo";
+private static immutable char[17] engineName = "SDL2 Vulkan Demo";
 
 /** Creates a Vulkan instance using the SDL-required surface extensions.
  *
@@ -14,8 +14,13 @@ static immutable char[17] engineName = "SDL2 Vulkan Demo";
  */
 struct VulkanInstance
 {
+    /** Vulkan instance handle owned by the wrapper. */
     VkInstance handle = VK_NULL_HANDLE;
 
+    /** Creates a Vulkan instance using the SDL-required surface extensions.
+     *
+     * @param windowHandle = SDL window used to query required Vulkan extensions.
+     */
     this(SDL_Window* windowHandle)
     {
         uint extensionCount = 0;

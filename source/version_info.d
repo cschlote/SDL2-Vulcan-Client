@@ -3,7 +3,7 @@ module version_info;
 
 import std.string : strip;
 
-enum gitDescribeVersion = import("build/git-describe.txt").strip;
+private enum gitDescribeVersion = import("build/git-describe.txt").strip;
 
 /** Returns the cached Git describe version string from the generated build artifact.
  *

@@ -1,4 +1,8 @@
-/** Main Vulkan renderer that owns the scene buffers, swapchain resources, and HUD overlay. */
+/** Main Vulkan renderer that owns the scene buffers, swapchain resources, and HUD overlay.
+ *
+ * The renderer keeps the 3D scene in the background and uploads a separate
+ * screen-space overlay each frame so the native-resolution UI stays sharp.
+ */
 module vulkan.renderer;
 
 import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetTicks, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
@@ -18,9 +22,9 @@ import vulkan.polyhedra : MeshData, buildPlatonicSolids;
 import vulkan.pipeline;
 import vulkan.swapchain;
 
-enum maxFramesInFlight = 2;
+private enum maxFramesInFlight = 2;
 
-enum RenderMode
+private enum RenderMode
 {
     flatColor,
     litTextured,
@@ -28,27 +32,37 @@ enum RenderMode
     hiddenLine,
 }
 
-struct SceneUniforms
+private struct SceneUniforms
 {
+    /** XYZ light direction with the active render mode encoded in `w`. */
     float[4] lightDirectionMode;
+    /** Lighting and specular parameters used by the fragment shader. */
     float[4] shadingParams;
 }
 
-struct TextureResource
+private struct TextureResource
 {
+    /** Vulkan image that stores the sampled texture data. */
     VkImage image = VK_NULL_HANDLE;
+    /** Device memory backing the texture image. */
     VkDeviceMemory memory = VK_NULL_HANDLE;
+    /** Image view used for shader sampling. */
     VkImageView imageView = VK_NULL_HANDLE;
+    /** Sampler state bound to the fragment shader. */
     VkSampler sampler = VK_NULL_HANDLE;
 }
 
-struct BufferResource
+private struct BufferResource
 {
+    /** Vulkan buffer handle. */
     VkBuffer buffer = VK_NULL_HANDLE;
+    /** Device memory backing the buffer. */
     VkDeviceMemory memory = VK_NULL_HANDLE;
+    /** Persistently mapped pointer when the buffer stays mapped. */
     void* mapped = null;
 }
 
+/** Owns the full renderer pipeline, scene state, and frame resources. */
 class VulkanRenderer
 {
     private SdlWindow* window;
@@ -148,7 +162,12 @@ class VulkanRenderer
         20, 21, 22, 20, 22, 23,
     ];
 
-    /// Creates the full renderer stack for the current SDL window and build version.
+    /** Creates the full renderer stack for the current SDL window and build version.
+     *
+     * The constructor initializes Vulkan, creates the swapchain and pipelines,
+     * and allocates the per-frame resources used for both the 3D scene and
+     * the overlay UI.
+     */
     ///
     /// Params:
     ///   window = SDL window used for surface creation and size queries.
@@ -204,7 +223,7 @@ class VulkanRenderer
         fpsStartTicks = SDL_GetTicks();
     }
 
-    /// Destroys all renderer-owned Vulkan resources and the SDL surface.
+    /** Destroys all renderer-owned Vulkan resources and the SDL surface. */
     void destroy()
     {
         if (device.handle != VK_NULL_HANDLE)
@@ -232,7 +251,7 @@ class VulkanRenderer
         instance.destroy();
     }
 
-    /// Runs the SDL event loop and renders frames until the application quits.
+    /** Runs the SDL event loop and renders frames until the application quits. */
     void run()
     {
         bool running = true;

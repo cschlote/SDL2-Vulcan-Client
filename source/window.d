@@ -15,6 +15,7 @@ import std.string : fromStringz, toStringz;
  */
 struct SdlWindow
 {
+    /** Owning SDL window handle. */
     SDL_Window* handle;
 
     this(string title, int width, int height)
