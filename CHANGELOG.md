@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## Release 26.19.8409
+
+- Added a native-resolution 2D overlay with translucent window panels and crisp bitmap text.
+- Added lit textured and wireframe render modes with clearer on-screen controls and mode labels.
+- Expanded DDoc coverage and refreshed the project README to match the current build and release workflow.
+
 ## Release 26.19.7021
 
 - Stabilized the colored cube view with cursor-key driven rotation on two axes.
