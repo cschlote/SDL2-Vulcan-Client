@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## Release 26.19.8459
+
+- Improved the on-screen interface with real font atlases, a configurable font path, and crisper text rendering.
+- Added Shift-accelerated camera rotation and a higher-contrast checkerboard scene texture.
+
 ## Release 26.19.8409
 
 - Added a native-resolution 2D overlay with translucent window panels and crisp bitmap text.
