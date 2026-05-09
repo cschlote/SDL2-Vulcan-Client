@@ -2,6 +2,7 @@
 	"fileVersion": 1,
 	"versions": {
 		"bindbc-common": "1.0.5",
+		"bindbc-freetype": "1.3.3",
 		"bindbc-loader": "1.1.5",
 		"bindbc-sdl": "2.3.5",
 		"bindbc-vulkan": "0.0.1",

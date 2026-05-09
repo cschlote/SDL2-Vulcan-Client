@@ -1,12 +1,27 @@
-/** CPU-generated overlay text and panels drawn in native window pixels above the 3D scene. */
+/** CPU-generated overlay panels and multi-size text layers drawn above the 3D scene. */
 module vulkan.hud;
 
 import std.format : format;
 import std.math : PI;
 
+import vulkan.font : FontAtlas, appendText;
 import vulkan.pipeline : Vertex;
 
-/** Builds the HUD overlay vertices for the current frame.
+/** Holds the panel and text geometry for the HUD overlay.
+ */
+struct HudOverlayGeometry
+{
+    /** Window body and header quads. */
+    Vertex[] panels;
+    /** Small-body text quads. */
+    Vertex[] smallText;
+    /** Medium-body text quads. */
+    Vertex[] mediumText;
+    /** Large sample text quads. */
+    Vertex[] largeText;
+}
+
+/** Builds the HUD overlay geometry for the current frame.
  *
  * @param extentWidth = Swapchain width in pixels.
  * @param extentHeight = Swapchain height in pixels.
@@ -15,36 +30,45 @@ import vulkan.pipeline : Vertex;
  * @param pitchAngle = Current pitch angle in radians.
  * @param shapeName = Name of the active polyhedron.
  * @param renderModeName = Name of the active render mode.
- * @returns A list of overlay vertices that can be uploaded to the GPU.
+ * @param smallFont = Font atlas used for 12 px body copy.
+ * @param mediumFont = Font atlas used for 18 px labels and titles.
+ * @param largeFont = Font atlas used for 24 px comparison samples.
+ * @returns Panel and text vertex lists that can be uploaded to the GPU.
  */
-Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName)
+HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
-    Vertex[] vertices;
+    HudOverlayGeometry geometry;
 
     const float margin = 18.0f;
 
-    appendWindow(vertices, margin, margin, extentWidth - margin < 612.0f ? extentWidth - margin : 612.0f, extentHeight - margin < 256.0f ? extentHeight - margin : 256.0f, "DESKTOP OVERLAY", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.58f], [0.20f, 0.48f, 0.88f, 0.90f]);
-    appendWindow(vertices, margin, 272.0f, extentWidth - margin < 352.0f ? extentWidth - margin : 352.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, "VIEW MODES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.56f], [0.20f, 0.48f, 0.88f, 0.86f]);
-    appendWindow(vertices, 366.0f, 272.0f, extentWidth - margin < 632.0f ? extentWidth - margin : 632.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, "FONT SAMPLES", extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.50f], [0.20f, 0.48f, 0.88f, 0.80f]);
+    appendWindow(geometry.panels, margin, margin, extentWidth - margin < 612.0f ? extentWidth - margin : 612.0f, extentHeight - margin < 256.0f ? extentHeight - margin : 256.0f, extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.58f], [0.20f, 0.48f, 0.88f, 0.90f]);
+    appendWindow(geometry.panels, margin, 272.0f, extentWidth - margin < 352.0f ? extentWidth - margin : 352.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.56f], [0.20f, 0.48f, 0.88f, 0.86f]);
+    appendWindow(geometry.panels, 366.0f, 272.0f, extentWidth - margin < 632.0f ? extentWidth - margin : 632.0f, extentHeight - margin < 470.0f ? extentHeight - margin : 470.0f, extentWidth, extentHeight, [0.06f, 0.08f, 0.11f, 0.50f], [0.20f, 0.48f, 0.88f, 0.80f]);
 
-    appendText(vertices, "WINDOWED 2D GUI", 34.0f, 32.0f, 2.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
-    appendText(vertices, "NATIVE PIXEL LAYOUT", 34.0f, 60.0f, 1.0f, [0.86f, 0.90f, 0.94f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("FRAME RATE: %.0f FRAMES PER SECOND", fps), 36.0f, 98.0f, 2.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 36.0f, 138.0f, 1.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 36.0f, 170.0f, 1.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("ACTIVE SHAPE: %s", shapeName), 36.0f, 202.0f, 1.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, format("CURRENT MODE: %s", renderModeName), 36.0f, 232.0f, 1.0f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.mediumText, mediumFont, "DESKTOP OVERLAY", 30.0f, 24.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "NATIVE WINDOW PIXELS. REAL FREE-TYPE FONTS AT 12, 18, AND 24 PX.", 34.0f, 58.0f, [0.86f, 0.90f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.mediumText, mediumFont, format("FRAME RATE: %.0f FRAMES PER SECOND", fps), 36.0f, 94.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 36.0f, 128.0f, [0.40f, 0.92f, 0.58f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 36.0f, 150.0f, [0.38f, 0.80f, 0.98f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, format("ACTIVE SHAPE: %s", shapeName), 36.0f, 174.0f, [0.94f, 0.94f, 0.94f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, format("CURRENT MODE: %s", renderModeName), 36.0f, 196.0f, [0.94f, 0.82f, 0.40f, 0.92f], extentWidth, extentHeight);
 
-    appendText(vertices, "FLAT COLOR RENDERING", 36.0f, 302.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "LIT AND TEXTURED RENDERING", 36.0f, 334.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "WIREFRAME RENDERING", 36.0f, 366.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "HIDDEN LINE RENDERING", 36.0f, 398.0f, 1.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.mediumText, mediumFont, "RENDER MODES", 30.0f, 278.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "F  FLAT COLOR RENDERING", 36.0f, 308.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "T  LIT AND TEXTURED RENDERING", 36.0f, 332.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "W  WIREFRAME RENDERING", 36.0f, 356.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "H  HIDDEN LINE RENDERING", 36.0f, 380.0f, [0.98f, 0.86f, 0.40f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "+ / -  SWITCH SHAPE", 36.0f, 406.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "ARROWS  ROTATE CAMERA", 36.0f, 430.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "ESC  CLOSE APPLICATION", 36.0f, 454.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
 
-    appendText(vertices, "SMALL FONT SAMPLE", 384.0f, 302.0f, 1.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "MEDIUM FONT SAMPLE", 384.0f, 336.0f, 2.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
-    appendText(vertices, "LARGE FONT SAMPLE", 384.0f, 386.0f, 3.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.mediumText, mediumFont, "FONT SIZES", 396.0f, 278.0f, [0.96f, 0.72f, 0.18f, 0.96f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "12 PX  THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.", 396.0f, 308.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.mediumText, mediumFont, "18 PX  THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.", 396.0f, 342.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.largeText, largeFont, "24 PX  THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.", 396.0f, 388.0f, [0.95f, 0.95f, 0.95f, 0.92f], extentWidth, extentHeight);
+    appendText(geometry.smallText, smallFont, "REAL FONTS RENDER EACH SIZE AS ITS OWN ATLAS, NOT AS A SCALE OF A SMALLER BITMAP.", 396.0f, 432.0f, [0.86f, 0.90f, 0.94f, 0.92f], extentWidth, extentHeight);
 
-    return vertices;
+    return geometry;
 }
 
 /** Appends a translucent UI window frame with a title bar.
@@ -54,14 +78,13 @@ Vertex[] buildHudOverlayVertices(float extentWidth, float extentHeight, float fp
  * @param top = Top edge in pixels.
  * @param right = Right edge in pixels.
  * @param bottom = Bottom edge in pixels.
- * @param title = Window title text.
  * @param extentWidth = Swapchain width in pixels.
  * @param extentHeight = Swapchain height in pixels.
  * @param bodyColor = Window body color in RGBA format.
  * @param headerColor = Window header color in RGBA format.
  * @returns Nothing.
  */
-private void appendWindow(ref Vertex[] vertices, float left, float top, float right, float bottom, string title, float extentWidth, float extentHeight, float[4] bodyColor, float[4] headerColor)
+private void appendWindow(ref Vertex[] vertices, float left, float top, float right, float bottom, float extentWidth, float extentHeight, float[4] bodyColor, float[4] headerColor)
 {
     if (right <= left || bottom <= top)
         return;
@@ -72,7 +95,6 @@ private void appendWindow(ref Vertex[] vertices, float left, float top, float ri
     appendRect(vertices, left, bottom - 1.0f, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
     appendRect(vertices, left, top, left + 1.0f, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
     appendRect(vertices, right - 1.0f, top, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f], extentWidth, extentHeight);
-    appendText(vertices, title, left + 10.0f, top + 7.0f, 1.0f, [0.98f, 0.98f, 1.0f, 0.94f], extentWidth, extentHeight);
 }
 
 /** Renders a text string as a sequence of glyph quads.

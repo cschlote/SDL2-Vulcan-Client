@@ -23,7 +23,15 @@ void main()
         return;
     }
 
+    if (mode == 2)
+    {
+        vec4 textureColor = texture(diffuseTexture, fragUv);
+        outColor = fragColor * textureColor;
+        return;
+    }
+
     vec4 textureColor = texture(diffuseTexture, fragUv * 6.0);
+
     vec3 normal = normalize(fragNormal);
     vec3 lightDirection = normalize(scene.lightDirectionMode.xyz);
     float diffuse = max(dot(normal, lightDirection), 0.0);
