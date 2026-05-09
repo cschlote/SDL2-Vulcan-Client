@@ -5,7 +5,7 @@
  */
 module vulkan.renderer;
 
-import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetTicks, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
+import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
@@ -13,7 +13,8 @@ import std.format : format;
 import std.math : PI, cos, sin;
 import std.string : fromStringz;
 
-import vulkan.hud : buildHudOverlayVertices;
+import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
+import vulkan.hud : HudOverlayGeometry, buildHudOverlayVertices;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -62,6 +63,14 @@ private struct BufferResource
     void* mapped = null;
 }
 
+private struct OverlayLayerResources
+{
+    BufferResource[maxFramesInFlight] vertexBuffers;
+    uint[maxFramesInFlight] vertexCounts;
+    BufferResource[maxFramesInFlight] uniformBuffers;
+    VkDescriptorSet[maxFramesInFlight] descriptorSets;
+}
+
 /** Owns the full renderer pipeline, scene state, and frame resources. */
 class VulkanRenderer
 {
@@ -97,9 +106,16 @@ class VulkanRenderer
     private BufferResource[maxFramesInFlight] uniformBuffers;
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
-    private TextureResource texture;
+    private TextureResource sceneTexture;
+    private FontAtlas[3] fontAtlases;
+    private TextureResource[3] fontTextures;
+    private OverlayLayerResources overlayPanels;
+    private OverlayLayerResources[3] overlayFonts;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
+    private enum smallFontPixelHeight = 12;
+    private enum mediumFontPixelHeight = 18;
+    private enum largeFontPixelHeight = 24;
 
     private VkSemaphore[maxFramesInFlight] imageAvailableSemaphores;
     private VkSemaphore[maxFramesInFlight] renderFinishedSemaphores;
@@ -212,6 +228,7 @@ class VulkanRenderer
         createGeometryBuffers();
         createOverlayBuffers();
         createTextureResources();
+        createFontResources();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -231,6 +248,7 @@ class VulkanRenderer
 
         destroySyncObjects();
         destroyDescriptors();
+        destroyFontResources();
         destroyTextureResources();
         destroyOverlayBuffers();
         destroyGeometryBuffers();
@@ -335,7 +353,6 @@ class VulkanRenderer
     void drawFrame()
     {
         vkWaitForFences(device.handle, 1, &inFlightFences[currentFrame], VK_TRUE, ulong.max);
-
         uint imageIndex = 0;
         const acquireResult = vkAcquireNextImageKHR(device.handle, swapchain.handle, ulong.max, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
         if (acquireResult == VkResult.VK_ERROR_OUT_OF_DATE_KHR)
@@ -345,7 +362,8 @@ class VulkanRenderer
         }
 
         if (imagesInFlight[imageIndex] != VK_NULL_HANDLE)
-            vkWaitForFences(device.handle, 1, &imagesInFlight[imageIndex], VK_TRUE, ulong.max);
+            enforce(vkWaitForFences(device.handle, 1, &imagesInFlight[imageIndex], VK_TRUE, ulong.max) == VkResult.VK_SUCCESS, "vkWaitForFences failed.");
+
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
         updateGeometryBuffer(currentFrame);
@@ -441,44 +459,7 @@ class VulkanRenderer
         enforce(vkCreateCommandPool(device.handle, &createInfo, null, &commandPool) == VkResult.VK_SUCCESS, "vkCreateCommandPool failed.");
     }
 
-    /// Destroys the command pool if it is still alive.
-    private void destroyCommandPool()
-    {
-        if (commandPool != VK_NULL_HANDLE)
-        {
-            vkDestroyCommandPool(device.handle, commandPool, null);
-            commandPool = VK_NULL_HANDLE;
-        }
-    }
-
-    /// Allocates one primary command buffer per swapchain image.
-    private void allocateCommandBuffers()
-    {
-        commandBuffers.length = swapchain.images.length;
-
-        VkCommandBufferAllocateInfo allocateInfo;
-        allocateInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        allocateInfo.commandPool = commandPool;
-        allocateInfo.level = VkCommandBufferLevel.VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        allocateInfo.commandBufferCount = cast(uint)commandBuffers.length;
-
-        enforce(vkAllocateCommandBuffers(device.handle, &allocateInfo, commandBuffers.ptr) == VkResult.VK_SUCCESS, "vkAllocateCommandBuffers failed.");
-
-        imagesInFlight.length = swapchain.images.length;
-        imagesInFlight[] = VK_NULL_HANDLE;
-    }
-
-    /// Frees all allocated command buffers.
-    private void destroyCommandBuffers()
-    {
-        if (commandBuffers.length > 0 && commandPool != VK_NULL_HANDLE)
-        {
-            vkFreeCommandBuffers(device.handle, commandPool, cast(uint)commandBuffers.length, commandBuffers.ptr);
-            commandBuffers.length = 0;
-        }
-    }
-
-    /// Allocates the vertex and index buffers used by the current polyhedron mesh.
+    /// Allocates the scene vertex and index buffers.
     private void createGeometryBuffers()
     {
         createBuffer(meshVertexBuffer, maxShapeVertexCount * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -488,18 +469,23 @@ class VulkanRenderer
     /// Allocates the per-frame vertex buffers used by the HUD overlay.
     private void createOverlayBuffers()
     {
-        foreach (frameIndex; 0 .. maxFramesInFlight)
-        {
-            createBuffer(overlayVertexBuffers[frameIndex], maxOverlayVertices * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-        }
+        createFrameVertexBuffers(overlayPanels);
+        foreach (ref fontLayer; overlayFonts)
+            createFrameVertexBuffers(fontLayer);
     }
 
+    /// Creates the scene checkerboard texture used by the main 3D pass.
     private void createTextureResources()
     {
         auto textureData = buildCheckerboardTextureData();
+        createTextureResource(sceneTexture, textureData, textureWidth, textureHeight, VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT);
+    }
 
+    /// Creates one Vulkan texture from raw RGBA pixel data.
+    private void createTextureResource(ref TextureResource resource, const(ubyte)[] pixelData, uint width, uint height, VkSamplerAddressMode addressMode = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+    {
         BufferResource stagingBuffer;
-        createBuffer(stagingBuffer, textureData, VkBufferUsageFlagBits.VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
+        createBuffer(stagingBuffer, pixelData, VkBufferUsageFlagBits.VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
         scope (exit)
             destroyBuffer(stagingBuffer);
 
@@ -507,8 +493,8 @@ class VulkanRenderer
         imageInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
         imageInfo.imageType = VkImageType.VK_IMAGE_TYPE_2D;
         imageInfo.format = VkFormat.VK_FORMAT_R8G8B8A8_UNORM;
-        imageInfo.extent.width = textureWidth;
-        imageInfo.extent.height = textureHeight;
+        imageInfo.extent.width = width;
+        imageInfo.extent.height = height;
         imageInfo.extent.depth = 1;
         imageInfo.mipLevels = 1;
         imageInfo.arrayLayers = 1;
@@ -518,26 +504,26 @@ class VulkanRenderer
         imageInfo.sharingMode = VkSharingMode.VK_SHARING_MODE_EXCLUSIVE;
         imageInfo.initialLayout = VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED;
 
-        enforce(vkCreateImage(device.handle, &imageInfo, null, &texture.image) == VkResult.VK_SUCCESS, "vkCreateImage for texture failed.");
+        enforce(vkCreateImage(device.handle, &imageInfo, null, &resource.image) == VkResult.VK_SUCCESS, "vkCreateImage for texture failed.");
 
         VkMemoryRequirements memoryRequirements;
-        vkGetImageMemoryRequirements(device.handle, texture.image, &memoryRequirements);
+        vkGetImageMemoryRequirements(device.handle, resource.image, &memoryRequirements);
 
         VkMemoryAllocateInfo allocateInfo;
         allocateInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocateInfo.allocationSize = memoryRequirements.size;
         allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, VkMemoryPropertyFlagBits.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-        enforce(vkAllocateMemory(device.handle, &allocateInfo, null, &texture.memory) == VkResult.VK_SUCCESS, "vkAllocateMemory for texture failed.");
-        enforce(vkBindImageMemory(device.handle, texture.image, texture.memory, 0) == VkResult.VK_SUCCESS, "vkBindImageMemory for texture failed.");
+        enforce(vkAllocateMemory(device.handle, &allocateInfo, null, &resource.memory) == VkResult.VK_SUCCESS, "vkAllocateMemory for texture failed.");
+        enforce(vkBindImageMemory(device.handle, resource.image, resource.memory, 0) == VkResult.VK_SUCCESS, "vkBindImageMemory for texture failed.");
 
-        transitionImageLayout(texture.image, VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
-        copyBufferToImage(stagingBuffer.buffer, texture.image, textureWidth, textureHeight);
-        transitionImageLayout(texture.image, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageLayout.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
+        transitionImageLayout(resource.image, VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
+        copyBufferToImage(stagingBuffer.buffer, resource.image, width, height);
+        transitionImageLayout(resource.image, VkImageLayout.VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VkImageLayout.VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT);
 
         VkImageViewCreateInfo viewInfo;
         viewInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        viewInfo.image = texture.image;
+        viewInfo.image = resource.image;
         viewInfo.viewType = VkImageViewType.VK_IMAGE_VIEW_TYPE_2D;
         viewInfo.format = VkFormat.VK_FORMAT_R8G8B8A8_UNORM;
         viewInfo.subresourceRange.aspectMask = VkImageAspectFlagBits.VK_IMAGE_ASPECT_COLOR_BIT;
@@ -545,25 +531,66 @@ class VulkanRenderer
         viewInfo.subresourceRange.levelCount = 1;
         viewInfo.subresourceRange.baseArrayLayer = 0;
         viewInfo.subresourceRange.layerCount = 1;
-        enforce(vkCreateImageView(device.handle, &viewInfo, null, &texture.imageView) == VkResult.VK_SUCCESS, "vkCreateImageView for texture failed.");
+        enforce(vkCreateImageView(device.handle, &viewInfo, null, &resource.imageView) == VkResult.VK_SUCCESS, "vkCreateImageView for texture failed.");
 
         VkSamplerCreateInfo samplerInfo;
         samplerInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
         samplerInfo.magFilter = VkFilter.VK_FILTER_LINEAR;
         samplerInfo.minFilter = VkFilter.VK_FILTER_LINEAR;
-        samplerInfo.addressModeU = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeV = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        samplerInfo.addressModeW = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        samplerInfo.addressModeU = addressMode;
+        samplerInfo.addressModeV = addressMode;
+        samplerInfo.addressModeW = addressMode;
         samplerInfo.anisotropyEnable = VK_FALSE;
         samplerInfo.maxAnisotropy = 1.0f;
         samplerInfo.borderColor = VkBorderColor.VK_BORDER_COLOR_INT_OPAQUE_BLACK;
         samplerInfo.unnormalizedCoordinates = VK_FALSE;
         samplerInfo.compareEnable = VK_FALSE;
+        samplerInfo.compareOp = VkCompareOp.VK_COMPARE_OP_ALWAYS;
         samplerInfo.mipmapMode = VkSamplerMipmapMode.VK_SAMPLER_MIPMAP_MODE_LINEAR;
         samplerInfo.mipLodBias = 0.0f;
         samplerInfo.minLod = 0.0f;
         samplerInfo.maxLod = 0.0f;
-        enforce(vkCreateSampler(device.handle, &samplerInfo, null, &texture.sampler) == VkResult.VK_SUCCESS, "vkCreateSampler failed.");
+        enforce(vkCreateSampler(device.handle, &samplerInfo, null, &resource.sampler) == VkResult.VK_SUCCESS, "vkCreateSampler failed.");
+    }
+
+    /// Releases one Vulkan texture resource.
+    private void destroyTextureResource(ref TextureResource resource)
+    {
+        if (resource.sampler != VK_NULL_HANDLE)
+        {
+            vkDestroySampler(device.handle, resource.sampler, null);
+            resource.sampler = VK_NULL_HANDLE;
+        }
+
+        if (resource.imageView != VK_NULL_HANDLE)
+        {
+            vkDestroyImageView(device.handle, resource.imageView, null);
+            resource.imageView = VK_NULL_HANDLE;
+        }
+
+        if (resource.image != VK_NULL_HANDLE)
+        {
+            vkDestroyImage(device.handle, resource.image, null);
+            resource.image = VK_NULL_HANDLE;
+        }
+
+        if (resource.memory != VK_NULL_HANDLE)
+        {
+            vkFreeMemory(device.handle, resource.memory, null);
+            resource.memory = VK_NULL_HANDLE;
+        }
+    }
+
+    /// Creates the font atlases and Vulkan textures used by the overlay text layers.
+    private void createFontResources()
+    {
+        const fontPath = selectDefaultFontPath();
+        fontAtlases[0] = buildFontAtlas(fontPath, smallFontPixelHeight);
+        fontAtlases[1] = buildFontAtlas(fontPath, mediumFontPixelHeight);
+        fontAtlases[2] = buildFontAtlas(fontPath, largeFontPixelHeight);
+
+        foreach (index, atlas; fontAtlases)
+            createTextureResource(fontTextures[index], atlas.pixels, atlas.width, atlas.height);
     }
 
     /// Releases the scene geometry buffers.
@@ -576,63 +603,77 @@ class VulkanRenderer
     /// Releases the HUD overlay buffers.
     private void destroyOverlayBuffers()
     {
-        foreach (frameIndex; 0 .. maxFramesInFlight)
-            destroyBuffer(overlayVertexBuffers[frameIndex]);
+        destroyFrameVertexBuffers(overlayPanels);
+        foreach (ref fontLayer; overlayFonts)
+            destroyFrameVertexBuffers(fontLayer);
     }
 
+    /// Releases the scene texture resources.
     private void destroyTextureResources()
     {
-        if (texture.sampler != VK_NULL_HANDLE)
-        {
-            vkDestroySampler(device.handle, texture.sampler, null);
-            texture.sampler = VK_NULL_HANDLE;
-        }
-
-        if (texture.imageView != VK_NULL_HANDLE)
-        {
-            vkDestroyImageView(device.handle, texture.imageView, null);
-            texture.imageView = VK_NULL_HANDLE;
-        }
-
-        if (texture.image != VK_NULL_HANDLE)
-        {
-            vkDestroyImage(device.handle, texture.image, null);
-            texture.image = VK_NULL_HANDLE;
-        }
-
-        if (texture.memory != VK_NULL_HANDLE)
-        {
-            vkFreeMemory(device.handle, texture.memory, null);
-            texture.memory = VK_NULL_HANDLE;
-        }
+        destroyTextureResource(sceneTexture);
     }
 
-    /// Allocates the per-frame uniform buffers used for the 3D scene.
+    /// Releases the font atlas textures.
+    private void destroyFontResources()
+    {
+        foreach (ref fontTexture; fontTextures)
+            destroyTextureResource(fontTexture);
+    }
+
+    /// Allocates the per-frame uniform buffers used for the scene and overlay layers.
     private void createUniformBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
         {
             createBuffer(uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            createBuffer(overlayPanels.uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            foreach (ref fontLayer; overlayFonts)
+                createBuffer(fontLayer.uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
         }
     }
 
-    /// Creates the descriptor pool and descriptor sets for the uniform buffers.
+    /// Creates the descriptor pool and descriptor sets for the scene and all overlay layers.
     private void createDescriptorPoolAndSets()
     {
+        enum descriptorLayerCount = 1 + 1 + fontTextures.length;
+
         VkDescriptorPoolSize[2] poolSizes;
         poolSizes[0].type = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = maxFramesInFlight;
+        poolSizes[0].descriptorCount = maxFramesInFlight * descriptorLayerCount;
         poolSizes[1].type = VkDescriptorType.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = maxFramesInFlight;
+        poolSizes[1].descriptorCount = maxFramesInFlight * descriptorLayerCount;
 
         VkDescriptorPoolCreateInfo poolInfo;
         poolInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
         poolInfo.poolSizeCount = cast(uint)poolSizes.length;
         poolInfo.pPoolSizes = poolSizes.ptr;
-        poolInfo.maxSets = maxFramesInFlight;
+        poolInfo.maxSets = maxFramesInFlight * descriptorLayerCount;
 
         enforce(vkCreateDescriptorPool(device.handle, &poolInfo, null, &descriptorPool) == VkResult.VK_SUCCESS, "vkCreateDescriptorPool failed.");
 
+        createDescriptorSetsForScene();
+        createDescriptorSetsForLayer(overlayPanels, sceneTexture);
+        createDescriptorSetsForLayer(overlayFonts[0], fontTextures[0]);
+        createDescriptorSetsForLayer(overlayFonts[1], fontTextures[1]);
+        createDescriptorSetsForLayer(overlayFonts[2], fontTextures[2]);
+    }
+
+    /// Allocates the descriptor sets for the 3D scene pass.
+    private void createDescriptorSetsForScene()
+    {
+        createDescriptorSets(descriptorSets, uniformBuffers, sceneTexture);
+    }
+
+    /// Allocates the descriptor sets for one overlay layer.
+    private void createDescriptorSetsForLayer(ref OverlayLayerResources layer, TextureResource texture)
+    {
+        createDescriptorSets(layer.descriptorSets, layer.uniformBuffers, texture);
+    }
+
+    /// Allocates and writes descriptor sets for a uniform-buffer-plus-texture layer.
+    private void createDescriptorSets(ref VkDescriptorSet[maxFramesInFlight] targetSets, ref BufferResource[maxFramesInFlight] layerUniformBuffers, TextureResource texture)
+    {
         VkDescriptorSetLayout[maxFramesInFlight] layouts;
         layouts[] = pipeline.descriptorSetLayout;
 
@@ -642,12 +683,12 @@ class VulkanRenderer
         allocateInfo.descriptorSetCount = maxFramesInFlight;
         allocateInfo.pSetLayouts = layouts.ptr;
 
-        enforce(vkAllocateDescriptorSets(device.handle, &allocateInfo, descriptorSets.ptr) == VkResult.VK_SUCCESS, "vkAllocateDescriptorSets failed.");
+        enforce(vkAllocateDescriptorSets(device.handle, &allocateInfo, targetSets.ptr) == VkResult.VK_SUCCESS, "vkAllocateDescriptorSets failed.");
 
         foreach (frameIndex; 0 .. maxFramesInFlight)
         {
             VkDescriptorBufferInfo bufferInfo;
-            bufferInfo.buffer = uniformBuffers[frameIndex].buffer;
+            bufferInfo.buffer = layerUniformBuffers[frameIndex].buffer;
             bufferInfo.offset = 0;
             bufferInfo.range = SceneUniforms.sizeof;
 
@@ -658,17 +699,15 @@ class VulkanRenderer
 
             VkWriteDescriptorSet[2] writes;
             writes[0].sType = VkStructureType.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writes[0].dstSet = descriptorSets[frameIndex];
+            writes[0].dstSet = targetSets[frameIndex];
             writes[0].dstBinding = 0;
-            writes[0].dstArrayElement = 0;
             writes[0].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
             writes[0].descriptorCount = 1;
             writes[0].pBufferInfo = &bufferInfo;
 
             writes[1].sType = VkStructureType.VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-            writes[1].dstSet = descriptorSets[frameIndex];
+            writes[1].dstSet = targetSets[frameIndex];
             writes[1].dstBinding = 1;
-            writes[1].dstArrayElement = 0;
             writes[1].descriptorType = VkDescriptorType.VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             writes[1].descriptorCount = 1;
             writes[1].pImageInfo = &imageInfo;
@@ -677,16 +716,46 @@ class VulkanRenderer
         }
     }
 
-    /// Releases the descriptor pool and uniform buffers.
+    /// Releases the descriptor pool and all uniform buffers.
     private void destroyDescriptors()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
             destroyBuffer(uniformBuffers[frameIndex]);
 
+        destroyFrameUniformBuffers(overlayPanels);
+        foreach (ref fontLayer; overlayFonts)
+            destroyFrameUniformBuffers(fontLayer);
+
         if (descriptorPool != VK_NULL_HANDLE)
         {
             vkDestroyDescriptorPool(device.handle, descriptorPool, null);
             descriptorPool = VK_NULL_HANDLE;
+        }
+    }
+
+    /// Allocates one command buffer per swapchain image.
+    private void allocateCommandBuffers()
+    {
+        commandBuffers.length = framebuffers.length;
+        imagesInFlight.length = framebuffers.length;
+        imagesInFlight[] = VK_NULL_HANDLE;
+
+        VkCommandBufferAllocateInfo allocateInfo;
+        allocateInfo.sType = VkStructureType.VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        allocateInfo.commandPool = commandPool;
+        allocateInfo.level = VkCommandBufferLevel.VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        allocateInfo.commandBufferCount = cast(uint)commandBuffers.length;
+
+        enforce(vkAllocateCommandBuffers(device.handle, &allocateInfo, commandBuffers.ptr) == VkResult.VK_SUCCESS, "vkAllocateCommandBuffers failed.");
+    }
+
+    /// Frees the per-frame command buffers.
+    private void destroyCommandBuffers()
+    {
+        if (commandBuffers.length != 0)
+        {
+            vkFreeCommandBuffers(device.handle, commandPool, cast(uint)commandBuffers.length, commandBuffers.ptr);
+            commandBuffers.length = 0;
         }
     }
 
@@ -709,6 +778,40 @@ class VulkanRenderer
 
             enforce(vkCreateFramebuffer(device.handle, &createInfo, null, &framebuffers[index]) == VkResult.VK_SUCCESS, "vkCreateFramebuffer failed.");
         }
+    }
+
+    /// Releases the command pool.
+    private void destroyCommandPool()
+    {
+        if (commandPool != VK_NULL_HANDLE)
+        {
+            vkDestroyCommandPool(device.handle, commandPool, null);
+            commandPool = VK_NULL_HANDLE;
+        }
+    }
+
+    /// Creates and maps a frame-local vertex buffer for an overlay layer.
+    private void createFrameVertexBuffers(ref OverlayLayerResources layer)
+    {
+        foreach (frameIndex; 0 .. maxFramesInFlight)
+        {
+            createBuffer(layer.vertexBuffers[frameIndex], maxOverlayVertices * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+            layer.vertexCounts[frameIndex] = 0;
+        }
+    }
+
+    /// Releases the frame-local vertex buffers for an overlay layer.
+    private void destroyFrameVertexBuffers(ref OverlayLayerResources layer)
+    {
+        foreach (frameIndex; 0 .. maxFramesInFlight)
+            destroyBuffer(layer.vertexBuffers[frameIndex]);
+    }
+
+    /// Releases the frame-local uniform buffers for an overlay layer.
+    private void destroyFrameUniformBuffers(ref OverlayLayerResources layer)
+    {
+        foreach (frameIndex; 0 .. maxFramesInFlight)
+            destroyBuffer(layer.uniformBuffers[frameIndex]);
     }
 
     /// Destroys the framebuffers created for the swapchain images.
@@ -834,13 +937,24 @@ class VulkanRenderer
         uniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
         memcpy(uniformBuffers[frameIndex].mapped, &uniforms, SceneUniforms.sizeof);
 
+        SceneUniforms panelUniforms;
+        panelUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 0.0f];
+        panelUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
+        memcpy(overlayPanels.uniformBuffers[frameIndex].mapped, &panelUniforms, SceneUniforms.sizeof);
+
+        SceneUniforms textUniforms;
+        textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 2.0f];
+        textUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
+        foreach (ref fontLayer; overlayFonts)
+            memcpy(fontLayer.uniformBuffers[frameIndex].mapped, &textUniforms, SceneUniforms.sizeof);
+
         const currentTicks = SDL_GetTicks();
         const elapsedTicks = currentTicks - lastRotationTicks;
         lastRotationTicks = currentTicks;
 
         const clampedElapsedTicks = elapsedTicks > 50 ? 50 : elapsedTicks;
         const deltaSeconds = cast(float)clampedElapsedTicks / 1_000.0f;
-        const rotationSpeed = 0.55f;
+        const rotationSpeed = 0.55f * ((SDL_GetModState() & SDL_Keymod.shift) != 0 ? 3.0f : 1.0f);
 
         if (rotateLeft)
             yawAngle -= rotationSpeed * deltaSeconds;
@@ -891,10 +1005,34 @@ class VulkanRenderer
         memcpy(meshVertexBuffer.mapped, meshTransformed.ptr, Vertex.sizeof * meshTransformed.length);
         memcpy(meshIndexBuffer.mapped, mesh.indices.ptr, uint.sizeof * mesh.indices.length);
 
-        auto overlayVertices = buildHudOverlayVertices(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName);
-        enforce(overlayVertices.length <= maxOverlayVertices, "HUD overlay vertex limit exceeded.");
-        overlayVertexCounts[frameIndex] = cast(uint)overlayVertices.length;
-        memcpy(overlayVertexBuffers[frameIndex].mapped, overlayVertices.ptr, Vertex.sizeof * overlayVertices.length);
+        auto overlayVertices = buildHudOverlayVertices(
+            cast(float)swapchain.extent.width,
+            cast(float)swapchain.extent.height,
+            cast(float)fpsValue,
+            yawAngle,
+            pitchAngle,
+            currentShapeName,
+            currentRenderModeName,
+            fontAtlases[0],
+            fontAtlases[1],
+            fontAtlases[2]);
+
+        enforce(overlayVertices.panels.length <= maxOverlayVertices, "HUD overlay panel vertex limit exceeded.");
+        enforce(overlayVertices.smallText.length <= maxOverlayVertices, "HUD overlay small-text vertex limit exceeded.");
+        enforce(overlayVertices.mediumText.length <= maxOverlayVertices, "HUD overlay medium-text vertex limit exceeded.");
+        enforce(overlayVertices.largeText.length <= maxOverlayVertices, "HUD overlay large-text vertex limit exceeded.");
+
+        overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
+        memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
+
+        overlayFonts[0].vertexCounts[frameIndex] = cast(uint)overlayVertices.smallText.length;
+        memcpy(overlayFonts[0].vertexBuffers[frameIndex].mapped, overlayVertices.smallText.ptr, Vertex.sizeof * overlayVertices.smallText.length);
+
+        overlayFonts[1].vertexCounts[frameIndex] = cast(uint)overlayVertices.mediumText.length;
+        memcpy(overlayFonts[1].vertexBuffers[frameIndex].mapped, overlayVertices.mediumText.ptr, Vertex.sizeof * overlayVertices.mediumText.length);
+
+        overlayFonts[2].vertexCounts[frameIndex] = cast(uint)overlayVertices.largeText.length;
+        memcpy(overlayFonts[2].vertexBuffers[frameIndex].mapped, overlayVertices.largeText.ptr, Vertex.sizeof * overlayVertices.largeText.length);
     }
 
     /// Records the render pass commands for the current frame.
@@ -959,13 +1097,27 @@ class VulkanRenderer
             vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
         }
 
-        const overlayCount = overlayVertexCounts[currentFrame];
-        if (overlayCount > 0)
+        const panelCount = overlayPanels.vertexCounts[currentFrame];
+        if (panelCount > 0)
         {
-            VkBuffer[1] overlayVertexBufferHandles = [overlayVertexBuffers[currentFrame].buffer];
             vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, overlayVertexBufferHandles.ptr, offsets.ptr);
-            vkCmdDraw(commandBuffer, overlayCount, 1, 0, 0);
+            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayPanels.descriptorSets[currentFrame], 0, null);
+            VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
+            vkCmdDraw(commandBuffer, panelCount, 1, 0, 0);
+        }
+
+        foreach (layerIndex; 0 .. overlayFonts.length)
+        {
+            const textCount = overlayFonts[layerIndex].vertexCounts[currentFrame];
+            if (textCount == 0)
+                continue;
+
+            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
+            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[layerIndex].descriptorSets[currentFrame], 0, null);
+            VkBuffer[1] textVertexBuffers = [overlayFonts[layerIndex].vertexBuffers[currentFrame].buffer];
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+            vkCmdDraw(commandBuffer, textCount, 1, 0, 0);
         }
 
         vkCmdEndRenderPass(commandBuffer);
