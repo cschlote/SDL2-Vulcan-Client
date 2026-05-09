@@ -1230,15 +1230,23 @@ class VulkanRenderer
     {
         ubyte[] data;
         data.length = textureWidth * textureHeight * 4;
+        enum checkerCellSize = 16;
+        enum darkR = 40;
+        enum darkG = 48;
+        enum darkB = 64;
+        enum lightR = 224;
+        enum lightG = 228;
+        enum lightB = 236;
+
         foreach (y; 0 .. textureHeight)
         {
             foreach (x; 0 .. textureWidth)
             {
-                const cell = ((x / 8) + (y / 8)) % 2;
+                const cell = ((x / checkerCellSize) + (y / checkerCellSize)) % 2;
                 const base = (y * textureWidth + x) * 4;
-                data[base + 0] = cell == 0 ? cast(ubyte)42 : cast(ubyte)218;
-                data[base + 1] = cell == 0 ? cast(ubyte)78 : cast(ubyte)198;
-                data[base + 2] = cell == 0 ? cast(ubyte)168 : cast(ubyte)248;
+                data[base + 0] = cell == 0 ? cast(ubyte)darkR : cast(ubyte)lightR;
+                data[base + 1] = cell == 0 ? cast(ubyte)darkG : cast(ubyte)lightG;
+                data[base + 2] = cell == 0 ? cast(ubyte)darkB : cast(ubyte)lightB;
                 data[base + 3] = 255;
             }
         }
