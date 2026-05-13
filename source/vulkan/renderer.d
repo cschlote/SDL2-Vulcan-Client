@@ -1,7 +1,8 @@
-/** Main Vulkan renderer that owns the scene buffers, swapchain resources, and HUD overlay.
+/** $purposeofFile
  *
- * The renderer keeps the 3D scene in the background and uploads a separate
- * screen-space overlay each frame so the native-resolution UI stays sharp.
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * License: CC-BY-NC-SA 4.0
  */
 module vulkan.renderer;
 
@@ -183,11 +184,11 @@ class VulkanRenderer
      * The constructor initializes Vulkan, creates the swapchain and pipelines,
      * and allocates the per-frame resources used for both the 3D scene and
      * the overlay UI.
+     *
+     * Params:
+     *   window = SDL window used for surface creation and size queries.
+     *   buildVersion = Git describe string used in the window title.
      */
-    ///
-    /// Params:
-    ///   window = SDL window used for surface creation and size queries.
-    ///   buildVersion = Git describe string used in the window title.
     this(SdlWindow* window, string buildVersion)
     {
         this.window = window;
@@ -294,11 +295,12 @@ class VulkanRenderer
         vkDeviceWaitIdle(device.handle);
     }
 
-    /// Handles a single SDL event and updates renderer state.
-    ///
-    /// Params:
-    ///   event = SDL event to process.
-    /// Returns: `true` when the event requests shutdown, otherwise `false`.
+    /** Handles a single SDL event and updates renderer state.
+     *
+     * Params:
+     *   event = SDL event to process.
+     * Returns: `true` when the event requests shutdown, otherwise `false`.
+     */
     bool handleEvent(ref SDL_Event event)
     {
         switch (event.type)
@@ -349,7 +351,7 @@ class VulkanRenderer
         }
     }
 
-    /// Acquires a swapchain image, updates buffers, submits rendering work, and presents the frame.
+    /** Acquires a swapchain image, updates buffers, submits rendering work, and presents the frame. */
     void drawFrame()
     {
         vkWaitForFences(device.handle, 1, &inFlightFences[currentFrame], VK_TRUE, ulong.max);
@@ -418,7 +420,7 @@ class VulkanRenderer
         }
     }
 
-    /// Recreates the swapchain and dependent resources after a resize or out-of-date presentation.
+    /** Recreates the swapchain and dependent resources after a resize or out-of-date presentation. */
     private void recreateSwapchain()
     {
         uint width = 0;
@@ -448,7 +450,7 @@ class VulkanRenderer
         imagesInFlight[] = VK_NULL_HANDLE;
     }
 
-    /// Creates the Vulkan command pool used for per-frame command buffers.
+    /** Creates the Vulkan command pool used for per-frame command buffers. */
     private void createCommandPool()
     {
         VkCommandPoolCreateInfo createInfo;
@@ -459,14 +461,14 @@ class VulkanRenderer
         enforce(vkCreateCommandPool(device.handle, &createInfo, null, &commandPool) == VkResult.VK_SUCCESS, "vkCreateCommandPool failed.");
     }
 
-    /// Allocates the scene vertex and index buffers.
+    /** Allocates the scene vertex and index buffers. */
     private void createGeometryBuffers()
     {
         createBuffer(meshVertexBuffer, maxShapeVertexCount * Vertex.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
         createBuffer(meshIndexBuffer, maxShapeIndexCount * uint.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
-    /// Allocates the per-frame vertex buffers used by the HUD overlay.
+    /** Allocates the per-frame vertex buffers used by the HUD overlay. */
     private void createOverlayBuffers()
     {
         createFrameVertexBuffers(overlayPanels);
@@ -474,14 +476,23 @@ class VulkanRenderer
             createFrameVertexBuffers(fontLayer);
     }
 
-    /// Creates the scene checkerboard texture used by the main 3D pass.
+    /** Creates the scene checkerboard texture used by the main 3D pass. */
     private void createTextureResources()
     {
         auto textureData = buildCheckerboardTextureData();
         createTextureResource(sceneTexture, textureData, textureWidth, textureHeight, VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT);
     }
 
-    /// Creates one Vulkan texture from raw RGBA pixel data.
+    /** Creates one Vulkan texture from raw RGBA pixel data.
+     *
+     * Params:
+     *   resource = Receives the created texture handles.
+     *   pixelData = Raw RGBA pixel data.
+     *   width = Texture width in pixels.
+     *   height = Texture height in pixels.
+     *   addressMode = Sampler addressing mode.
+     * Returns: Nothing.
+     */
     private void createTextureResource(ref TextureResource resource, const(ubyte)[] pixelData, uint width, uint height, VkSamplerAddressMode addressMode = VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
     {
         BufferResource stagingBuffer;
@@ -553,7 +564,12 @@ class VulkanRenderer
         enforce(vkCreateSampler(device.handle, &samplerInfo, null, &resource.sampler) == VkResult.VK_SUCCESS, "vkCreateSampler failed.");
     }
 
-    /// Releases one Vulkan texture resource.
+    /** Releases one Vulkan texture resource.
+     *
+     * Params:
+     *   resource = Texture resource to destroy.
+     * Returns: Nothing.
+     */
     private void destroyTextureResource(ref TextureResource resource)
     {
         if (resource.sampler != VK_NULL_HANDLE)
@@ -593,14 +609,14 @@ class VulkanRenderer
             createTextureResource(fontTextures[index], atlas.pixels, atlas.width, atlas.height);
     }
 
-    /// Releases the scene geometry buffers.
+    /** Releases the scene geometry buffers. */
     private void destroyGeometryBuffers()
     {
         destroyBuffer(meshVertexBuffer);
         destroyBuffer(meshIndexBuffer);
     }
 
-    /// Releases the HUD overlay buffers.
+    /** Releases the HUD overlay buffers. */
     private void destroyOverlayBuffers()
     {
         destroyFrameVertexBuffers(overlayPanels);
@@ -608,20 +624,20 @@ class VulkanRenderer
             destroyFrameVertexBuffers(fontLayer);
     }
 
-    /// Releases the scene texture resources.
+    /** Releases the scene texture resources. */
     private void destroyTextureResources()
     {
         destroyTextureResource(sceneTexture);
     }
 
-    /// Releases the font atlas textures.
+    /** Releases the font atlas textures. */
     private void destroyFontResources()
     {
         foreach (ref fontTexture; fontTextures)
             destroyTextureResource(fontTexture);
     }
 
-    /// Allocates the per-frame uniform buffers used for the scene and overlay layers.
+    /** Allocates the per-frame uniform buffers used for the scene and overlay layers. */
     private void createUniformBuffers()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -633,7 +649,7 @@ class VulkanRenderer
         }
     }
 
-    /// Creates the descriptor pool and descriptor sets for the scene and all overlay layers.
+    /** Creates the descriptor pool and descriptor sets for the scene and all overlay layers. */
     private void createDescriptorPoolAndSets()
     {
         enum descriptorLayerCount = 1 + 1 + fontTextures.length;
@@ -659,19 +675,32 @@ class VulkanRenderer
         createDescriptorSetsForLayer(overlayFonts[2], fontTextures[2]);
     }
 
-    /// Allocates the descriptor sets for the 3D scene pass.
+    /** Allocates the descriptor sets for the 3D scene pass. */
     private void createDescriptorSetsForScene()
     {
         createDescriptorSets(descriptorSets, uniformBuffers, sceneTexture);
     }
 
-    /// Allocates the descriptor sets for one overlay layer.
+    /** Allocates the descriptor sets for one overlay layer.
+     *
+     * Params:
+     *   layer = Overlay layer to receive descriptor sets.
+     *   texture = Texture bound by the layer.
+     * Returns: Nothing.
+     */
     private void createDescriptorSetsForLayer(ref OverlayLayerResources layer, TextureResource texture)
     {
         createDescriptorSets(layer.descriptorSets, layer.uniformBuffers, texture);
     }
 
-    /// Allocates and writes descriptor sets for a uniform-buffer-plus-texture layer.
+    /** Allocates and writes descriptor sets for a uniform-buffer-plus-texture layer.
+     *
+     * Params:
+     *   targetSets = Destination descriptor-set array.
+     *   layerUniformBuffers = Uniform buffers bound by the sets.
+     *   texture = Texture bound by the sets.
+     * Returns: Nothing.
+     */
     private void createDescriptorSets(ref VkDescriptorSet[maxFramesInFlight] targetSets, ref BufferResource[maxFramesInFlight] layerUniformBuffers, TextureResource texture)
     {
         VkDescriptorSetLayout[maxFramesInFlight] layouts;
@@ -716,7 +745,7 @@ class VulkanRenderer
         }
     }
 
-    /// Releases the descriptor pool and all uniform buffers.
+    /** Releases the descriptor pool and all uniform buffers. */
     private void destroyDescriptors()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -733,7 +762,7 @@ class VulkanRenderer
         }
     }
 
-    /// Allocates one command buffer per swapchain image.
+    /** Allocates one command buffer per swapchain image. */
     private void allocateCommandBuffers()
     {
         commandBuffers.length = framebuffers.length;
@@ -749,7 +778,7 @@ class VulkanRenderer
         enforce(vkAllocateCommandBuffers(device.handle, &allocateInfo, commandBuffers.ptr) == VkResult.VK_SUCCESS, "vkAllocateCommandBuffers failed.");
     }
 
-    /// Frees the per-frame command buffers.
+    /** Frees the per-frame command buffers. */
     private void destroyCommandBuffers()
     {
         if (commandBuffers.length != 0)
@@ -759,7 +788,7 @@ class VulkanRenderer
         }
     }
 
-    /// Creates one framebuffer per swapchain image view.
+    /** Creates one framebuffer per swapchain image view. */
     private void createFramebuffers()
     {
         framebuffers.length = swapchain.imageViews.length;
@@ -780,7 +809,7 @@ class VulkanRenderer
         }
     }
 
-    /// Releases the command pool.
+    /** Releases the command pool. */
     private void destroyCommandPool()
     {
         if (commandPool != VK_NULL_HANDLE)
@@ -790,7 +819,7 @@ class VulkanRenderer
         }
     }
 
-    /// Creates and maps a frame-local vertex buffer for an overlay layer.
+    /** Creates and maps a frame-local vertex buffer for an overlay layer. */
     private void createFrameVertexBuffers(ref OverlayLayerResources layer)
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -800,21 +829,21 @@ class VulkanRenderer
         }
     }
 
-    /// Releases the frame-local vertex buffers for an overlay layer.
+    /** Releases the frame-local vertex buffers for an overlay layer. */
     private void destroyFrameVertexBuffers(ref OverlayLayerResources layer)
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
             destroyBuffer(layer.vertexBuffers[frameIndex]);
     }
 
-    /// Releases the frame-local uniform buffers for an overlay layer.
+    /** Releases the frame-local uniform buffers for an overlay layer. */
     private void destroyFrameUniformBuffers(ref OverlayLayerResources layer)
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
             destroyBuffer(layer.uniformBuffers[frameIndex]);
     }
 
-    /// Destroys the framebuffers created for the swapchain images.
+    /** Destroys the framebuffers created for the swapchain images. */
     private void destroyFramebuffers()
     {
         foreach (framebuffer; framebuffers)
@@ -825,7 +854,7 @@ class VulkanRenderer
         framebuffers.length = 0;
     }
 
-    /// Creates the depth attachment image, image view, and backing memory.
+    /** Creates the depth attachment image, image view, and backing memory. */
     private void createDepthResources()
     {
         VkImageCreateInfo imageInfo;
@@ -872,7 +901,7 @@ class VulkanRenderer
         transitionImageLayout(depthImage, VkImageLayout.VK_IMAGE_LAYOUT_UNDEFINED, VkImageLayout.VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
     }
 
-    /// Releases the depth attachment image, image view, and backing memory.
+    /** Releases the depth attachment image, image view, and backing memory. */
     private void destroyDepthResources()
     {
         if (depthImageView != VK_NULL_HANDLE)
@@ -894,7 +923,7 @@ class VulkanRenderer
         }
     }
 
-    /// Creates the per-frame semaphores and fences used for frame submission.
+    /** Creates the per-frame semaphores and fences used for frame submission. */
     private void createSyncObjects()
     {
         VkSemaphoreCreateInfo semaphoreInfo;
@@ -912,7 +941,7 @@ class VulkanRenderer
         }
     }
 
-    /// Destroys the semaphores and fences used for frame submission.
+    /** Destroys the semaphores and fences used for frame submission. */
     private void destroySyncObjects()
     {
         foreach (frameIndex; 0 .. maxFramesInFlight)
@@ -1203,6 +1232,15 @@ class VulkanRenderer
         vkFreeCommandBuffers(device.handle, commandPool, 1, &commandBuffer);
     }
 
+    /** Copies a staging buffer into a Vulkan image.
+     *
+     * Params:
+     *   buffer = Source buffer containing the pixel data.
+     *   image = Destination Vulkan image.
+     *   width = Copy width in pixels.
+     *   height = Copy height in pixels.
+     * Returns: Nothing.
+     */
     private void copyBufferToImage(VkBuffer buffer, VkImage image, uint width, uint height)
     {
         VkCommandBuffer commandBuffer = beginSingleTimeCommands();
@@ -1226,6 +1264,10 @@ class VulkanRenderer
         endSingleTimeCommands(commandBuffer);
     }
 
+    /** Builds the checkerboard texture used by the main scene material.
+     *
+     * @returns RGBA pixel data for the generated checkerboard.
+     */
     private ubyte[] buildCheckerboardTextureData()
     {
         ubyte[] data;
@@ -1276,6 +1318,12 @@ class VulkanRenderer
         updateWindowTitle();
     }
 
+    /** Updates the active render mode and refreshes the window title.
+     *
+     * Params:
+     *   mode = Render mode to activate.
+     * Returns: Nothing.
+     */
     private void setRenderMode(RenderMode mode)
     {
         currentRenderMode = mode;
@@ -1283,6 +1331,12 @@ class VulkanRenderer
         updateWindowTitle();
     }
 
+    /** Returns the human-readable label for a render mode.
+     *
+     * Params:
+     *   mode = Render mode to describe.
+     * Returns: Upper-case render mode label.
+     */
     private static string renderModeLabel(RenderMode mode)
     {
         final switch (mode)

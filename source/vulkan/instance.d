@@ -1,4 +1,9 @@
-/** Vulkan instance creation and destruction helpers for the SDL window surface. */
+/** $purposeofFile
+ *
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * License: CC-BY-NC-SA 4.0
+ */
 module vulkan.instance;
 
 import bindbc.sdl : SDL_Vulkan_GetInstanceExtensions, SDL_Window;
