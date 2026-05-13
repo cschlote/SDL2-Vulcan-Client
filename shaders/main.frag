@@ -21,7 +21,23 @@ layout(location = 0) out vec4 outColor;
 
 void main()
 {
-    int mode = int(scene.lightDirectionMode.w + 0.5);
+    float modeValue = scene.lightDirectionMode.w;
+    if (modeValue < 0.0)
+    {
+        if (modeValue < -1.5)
+        {
+            vec4 textureColor = texture(diffuseTexture, fragUv);
+            outColor = vec4(fragColor.rgb * textureColor.rgb, fragColor.a * textureColor.a);
+        }
+        else
+        {
+            outColor = fragColor;
+        }
+
+        return;
+    }
+
+    int mode = int(modeValue + 0.5);
     if (mode == 0)
     {
         outColor = fragColor;

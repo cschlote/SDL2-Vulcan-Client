@@ -10,7 +10,7 @@ import bindbc.freetype;
 import std.algorithm : max;
 import std.exception : enforce;
 import std.file : exists;
-import std.math : ceil, sqrt;
+import std.math : ceil, isInfinity, isNaN, sqrt;
 import std.process : environment;
 import std.string : indexOf, toStringz;
 
@@ -254,10 +254,12 @@ private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atla
 
 private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
 {
-    const x0 = left / extentWidth * 2.0f - 1.0f;
-    const y0 = top / extentHeight * 2.0f - 1.0f;
-    const x1 = right / extentWidth * 2.0f - 1.0f;
-    const y1 = bottom / extentHeight * 2.0f - 1.0f;
+    const safeExtentWidth = extentWidth > 0.0f && !isNaN(extentWidth) && !isInfinity(extentWidth) ? extentWidth : 1.0f;
+    const safeExtentHeight = extentHeight > 0.0f && !isNaN(extentHeight) && !isInfinity(extentHeight) ? extentHeight : 1.0f;
+    const x0 = left / safeExtentWidth * 2.0f - 1.0f;
+    const y0 = 1.0f - top / safeExtentHeight * 2.0f;
+    const x1 = right / safeExtentWidth * 2.0f - 1.0f;
+    const y1 = 1.0f - bottom / safeExtentHeight * 2.0f;
 
     vertices ~= Vertex([x0, y0, 0.0f], color, [0.0f, 0.0f, 1.0f], [u0, v0]);
     vertices ~= Vertex([x1, y0, 0.0f], color, [0.0f, 0.0f, 1.0f], [u1, v0]);

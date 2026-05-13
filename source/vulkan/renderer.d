@@ -12,6 +12,7 @@ import core.stdc.string : memcpy;
 import std.exception : enforce;
 import std.format : format;
 import std.math : PI, cos, sin;
+import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
@@ -967,12 +968,12 @@ class VulkanRenderer
         memcpy(uniformBuffers[frameIndex].mapped, &uniforms, SceneUniforms.sizeof);
 
         SceneUniforms panelUniforms;
-        panelUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 0.0f];
+        panelUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, -1.0f];
         panelUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
         memcpy(overlayPanels.uniformBuffers[frameIndex].mapped, &panelUniforms, SceneUniforms.sizeof);
 
         SceneUniforms textUniforms;
-        textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 2.0f];
+        textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, -2.0f];
         textUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
         foreach (ref fontLayer; overlayFonts)
             memcpy(fontLayer.uniformBuffers[frameIndex].mapped, &textUniforms, SceneUniforms.sizeof);
