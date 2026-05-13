@@ -1,3 +1,8 @@
+/* Fragment shader for the main scene.
+ *
+ * Mode 0 renders flat color, mode 1 applies lighting and a tiled diffuse
+ * texture, and mode 2 multiplies the vertex color by the sampled texture.
+ */
 #version 450
 
 layout(location = 0) in vec4 fragColor;
