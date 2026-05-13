@@ -12,10 +12,11 @@ import core.stdc.string : memcpy;
 import std.exception : enforce;
 import std.format : format;
 import std.math : PI, cos, sin;
+import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.hud : HudOverlayGeometry, buildHudOverlayVertices;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -112,11 +113,14 @@ class VulkanRenderer
     private TextureResource[3] fontTextures;
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[3] overlayFonts;
+    private HudWindowDrawRange[] hudWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum smallFontPixelHeight = 12;
     private enum mediumFontPixelHeight = 18;
     private enum largeFontPixelHeight = 24;
+    private HudLayoutState hudLayoutState;
+    private bool sceneMouseDragging;
 
     private VkSemaphore[maxFramesInFlight] imageAvailableSemaphores;
     private VkSemaphore[maxFramesInFlight] renderFinishedSemaphores;
@@ -230,6 +234,7 @@ class VulkanRenderer
         createOverlayBuffers();
         createTextureResources();
         createFontResources();
+        syncHudLayoutState();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -331,6 +336,12 @@ class VulkanRenderer
                 else if (event.key.scancode == SDL_Scancode.down)
                     rotateDown = true;
                 return false;
+            case SDL_EventType.mouseButtonDown:
+                return handleMouseButtonDown(event);
+            case SDL_EventType.mouseButtonUp:
+                return handleMouseButtonUp(event);
+            case SDL_EventType.mouseMotion:
+                return handleMouseMotion(event);
             case SDL_EventType.keyUp:
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
@@ -967,12 +978,12 @@ class VulkanRenderer
         memcpy(uniformBuffers[frameIndex].mapped, &uniforms, SceneUniforms.sizeof);
 
         SceneUniforms panelUniforms;
-        panelUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 0.0f];
+        panelUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, -1.0f];
         panelUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
         memcpy(overlayPanels.uniformBuffers[frameIndex].mapped, &panelUniforms, SceneUniforms.sizeof);
 
         SceneUniforms textUniforms;
-        textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, 2.0f];
+        textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, -2.0f];
         textUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
         foreach (ref fontLayer; overlayFonts)
             memcpy(fontLayer.uniformBuffers[frameIndex].mapped, &textUniforms, SceneUniforms.sizeof);
@@ -1042,6 +1053,7 @@ class VulkanRenderer
             pitchAngle,
             currentShapeName,
             currentRenderModeName,
+            hudLayoutState,
             fontAtlases[0],
             fontAtlases[1],
             fontAtlases[2]);
@@ -1050,6 +1062,8 @@ class VulkanRenderer
         enforce(overlayVertices.smallText.length <= maxOverlayVertices, "HUD overlay small-text vertex limit exceeded.");
         enforce(overlayVertices.mediumText.length <= maxOverlayVertices, "HUD overlay medium-text vertex limit exceeded.");
         enforce(overlayVertices.largeText.length <= maxOverlayVertices, "HUD overlay large-text vertex limit exceeded.");
+
+        hudWindowRanges = overlayVertices.windows;
 
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
@@ -1065,6 +1079,96 @@ class VulkanRenderer
     }
 
     /// Records the render pass commands for the current frame.
+
+            /** Recomputes the draggable HUD window clamp state for the current swapchain size. */
+            private void syncHudLayoutState()
+            {
+                buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+            }
+
+            /** Starts a scene drag when a mouse press does not hit the HUD. */
+            private bool handleMouseButtonDown(ref SDL_Event event)
+            {
+                if (event.button.button != 1)
+                    return false;
+
+                const layout = buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+
+                const mouseX = cast(float)event.button.x;
+                const mouseY = cast(float)event.button.y;
+                const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
+                    || hudPointInRect(layout.modes, mouseX, mouseY)
+                    || hudPointInRect(layout.sample, mouseX, mouseY)
+                    || hudPointInRect(layout.input, mouseX, mouseY)
+                    || hudPointInRect(layout.center, mouseX, mouseY);
+
+                if (hudPointInHeader(layout.center, mouseX, mouseY))
+                {
+                    hudBeginDrag(hudLayoutState, layout.center, mouseX, mouseY);
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                sceneMouseDragging = !hitHud;
+                return false;
+            }
+
+            /** Ends any active mouse drag when the button is released. */
+            private bool handleMouseButtonUp(ref SDL_Event event)
+            {
+                if (event.button.button != 1)
+                    return false;
+
+                if (hudLayoutState.middleDragging)
+                    hudEndDrag(hudLayoutState);
+
+                sceneMouseDragging = false;
+                return false;
+            }
+
+            /** Routes mouse motion either to the draggable window or to the 3D layer. */
+            private bool handleMouseMotion(ref SDL_Event event)
+            {
+                if (hudLayoutState.middleDragging)
+                {
+                    hudDragTo(hudLayoutState, cast(float)event.motion.x, cast(float)event.motion.y, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height);
+                    return false;
+                }
+
+                if (sceneMouseDragging)
+                {
+                    yawAngle += cast(float)event.motion.xrel * 0.006f;
+                    pitchAngle += cast(float)event.motion.yrel * 0.006f;
+                    if (pitchAngle < -1.40f)
+                        pitchAngle = -1.40f;
+                    else if (pitchAngle > 1.40f)
+                        pitchAngle = 1.40f;
+                }
+
+                return false;
+            }
     ///
     /// Params:
     ///   commandBuffer = Command buffer to record into.
@@ -1126,27 +1230,40 @@ class VulkanRenderer
             vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
         }
 
-        const panelCount = overlayPanels.vertexCounts[currentFrame];
-        if (panelCount > 0)
+        foreach (windowRange; hudWindowRanges)
         {
             vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
-            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayPanels.descriptorSets[currentFrame], 0, null);
-            VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
-            vkCmdDraw(commandBuffer, panelCount, 1, 0, 0);
-        }
+            if (windowRange.panelsCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayPanels.descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.panelsCount, 1, windowRange.panelsStart, 0);
+            }
 
-        foreach (layerIndex; 0 .. overlayFonts.length)
-        {
-            const textCount = overlayFonts[layerIndex].vertexCounts[currentFrame];
-            if (textCount == 0)
-                continue;
+            if (windowRange.smallTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[0].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[0].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.smallTextCount, 1, windowRange.smallTextStart, 0);
+            }
 
-            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
-            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[layerIndex].descriptorSets[currentFrame], 0, null);
-            VkBuffer[1] textVertexBuffers = [overlayFonts[layerIndex].vertexBuffers[currentFrame].buffer];
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
-            vkCmdDraw(commandBuffer, textCount, 1, 0, 0);
+            if (windowRange.mediumTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[1].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[1].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.mediumTextCount, 1, windowRange.mediumTextStart, 0);
+            }
+
+            if (windowRange.largeTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[2].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[2].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.largeTextCount, 1, windowRange.largeTextStart, 0);
+            }
         }
 
         vkCmdEndRenderPass(commandBuffer);

@@ -78,7 +78,7 @@ struct PipelineResources
         createDescriptorSetLayout(device);
         createRenderPass(device, colorFormat, depthFormat);
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_FILL, true, true, false, false, graphicsPipeline);
-        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_FILL, false, false, false, true, overlayPipeline);
+        createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_FILL, true, true, false, true, overlayPipeline);
         createGraphicsPipeline(device, extent, vertexShaderPath, fragmentShaderPath, VkPrimitiveTopology.VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST, VkPolygonMode.VK_POLYGON_MODE_LINE, false, false, false, false, wireframePipeline);
     }
 
