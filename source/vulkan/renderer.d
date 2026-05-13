@@ -16,7 +16,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.hud : HudOverlayGeometry, buildHudOverlayVertices;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -118,6 +118,8 @@ class VulkanRenderer
     private enum smallFontPixelHeight = 12;
     private enum mediumFontPixelHeight = 18;
     private enum largeFontPixelHeight = 24;
+    private HudLayoutState hudLayoutState;
+    private bool sceneMouseDragging;
 
     private VkSemaphore[maxFramesInFlight] imageAvailableSemaphores;
     private VkSemaphore[maxFramesInFlight] renderFinishedSemaphores;
@@ -231,6 +233,7 @@ class VulkanRenderer
         createOverlayBuffers();
         createTextureResources();
         createFontResources();
+        syncHudLayoutState();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -332,6 +335,12 @@ class VulkanRenderer
                 else if (event.key.scancode == SDL_Scancode.down)
                     rotateDown = true;
                 return false;
+            case SDL_EventType.mouseButtonDown:
+                return handleMouseButtonDown(event);
+            case SDL_EventType.mouseButtonUp:
+                return handleMouseButtonUp(event);
+            case SDL_EventType.mouseMotion:
+                return handleMouseMotion(event);
             case SDL_EventType.keyUp:
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
@@ -1043,6 +1052,7 @@ class VulkanRenderer
             pitchAngle,
             currentShapeName,
             currentRenderModeName,
+            hudLayoutState,
             fontAtlases[0],
             fontAtlases[1],
             fontAtlases[2]);
@@ -1066,6 +1076,96 @@ class VulkanRenderer
     }
 
     /// Records the render pass commands for the current frame.
+
+            /** Recomputes the draggable HUD window clamp state for the current swapchain size. */
+            private void syncHudLayoutState()
+            {
+                buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+            }
+
+            /** Starts a scene drag when a mouse press does not hit the HUD. */
+            private bool handleMouseButtonDown(ref SDL_Event event)
+            {
+                if (event.button.button != 1)
+                    return false;
+
+                const layout = buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+
+                const mouseX = cast(float)event.button.x;
+                const mouseY = cast(float)event.button.y;
+                const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
+                    || hudPointInRect(layout.modes, mouseX, mouseY)
+                    || hudPointInRect(layout.sample, mouseX, mouseY)
+                    || hudPointInRect(layout.input, mouseX, mouseY)
+                    || hudPointInRect(layout.center, mouseX, mouseY);
+
+                if (hudPointInHeader(layout.center, mouseX, mouseY))
+                {
+                    hudBeginDrag(hudLayoutState, layout.center, mouseX, mouseY);
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                sceneMouseDragging = !hitHud;
+                return false;
+            }
+
+            /** Ends any active mouse drag when the button is released. */
+            private bool handleMouseButtonUp(ref SDL_Event event)
+            {
+                if (event.button.button != 1)
+                    return false;
+
+                if (hudLayoutState.middleDragging)
+                    hudEndDrag(hudLayoutState);
+
+                sceneMouseDragging = false;
+                return false;
+            }
+
+            /** Routes mouse motion either to the draggable window or to the 3D layer. */
+            private bool handleMouseMotion(ref SDL_Event event)
+            {
+                if (hudLayoutState.middleDragging)
+                {
+                    hudDragTo(hudLayoutState, cast(float)event.motion.x, cast(float)event.motion.y, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height);
+                    return false;
+                }
+
+                if (sceneMouseDragging)
+                {
+                    yawAngle += cast(float)event.motion.xrel * 0.006f;
+                    pitchAngle += cast(float)event.motion.yrel * 0.006f;
+                    if (pitchAngle < -1.40f)
+                        pitchAngle = -1.40f;
+                    else if (pitchAngle > 1.40f)
+                        pitchAngle = 1.40f;
+                }
+
+                return false;
+            }
     ///
     /// Params:
     ///   commandBuffer = Command buffer to record into.
