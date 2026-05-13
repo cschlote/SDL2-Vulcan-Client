@@ -50,6 +50,7 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Keep each commit focused on one coherent change.
 - Stage only the files that belong to that change.
 - Write commit subjects in technical English and add a body when the change needs context.
+- Merge feature branches with an explicit merge commit (`--no-ff`); do not fast-forward feature branch merges into long-lived branches.
 - For release commits, update `CHANGELOG.md`, generate the release timetag with `scripts/release_timetag.d`, and tag the commit with a leading `v`.
 - Do not commit generated build artifacts such as compiled helper binaries.
 
