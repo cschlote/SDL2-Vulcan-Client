@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added a Vulkan quickstart, a rendering-architecture guide, shader documentation, and DDox/ADRDox skeletons for future technical notes.
+
 ## Release 26.19.8459
 
 - Improved the on-screen interface with real font atlases, a configurable font path, and crisper text rendering.
