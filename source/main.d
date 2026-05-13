@@ -1,4 +1,9 @@
-/** Program entry point that forwards to the application runner. */
+/** $purposeofFile
+ *
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * License: CC-BY-NC-SA 4.0
+ */
 module main;
 
 import app;
