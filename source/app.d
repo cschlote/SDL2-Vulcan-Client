@@ -1,4 +1,9 @@
-/** Application bootstrap that loads SDL and Vulkan, creates the window, and drives the renderer. */
+/** $purposeofFile
+ *
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * License: CC-BY-NC-SA 4.0
+ */
 module app;
 
 import bindbc.loader : LoadMsg;
