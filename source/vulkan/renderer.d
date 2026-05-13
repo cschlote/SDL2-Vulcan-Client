@@ -16,7 +16,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -113,6 +113,7 @@ class VulkanRenderer
     private TextureResource[3] fontTextures;
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[3] overlayFonts;
+    private HudWindowDrawRange[] hudWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum smallFontPixelHeight = 12;
@@ -1062,6 +1063,8 @@ class VulkanRenderer
         enforce(overlayVertices.mediumText.length <= maxOverlayVertices, "HUD overlay medium-text vertex limit exceeded.");
         enforce(overlayVertices.largeText.length <= maxOverlayVertices, "HUD overlay large-text vertex limit exceeded.");
 
+        hudWindowRanges = overlayVertices.windows;
+
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
 
@@ -1227,27 +1230,40 @@ class VulkanRenderer
             vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
         }
 
-        const panelCount = overlayPanels.vertexCounts[currentFrame];
-        if (panelCount > 0)
+        foreach (windowRange; hudWindowRanges)
         {
             vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
-            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayPanels.descriptorSets[currentFrame], 0, null);
-            VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
-            vkCmdDraw(commandBuffer, panelCount, 1, 0, 0);
-        }
+            if (windowRange.panelsCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayPanels.descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.panelsCount, 1, windowRange.panelsStart, 0);
+            }
 
-        foreach (layerIndex; 0 .. overlayFonts.length)
-        {
-            const textCount = overlayFonts[layerIndex].vertexCounts[currentFrame];
-            if (textCount == 0)
-                continue;
+            if (windowRange.smallTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[0].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[0].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.smallTextCount, 1, windowRange.smallTextStart, 0);
+            }
 
-            vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
-            vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[layerIndex].descriptorSets[currentFrame], 0, null);
-            VkBuffer[1] textVertexBuffers = [overlayFonts[layerIndex].vertexBuffers[currentFrame].buffer];
-            vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
-            vkCmdDraw(commandBuffer, textCount, 1, 0, 0);
+            if (windowRange.mediumTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[1].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[1].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.mediumTextCount, 1, windowRange.mediumTextStart, 0);
+            }
+
+            if (windowRange.largeTextCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[2].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[2].vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.largeTextCount, 1, windowRange.largeTextStart, 0);
+            }
         }
 
         vkCmdEndRenderPass(commandBuffer);

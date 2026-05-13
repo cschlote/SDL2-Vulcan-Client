@@ -48,6 +48,19 @@ struct HudLayout
     HudWindowRect center;
 }
 
+/** Describes one contiguous draw block inside the overlay buffers. */
+struct HudWindowDrawRange
+{
+    uint panelsStart;
+    uint panelsCount;
+    uint smallTextStart;
+    uint smallTextCount;
+    uint mediumTextStart;
+    uint mediumTextCount;
+    uint largeTextStart;
+    uint largeTextCount;
+}
+
 /** Holds the panel and text geometry for the HUD overlay.
  */
 struct HudOverlayGeometry
@@ -60,6 +73,8 @@ struct HudOverlayGeometry
     Vertex[] mediumText;
     /** Large sample text quads. */
     Vertex[] largeText;
+    /** Draw ranges that keep each window's render calls contiguous. */
+    HudWindowDrawRange[] windows;
 }
 
 /** Builds the HUD overlay geometry for the current frame.
@@ -81,29 +96,53 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
     HudOverlayGeometry geometry;
 
     const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, smallFont, mediumFont, largeFont);
+    UiWindow[5] windows = [
+        buildStatusWindow(layout.status, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont),
+        buildModeWindow(layout.modes, smallFont),
+        buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont),
+        buildInputWindow(layout.input, smallFont),
+        buildCenterWindow(layout.center, smallFont, mediumFont),
+    ];
 
-    auto root = new UiContainer();
-    root.add(buildStatusWindow(layout.status, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont));
-    root.add(buildModeWindow(layout.modes, smallFont));
-    root.add(buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont));
-    root.add(buildInputWindow(layout.input, smallFont));
-    root.add(buildCenterWindow(layout.center, smallFont, mediumFont));
+    foreach (index, window; windows)
+    {
+        Vertex[] windowPanels;
+        Vertex[] windowSmallText;
+        Vertex[] windowMediumText;
+        Vertex[] windowLargeText;
 
-    UiRenderContext context = UiRenderContext.init;
-    context.extentWidth = extentWidth;
-    context.extentHeight = extentHeight;
-    context.originX = 0.0f;
-    context.originY = 0.0f;
-    context.depthBase = 0.10f;
-    context.smallFont = &smallFont;
-    context.mediumFont = &mediumFont;
-    context.largeFont = &largeFont;
-    context.panels = &geometry.panels;
-    context.smallText = &geometry.smallText;
-    context.mediumText = &geometry.mediumText;
-    context.largeText = &geometry.largeText;
+        UiRenderContext context = UiRenderContext.init;
+        context.extentWidth = extentWidth;
+        context.extentHeight = extentHeight;
+        context.originX = 0.0f;
+        context.originY = 0.0f;
+        context.depthBase = 0.10f - cast(float)index * 0.02f;
+        context.smallFont = &smallFont;
+        context.mediumFont = &mediumFont;
+        context.largeFont = &largeFont;
+        context.panels = &windowPanels;
+        context.smallText = &windowSmallText;
+        context.mediumText = &windowMediumText;
+        context.largeText = &windowLargeText;
 
-    root.render(context);
+        window.render(context);
+
+        HudWindowDrawRange range;
+        range.panelsStart = cast(uint)geometry.panels.length;
+        range.panelsCount = cast(uint)windowPanels.length;
+        range.smallTextStart = cast(uint)geometry.smallText.length;
+        range.smallTextCount = cast(uint)windowSmallText.length;
+        range.mediumTextStart = cast(uint)geometry.mediumText.length;
+        range.mediumTextCount = cast(uint)windowMediumText.length;
+        range.largeTextStart = cast(uint)geometry.largeText.length;
+        range.largeTextCount = cast(uint)windowLargeText.length;
+        geometry.windows ~= range;
+
+        geometry.panels ~= windowPanels;
+        geometry.smallText ~= windowSmallText;
+        geometry.mediumText ~= windowMediumText;
+        geometry.largeText ~= windowLargeText;
+    }
 
     return geometry;
 }
