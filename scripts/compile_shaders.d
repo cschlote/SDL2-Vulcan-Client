@@ -1,4 +1,10 @@
 #!/usr/bin/env rdmd
+/** $purposeofFile
+ *
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * License: CC-BY-NC-SA 4.0
+ */
 module scripts.compile_shaders;
 
 import std.file : exists, mkdirRecurse, timeLastModified;
@@ -11,6 +17,7 @@ private struct ShaderPair
     string output;
 }
 
+/** Compiles the repository's GLSL shaders into SPIR-V binaries. */
 void main()
 {
     const ShaderPair[] shaders = [
@@ -37,6 +44,13 @@ void main()
     }
 }
 
+/** Returns whether a shader source file is newer than its compiled output.
+ *
+ * Params:
+ *   sourcePath = Path to the GLSL source file.
+ *   outputPath = Path to the generated SPIR-V file.
+ * Returns: `true` when the shader should be rebuilt, otherwise `false`.
+ */
 private bool needsCompile(string sourcePath, string outputPath)
 {
     if (!exists(outputPath))
