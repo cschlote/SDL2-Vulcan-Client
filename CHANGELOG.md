@@ -2,8 +2,10 @@
 
 ## Unreleased
 
-- Added a Vulkan quickstart, a rendering-architecture guide, shader documentation, and DDox/ADRDox skeletons for future technical notes.
-- Fixed HUD window layering so each window's panel, text, and hidden-line elements stay in the same render block.
+## Release 26.20.4126
+
+- Improved the custom overlay documentation and clarified the retained UI layout.
+- Set a sensible minimum size for the SDL window and kept HUD elements rendering together.
 
 ## Release 26.19.8459
 

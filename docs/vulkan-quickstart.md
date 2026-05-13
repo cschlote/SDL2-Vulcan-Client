@@ -32,7 +32,7 @@ The code keeps ownership explicit:
 - swapchain-dependent resources are recreated when the surface becomes invalid
 - per-frame resources are double-buffered to keep updates deterministic
 
-That separation is the part senior developers usually care about first when they need to extend the project, whether the next step is adding more passes, moving to a different overlay system, or integrating Dear ImGui.
+That separation is the part senior developers usually care about first when they need to extend the project, whether the next step is adding more passes or evolving the overlay system.
 
 ## Practical Vulkan Concepts
 

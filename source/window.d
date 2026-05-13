@@ -6,7 +6,7 @@
  */
 module window;
 
-import bindbc.sdl : SDL_CreateWindow, SDL_DestroyWindow, SDL_GetError, SDL_GetWindowSize, SDL_SetWindowTitle, SDL_Vulkan_CreateSurface, SDL_Window, SDL_WindowFlags;
+import bindbc.sdl : SDL_CreateWindow, SDL_DestroyWindow, SDL_GetError, SDL_GetWindowSize, SDL_SetWindowMinimumSize, SDL_SetWindowTitle, SDL_Vulkan_CreateSurface, SDL_Window, SDL_WindowFlags;
 import bindbc.vulkan;
 import std.exception : enforce;
 import std.string : fromStringz, toStringz;
@@ -27,6 +27,7 @@ struct SdlWindow
     {
         handle = SDL_CreateWindow(title.toStringz, width, height, SDL_WindowFlags.vulkan | SDL_WindowFlags.resizable);
         enforce(handle !is null, "SDL_CreateWindow failed: " ~ SDL_GetError().fromStringz.idup);
+        enforce(SDL_SetWindowMinimumSize(handle, 1024, 576), "SDL_SetWindowMinimumSize failed: " ~ SDL_GetError().fromStringz.idup);
     }
 
     /** Destroys the managed SDL window if it is still alive.

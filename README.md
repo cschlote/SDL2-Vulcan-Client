@@ -1,6 +1,6 @@
 # SDL2 Vulkan Quickstart
 
-This repository is a compact Vulkan codebase in D that is meant to be read, extended, and used as a senior-level quickstart for both Vulkan and Dear ImGui style frame integration. The current renderer uses a custom overlay, but the ownership model, per-frame resource split, and swapchain lifecycle are the same pieces you need when you swap in ImGui.
+This repository is a compact Vulkan codebase in D that is meant to be read, extended, and used as a senior-level quickstart for Vulkan frame integration. The current renderer uses a custom overlay, and the ownership model, per-frame resource split, and swapchain lifecycle are the core pieces you need for that architecture.
 
 ## Fast Orientation
 
@@ -49,7 +49,7 @@ The build runs the version helper and shader compiler before linking the executa
 ## Documentation Notes
 
 - The overlay is rendered in native window pixels, not as a scaled texture, so it stays crisp.
-- The frame lifecycle is intentionally explicit so that a future Dear ImGui integration can reuse the same swapchain and per-frame resource structure.
+- The frame lifecycle is intentionally explicit so that the same swapchain and per-frame resource structure can support a custom overlay or another retained UI layer.
 - If you need deeper source documentation, start with the DDox skeleton in [docs/templates/ddox.md](docs/templates/ddox.md) and the ADRDox skeleton in [docs/templates/adrdox.md](docs/templates/adrdox.md).
 
 ## Release and Versioning
