@@ -200,7 +200,7 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
  * @param extentHeight = Swapchain height in pixels.
  * @returns Nothing.
  */
-void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, float x, float y, float[4] color, float extentWidth, float extentHeight)
+void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, float x, float y, float z, float[4] color, float extentWidth, float extentHeight)
 {
     float cursorX = x;
     float cursorY = y;
@@ -224,7 +224,7 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
         {
             const left = cursorX + glyph.bearingX;
             const top = cursorY + baselineOffset - glyph.bearingY;
-            appendTexturedQuad(vertices, left, top, left + glyph.width, top + glyph.height, glyph.u0, glyph.v0, glyph.u1, glyph.v1, color, extentWidth, extentHeight);
+            appendTexturedQuad(vertices, left, top, left + glyph.width, top + glyph.height, z, glyph.u0, glyph.v0, glyph.u1, glyph.v1, color, extentWidth, extentHeight);
         }
 
         cursorX += glyph.advance;
@@ -252,7 +252,7 @@ private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atla
     }
 }
 
-private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
+private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
 {
     const safeExtentWidth = extentWidth > 0.0f && !isNaN(extentWidth) && !isInfinity(extentWidth) ? extentWidth : 1.0f;
     const safeExtentHeight = extentHeight > 0.0f && !isNaN(extentHeight) && !isInfinity(extentHeight) ? extentHeight : 1.0f;
@@ -261,13 +261,13 @@ private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, fl
     const x1 = right / safeExtentWidth * 2.0f - 1.0f;
     const y1 = bottom / safeExtentHeight * 2.0f - 1.0f;
 
-    vertices ~= Vertex([x0, y0, 0.0f], color, [0.0f, 0.0f, 1.0f], [u0, v0]);
-    vertices ~= Vertex([x1, y0, 0.0f], color, [0.0f, 0.0f, 1.0f], [u1, v0]);
-    vertices ~= Vertex([x1, y1, 0.0f], color, [0.0f, 0.0f, 1.0f], [u1, v1]);
+    vertices ~= Vertex([x0, y0, z], color, [0.0f, 0.0f, 1.0f], [u0, v0]);
+    vertices ~= Vertex([x1, y0, z], color, [0.0f, 0.0f, 1.0f], [u1, v0]);
+    vertices ~= Vertex([x1, y1, z], color, [0.0f, 0.0f, 1.0f], [u1, v1]);
 
-    vertices ~= Vertex([x0, y0, 0.0f], color, [0.0f, 0.0f, 1.0f], [u0, v0]);
-    vertices ~= Vertex([x1, y1, 0.0f], color, [0.0f, 0.0f, 1.0f], [u1, v1]);
-    vertices ~= Vertex([x0, y1, 0.0f], color, [0.0f, 0.0f, 1.0f], [u0, v1]);
+    vertices ~= Vertex([x0, y0, z], color, [0.0f, 0.0f, 1.0f], [u0, v0]);
+    vertices ~= Vertex([x1, y1, z], color, [0.0f, 0.0f, 1.0f], [u1, v1]);
+    vertices ~= Vertex([x0, y1, z], color, [0.0f, 0.0f, 1.0f], [u0, v1]);
 }
 
 unittest

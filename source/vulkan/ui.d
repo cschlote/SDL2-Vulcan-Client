@@ -25,6 +25,7 @@ struct UiRenderContext
     float extentHeight;
     float originX;
     float originY;
+    float depthBase;
     const(FontAtlas)* smallFont;
     const(FontAtlas)* mediumFont;
     const(FontAtlas)* largeFont;
@@ -92,8 +93,11 @@ abstract class UiWidget
         renderSelf(localContext);
 
         auto childContext = localContext.offset(childOffsetX, childOffsetY);
-        foreach (child; children)
+        foreach (index, child; children)
+        {
+            childContext.depthBase = localContext.depthBase - cast(float)index * 0.02f;
             child.render(childContext);
+        }
     }
 
 protected:
@@ -140,8 +144,8 @@ final class UiWindow : UiWidget
 protected:
     override void renderSelf(ref UiRenderContext context)
     {
-        appendWindowFrame(context, 0.0f, 0.0f, width, height, bodyColor, headerColor);
-        appendTextLine(context, UiTextStyle.medium, title, 12.0f, 6.0f, titleColor);
+        appendWindowFrame(context, 0.0f, 0.0f, width, height, bodyColor, headerColor, context.depthBase);
+        appendTextLine(context, UiTextStyle.medium, title, 12.0f, 6.0f, titleColor, context.depthBase - 0.001f);
     }
 }
 
@@ -163,7 +167,7 @@ final class UiLabel : UiWidget
 protected:
     override void renderSelf(ref UiRenderContext context)
     {
-        appendTextLine(context, style, text, 0.0f, 0.0f, color);
+        appendTextLine(context, style, text, 0.0f, 0.0f, color, context.depthBase - 0.001f);
     }
 }
 
@@ -189,37 +193,37 @@ final class UiButton : UiWidget
 protected:
     override void renderSelf(ref UiRenderContext context)
     {
-        appendButtonFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor);
-        appendTextLine(context, style, caption, 10.0f, 5.0f, textColor);
+        appendButtonFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor, context.depthBase);
+        appendTextLine(context, style, caption, 10.0f, 5.0f, textColor, context.depthBase - 0.001f);
     }
 }
 
-private void appendWindowFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] bodyColor, float[4] headerColor)
+private void appendWindowFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] bodyColor, float[4] headerColor, float z)
 {
     if (right <= left || bottom <= top)
         return;
 
-    appendQuad(context, left, top, right, bottom, 0.0f, bodyColor);
-    appendQuad(context, left, top, right, top + 7.0f, 0.0f, headerColor);
-    appendQuad(context, left, top, right, top + 1.0f, 0.01f, [0.98f, 0.98f, 1.0f, 0.46f]);
-    appendQuad(context, left, bottom - 1.0f, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, left, top, left + 1.0f, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, right - 1.0f, top, right, bottom, 0.01f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, left, top, right, bottom, z, bodyColor);
+    appendQuad(context, left, top, right, top + 7.0f, z - 0.001f, headerColor);
+    appendQuad(context, left, top, right, top + 1.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.46f]);
+    appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, left, top, left + 1.0f, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, right - 1.0f, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
 }
 
-private void appendButtonFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] bodyColor, float[4] borderColor)
+private void appendButtonFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] bodyColor, float[4] borderColor, float z)
 {
     if (right <= left || bottom <= top)
         return;
 
-    appendQuad(context, left, top, right, bottom, 0.0f, bodyColor);
-    appendQuad(context, left, top, right, top + 1.0f, 0.01f, [1.0f, 1.0f, 1.0f, 0.24f]);
-    appendQuad(context, left, bottom - 1.0f, right, bottom, 0.01f, [0.0f, 0.0f, 0.0f, 0.34f]);
-    appendQuad(context, left, top, left + 1.0f, bottom, 0.01f, borderColor);
-    appendQuad(context, right - 1.0f, top, right, bottom, 0.01f, borderColor);
+    appendQuad(context, left, top, right, bottom, z, bodyColor);
+    appendQuad(context, left, top, right, top + 1.0f, z - 0.001f, [1.0f, 1.0f, 1.0f, 0.24f]);
+    appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.001f, [0.0f, 0.0f, 0.0f, 0.34f]);
+    appendQuad(context, left, top, left + 1.0f, bottom, z - 0.001f, borderColor);
+    appendQuad(context, right - 1.0f, top, right, bottom, z - 0.001f, borderColor);
 }
 
-private void appendTextLine(ref UiRenderContext context, UiTextStyle style, string text, float x, float y, float[4] color)
+private void appendTextLine(ref UiRenderContext context, UiTextStyle style, string text, float x, float y, float[4] color, float z)
 {
     const atlas = context.atlasFor(style);
     auto vertices = textVerticesFor(context, style);
@@ -227,7 +231,7 @@ private void appendTextLine(ref UiRenderContext context, UiTextStyle style, stri
     if (atlas is null || vertices is null)
         return;
 
-    appendText(*vertices, *atlas, text, context.originX + x, context.originY + y, color, context.extentWidth, context.extentHeight);
+    appendText(*vertices, *atlas, text, context.originX + x, context.originY + y, z, color, context.extentWidth, context.extentHeight);
 }
 
 private Vertex[]* textVerticesFor(ref UiRenderContext context, UiTextStyle style)

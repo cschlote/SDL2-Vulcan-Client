@@ -94,6 +94,7 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
     context.extentHeight = extentHeight;
     context.originX = 0.0f;
     context.originY = 0.0f;
+    context.depthBase = 0.10f;
     context.smallFont = &smallFont;
     context.mediumFont = &mediumFont;
     context.largeFont = &largeFont;
