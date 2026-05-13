@@ -265,7 +265,7 @@ private float toNdcX(ref UiRenderContext context, float pixelX)
 private float toNdcY(ref UiRenderContext context, float pixelY)
 {
     const extentHeight = safeExtent(context.extentHeight);
-    return 1.0f - (context.originY + pixelY) / extentHeight * 2.0f;
+    return (context.originY + pixelY) / extentHeight * 2.0f - 1.0f;
 }
 
 private float safeExtent(float extent)
