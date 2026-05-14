@@ -27,7 +27,7 @@ import std.string : fromStringz;
 import logging : logLine, logLineVerbose;
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -1187,20 +1187,27 @@ class VulkanRenderer
                     return false;
                 }
 
-                if (hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                {
+                    logLineVerbose("Status window handled the press.");
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                if (hudLayoutState.centerVisible && hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
                 {
                     logLineVerbose("Center window handled the press. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
                     sceneMouseDragging = false;
                     return false;
                 }
 
-                const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
-                    || hudPointInRect(layout.modes, mouseX, mouseY)
+                const hitHud = hudPointInRect(layout.modes, mouseX, mouseY)
                     || hudPointInRect(layout.sample, mouseX, mouseY)
                     || hudPointInRect(layout.input, mouseX, mouseY)
-                    || hudPointInRect(layout.center, mouseX, mouseY);
+                    || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
+                    || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
 
-                if (hudPointInHeader(layout.center, mouseX, mouseY))
+                if (hudLayoutState.centerVisible && hudPointInHeader(layout.center, mouseX, mouseY))
                 {
                     hudBeginDrag(hudLayoutState, layout.center, mouseX, mouseY);
                     logLineVerbose("Fallback header drag started.");
@@ -1231,7 +1238,7 @@ class VulkanRenderer
                     fontAtlases[1],
                     fontAtlases[2]);
 
-                if (hudLayoutState.middleDragging || hudLayoutState.middleResizing)
+                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
                 {
                     logLineVerbose("Mouse up routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
                     hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
@@ -1249,7 +1256,7 @@ class VulkanRenderer
             /** Routes mouse motion either to the draggable window or to the 3D layer. */
             private bool handleMouseMotion(ref SDL_Event event)
             {
-                if (hudLayoutState.middleDragging || hudLayoutState.middleResizing)
+                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
                 {
                     const layout = buildHudLayout(
                         cast(float)swapchain.extent.width,

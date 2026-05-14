@@ -359,6 +359,18 @@ bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, r
     return window.dispatchPointerEvent(event);
 }
 
+/** Sends a pointer event to the status window and reports whether it handled it. */
+bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    auto window = buildStatusWindow(rect, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    UiPointerEvent event;
+    event.kind = kind;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = button;
+    return window.dispatchPointerEvent(event);
+}
+
 private UiWindow buildSampleWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
     const sampleSmall = textBlockWidth(smallFont, "12 PX  THE QUICK BROWN FOX");
@@ -412,6 +424,9 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     {
         logLine("UiWindow close: DRAG ME");
         layoutState.centerVisible = false;
+        layoutState.middleDragging = false;
+        layoutState.middleResizing = false;
+        layoutState.middleResizeHandle = UiResizeHandle.none;
     };
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
     content.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
