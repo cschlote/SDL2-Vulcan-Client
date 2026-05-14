@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchModeButtonDown, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -1169,6 +1169,19 @@ class VulkanRenderer
 
                 const mouseX = cast(float)event.button.x;
                 const mouseY = cast(float)event.button.y;
+                if (hudDispatchModeButtonDown(
+                    layout.modes,
+                    mouseX,
+                    mouseY,
+                    fontAtlases[0],
+                    { setRenderMode(RenderMode.flatColor); },
+                    { setRenderMode(RenderMode.litTextured); },
+                    { setRenderMode(RenderMode.wireframe); },
+                    { setRenderMode(RenderMode.hiddenLine); }))
+                {
+                    return false;
+                }
+
                 const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
                     || hudPointInRect(layout.modes, mouseX, mouseY)
                     || hudPointInRect(layout.sample, mouseX, mouseY)

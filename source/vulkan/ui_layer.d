@@ -23,6 +23,7 @@ import std.math : PI;
 
 import vulkan.font : FontAtlas;
 import vulkan.pipeline : Vertex;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_container : UiContainer;
@@ -257,7 +258,7 @@ private UiWindow buildStatusWindow(HudWindowRect rect, float fps, float yawAngle
     return window;
 }
 
-private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont)
+private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
 {
     const buttonLabels = [
         "F  FLAT COLOR",
@@ -290,14 +291,38 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     const height = 36.0f + contentBottomWithLabels + 20.0f;
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiButton("F  FLAT COLOR", 0.0f, 0.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    flatColorButton.onClick = onFlatColor;
+    window.add(flatColorButton);
+
+    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    litTexturedButton.onClick = onLitTextured;
+    window.add(litTexturedButton);
+
+    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    wireframeButton.onClick = onWireframe;
+    window.add(wireframeButton);
+
+    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    hiddenLineButton.onClick = onHiddenLine;
+    window.add(hiddenLineButton);
+
     window.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 120.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("ARROWS  ROTATE CAMERA", 0.0f, 144.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("ESC  CLOSE APPLICATION", 0.0f, 168.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     return window;
+}
+
+/** Sends a button-down event to the mode buttons and reports whether one handled it. */
+bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine)
+{
+    auto window = buildModeWindow(rect, smallFont, onFlatColor, onLitTextured, onWireframe, onHiddenLine);
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = 1;
+    return window.dispatchPointerEvent(event);
 }
 
 private UiWindow buildSampleWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)

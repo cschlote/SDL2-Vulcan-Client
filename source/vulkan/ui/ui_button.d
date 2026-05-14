@@ -8,6 +8,7 @@
  */
 module vulkan.ui.ui_button;
 
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine;
@@ -20,6 +21,7 @@ final class UiButton : UiWidget
     float[4] borderColor;
     float[4] textColor;
     UiTextStyle style;
+    void delegate() onClick;
 
     this(string caption, float x, float y, float width, float height, float[4] bodyColor, float[4] borderColor, float[4] textColor, UiTextStyle style = UiTextStyle.small)
     {
@@ -36,5 +38,16 @@ protected:
     {
         appendButtonFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor, context.depthBase);
         appendTextLine(context, style, caption, 10.0f, 5.0f, textColor, context.depthBase - 0.001f);
+    }
+
+    override bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
+            return false;
+
+        if (onClick !is null)
+            onClick();
+
+        return true;
     }
 }

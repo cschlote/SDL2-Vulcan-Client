@@ -9,6 +9,7 @@
  */
 module vulkan.ui.ui_widget;
 
+import vulkan.ui.ui_event : UiPointerEvent;
 import vulkan.ui.ui_context : UiRenderContext;
 
 /** Base class for all retained UI widgets. */
@@ -39,6 +40,28 @@ abstract class UiWidget
         children ~= child;
     }
 
+    /** Routes a pointer event through the widget tree. */
+    final bool dispatchPointerEvent(ref UiPointerEvent event)
+    {
+        if (!visible)
+            return false;
+
+        if (width > 0.0f && height > 0.0f && !contains(event.x, event.y))
+            return false;
+
+        auto childEvent = event;
+        childEvent.x -= x + childOffsetX;
+        childEvent.y -= y + childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            if (children[cast(size_t)index].dispatchPointerEvent(childEvent))
+                return true;
+        }
+
+        return handlePointerEvent(event);
+    }
+
     /** Renders the widget and its children in back-to-front order. */
     final void render(ref UiRenderContext context)
     {
@@ -58,4 +81,17 @@ abstract class UiWidget
 
 protected:
     abstract void renderSelf(ref UiRenderContext context);
+
+    /** Handles a pointer event after children had a chance to consume it. */
+    bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        return false;
+    }
+
+private:
+    /** Returns whether the event hits the widget body in parent space. */
+    bool contains(float localX, float localY) const
+    {
+        return localX >= x && localY >= y && localX < x + width && localY < y + height;
+    }
 }
