@@ -80,7 +80,7 @@ struct FontAtlas
     ubyte[] pixels;
 }
 
-private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;!?/\\+-()[]%";
+private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?/\\+-()[]%";
 
 /** Chooses a reasonable system font path for the current platform.
  *
@@ -99,8 +99,8 @@ string selectDefaultFontPath()
     version(linux)
     {
         foreach (candidate; [
-            "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/TTF/DejaVuSans.ttf",
             "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
         ])
         {
@@ -116,6 +116,35 @@ string selectDefaultFontPath()
         return "C:/Windows/Fonts/arial.ttf".idup;
 
     return "/usr/share/fonts/TTF/DejaVuSans.ttf".idup;
+}
+
+/** Chooses a reasonable system monospace font path for the current platform. */
+string selectDefaultMonospaceFontPath()
+{
+    const overrideFontPath = environment.get("SDL2_VULCAN_CLIENT_MONO_FONT_PATH", "");
+    if (overrideFontPath.length != 0 && overrideFontPath.exists)
+        return overrideFontPath.idup;
+
+    version(linux)
+    {
+        foreach (candidate; [
+            "/usr/share/fonts/noto/NotoSansMono-Regular.ttf",
+            "/usr/share/fonts/TTF/DejaVuSansMono.ttf",
+            "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
+        ])
+        {
+            if (candidate.exists)
+                return candidate.idup;
+        }
+    }
+
+    version(OSX)
+        return "/System/Library/Fonts/Menlo.ttc".idup;
+
+    version(Windows)
+        return "C:/Windows/Fonts/consola.ttf".idup;
+
+    return "/usr/share/fonts/noto/NotoSansMono-Regular.ttf".idup;
 }
 
 /** Builds a FreeType-rasterized atlas for the requested glyph set.

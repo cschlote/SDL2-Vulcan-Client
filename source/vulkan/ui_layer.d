@@ -28,7 +28,7 @@ import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_container : UiContainer;
-import vulkan.ui.ui_label : UiLabel;
+import vulkan.ui.ui_label : UiLabel, UiTextBlock;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_window : UiWindow;
 import logging : logLine;
@@ -81,6 +81,22 @@ struct HudLayoutState
     bool centerVisible = true;
     /** Whether the settings dialog is currently shown. */
     bool settingsVisible;
+    /** Current left edge of the settings dialog. */
+    float settingsLeft;
+    /** Current top edge of the settings dialog. */
+    float settingsTop;
+    /** Current width of the settings dialog. */
+    float settingsWidth;
+    /** Current height of the settings dialog. */
+    float settingsHeight;
+    /** Whether the settings dialog has been initialized once. */
+    bool settingsInitialized;
+    /** Whether the settings dialog is currently being dragged. */
+    bool settingsDragging;
+    /** Cursor offset captured when the settings drag starts. */
+    float settingsDragOffsetX;
+    /** Cursor offset captured when the settings drag starts. */
+    float settingsDragOffsetY;
     /** Whether a drag is currently active. */
     bool middleDragging;
     /** Whether a resize is currently active. */
@@ -131,18 +147,10 @@ struct HudWindowDrawRange
     uint panelsStart;
     /** Vertex count for panel geometry. */
     uint panelsCount;
-    /** Start index for small text vertices. */
-    uint smallTextStart;
-    /** Vertex count for small text geometry. */
-    uint smallTextCount;
-    /** Start index for medium text vertices. */
-    uint mediumTextStart;
-    /** Vertex count for medium text geometry. */
-    uint mediumTextCount;
-    /** Start index for large text vertices. */
-    uint largeTextStart;
-    /** Vertex count for large text geometry. */
-    uint largeTextCount;
+    /** Start indices for text vertices, indexed by UiTextStyle. */
+    uint[7] textStarts;
+    /** Vertex counts for text geometry, indexed by UiTextStyle. */
+    uint[7] textCounts;
 }
 
 /** Holds the panel and text geometry for the HUD overlay.
@@ -154,12 +162,8 @@ struct HudOverlayGeometry
 {
     /** Window body and header quads. */
     Vertex[] panels;
-    /** Small-body text quads. */
-    Vertex[] smallText;
-    /** Medium-body text quads. */
-    Vertex[] mediumText;
-    /** Large sample text quads. */
-    Vertex[] largeText;
+    /** Text quads indexed by UiTextStyle. */
+    Vertex[][7] textLayers;
     /** Draw ranges that keep each window's render calls contiguous. */
     HudWindowDrawRange[] windows;
 }
@@ -182,36 +186,64 @@ struct HudOverlayGeometry
  * @param largeFont = Font atlas used for 24 px comparison samples.
  * @returns Panel and text vertex lists that can be uploaded to the GPU.
  */
-HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, void delegate() onOpenSettings, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+HudOverlayGeometry buildHudOverlayVertices(
+    float extentWidth,
+    float extentHeight,
+    float fps,
+    float yawAngle,
+    float pitchAngle,
+    string shapeName,
+    string renderModeName,
+    string buildVersion,
+    ref HudLayoutState layoutState,
+    ref DemoSettings settingsDraft,
+    string platformName,
+    uint vulkanApiVersion,
+    void delegate() onFlatColor,
+    void delegate() onLitTextured,
+    void delegate() onWireframe,
+    void delegate() onHiddenLine,
+    void delegate() onPreviousShape,
+    void delegate() onNextShape,
+    void delegate() onOpenSettings,
+    void delegate() onApplySettings,
+    const(FontAtlas)[] fontAtlases,
+    ref const(FontAtlas) smallFont,
+    ref const(FontAtlas) mediumFont,
+    ref const(FontAtlas) largeFont)
 {
     HudOverlayGeometry geometry;
 
-    const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, smallFont, mediumFont, largeFont);
+    const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, fontAtlases, smallFont, mediumFont, largeFont);
     UiWindow[] windows;
     if (layoutState.statusVisible)
-        windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+        windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, smallFont, mediumFont);
     windows ~= buildModeWindow(
         layout.modes,
         smallFont,
+        onFlatColor,
+        onLitTextured,
+        onWireframe,
+        onHiddenLine,
+        onPreviousShape,
+        onNextShape,
         onOpenSettings,
         () { layoutState.statusVisible = !layoutState.statusVisible; },
         () { layoutState.sampleVisible = !layoutState.sampleVisible; },
-        () { layoutState.inputVisible = !layoutState.inputVisible; });
+        () { layoutState.inputVisible = !layoutState.inputVisible; },
+        () { layoutState.centerVisible = !layoutState.centerVisible; });
     if (layoutState.sampleVisible)
-        windows ~= buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont);
+        windows ~= buildSampleWindow(layout.sample, fontAtlases, smallFont, mediumFont, largeFont);
     if (layoutState.inputVisible)
         windows ~= buildInputWindow(layout.input, smallFont);
     windows ~= buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont);
 
-    if (layoutState.settingsVisible)
-        windows ~= buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight), layoutState, settingsDraft, onApplySettings, smallFont, mediumFont);
+    windows ~= buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight, layoutState), layoutState, extentWidth, extentHeight, settingsDraft, onApplySettings, smallFont, mediumFont);
 
     foreach (index, window; windows)
     {
         Vertex[] windowPanels;
-        Vertex[] windowSmallText;
-        Vertex[] windowMediumText;
-        Vertex[] windowLargeText;
+        Vertex[][7] windowTextLayers;
 
         UiRenderContext context = UiRenderContext.init;
         context.extentWidth = extentWidth;
@@ -219,31 +251,27 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
         context.originX = 0.0f;
         context.originY = 0.0f;
         context.depthBase = 0.10f - cast(float)index * 0.02f;
-        context.smallFont = &smallFont;
-        context.mediumFont = &mediumFont;
-        context.largeFont = &largeFont;
+        foreach (layerIndex; 0 .. context.fonts.length)
+            context.fonts[layerIndex] = &fontAtlases[layerIndex];
         context.panels = &windowPanels;
-        context.smallText = &windowSmallText;
-        context.mediumText = &windowMediumText;
-        context.largeText = &windowLargeText;
+        foreach (layerIndex; 0 .. windowTextLayers.length)
+            context.textLayers[layerIndex] = &windowTextLayers[layerIndex];
 
         window.render(context);
 
         HudWindowDrawRange range;
         range.panelsStart = cast(uint)geometry.panels.length;
         range.panelsCount = cast(uint)windowPanels.length;
-        range.smallTextStart = cast(uint)geometry.smallText.length;
-        range.smallTextCount = cast(uint)windowSmallText.length;
-        range.mediumTextStart = cast(uint)geometry.mediumText.length;
-        range.mediumTextCount = cast(uint)windowMediumText.length;
-        range.largeTextStart = cast(uint)geometry.largeText.length;
-        range.largeTextCount = cast(uint)windowLargeText.length;
+        foreach (layerIndex; 0 .. windowTextLayers.length)
+        {
+            range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
+            range.textCounts[layerIndex] = cast(uint)windowTextLayers[layerIndex].length;
+        }
         geometry.windows ~= range;
 
         geometry.panels ~= windowPanels;
-        geometry.smallText ~= windowSmallText;
-        geometry.mediumText ~= windowMediumText;
-        geometry.largeText ~= windowLargeText;
+        foreach (layerIndex; 0 .. windowTextLayers.length)
+            geometry.textLayers[layerIndex] ~= windowTextLayers[layerIndex];
     }
 
     return geometry;
@@ -254,87 +282,86 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
  * This layout is shared by hit testing, dragging, and rendering so the HUD
  * stays consistent across the input and draw paths.
  */
-HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, const(FontAtlas)[] fontAtlases, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
     HudLayout layout;
     layout.status = buildStatusRect(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
     layout.modes = buildModesRect(extentWidth, extentHeight, smallFont);
-    layout.sample = buildSampleRect(extentWidth, extentHeight, smallFont, mediumFont, largeFont);
+    layout.sample = buildSampleRect(extentWidth, extentHeight, fontAtlases);
     layout.input = buildInputRect(extentWidth, extentHeight, smallFont, mediumFont);
     layout.center = buildCenterRect(extentWidth, extentHeight, layoutState, smallFont, mediumFont);
     return layout;
 }
 
-private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    const titleText = "DESKTOP OVERLAY";
-    const firstBodyWidth = textBlockWidth(smallFont, "NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.");
-    const secondBodyWidth = textBlockWidth(mediumFont, format("FRAME RATE: %.0f FPS", fps));
-    const thirdBodyWidth = textBlockWidth(smallFont, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI));
-    const fourthBodyWidth = textBlockWidth(smallFont, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI));
-    const fifthBodyWidth = textBlockWidth(smallFont, format("ACTIVE SHAPE: %s", shapeName));
-    const sixthBodyWidth = textBlockWidth(smallFont, format("CURRENT MODE: %s", renderModeName));
-    const contentWidth = max(max(max(max(firstBodyWidth, secondBodyWidth), max(thirdBodyWidth, fourthBodyWidth)), fifthBodyWidth), sixthBodyWidth);
+    const titleText = "STATUS";
+    const platformText = format("PLATFORM: %s", platformName);
+    const vulkanVersionText = format("VULKAN API: %u.%u.%u", cast(uint)(vulkanApiVersion >> 22), cast(uint)((vulkanApiVersion >> 12) & 0x3ff), cast(uint)(vulkanApiVersion & 0xfff));
+    const buildText = format("BUILD: %s", buildVersion);
+    const firstBodyWidth = textBlockWidth(smallFont, platformText);
+    const secondBodyWidth = textBlockWidth(smallFont, vulkanVersionText);
+    const thirdBodyWidth = textBlockWidth(mediumFont, format("FRAME RATE: %.0f FPS", fps));
+    const fourthBodyWidth = textBlockWidth(smallFont, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI));
+    const fifthBodyWidth = textBlockWidth(smallFont, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI));
+    const sixthBodyWidth = textBlockWidth(smallFont, format("ACTIVE SHAPE: %s", shapeName));
+    const seventhBodyWidth = textBlockWidth(smallFont, format("CURRENT MODE: %s", renderModeName));
+    const contentWidth = max(max(max(max(max(max(firstBodyWidth, secondBodyWidth), max(thirdBodyWidth, fourthBodyWidth)), max(fifthBodyWidth, sixthBodyWidth)), seventhBodyWidth), textBlockWidth(smallFont, buildText)), textBlockWidth(smallFont, "MODEL / CAMERA / API / BUILD"));
     const titleWidth = textBlockWidth(mediumFont, titleText);
-    const width = max(titleWidth + 24.0f, contentWidth + 36.0f);
+    const width = max(titleWidth + 20.0f, contentWidth + 24.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const contentBottom = max(
-        max(max(max(max(
-            smallTextHeight,
-            34.0f + mediumTextHeight),
-            68.0f + smallTextHeight),
-            90.0f + smallTextHeight),
-            114.0f + smallTextHeight),
-        136.0f + smallTextHeight);
-    const height = 36.0f + contentBottom + 20.0f;
+    const contentBottom = max(max(max(max(max(max(smallTextHeight, 18.0f + smallTextHeight), 34.0f + smallTextHeight), 52.0f + mediumTextHeight), 76.0f + smallTextHeight), 98.0f + smallTextHeight), 120.0f + smallTextHeight);
+    const height = 28.0f + contentBottom + 12.0f;
     auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.96f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
     window.visible = layoutState.statusVisible;
     window.onClose = ()
     {
-        logLine("UiWindow close: DESKTOP OVERLAY");
+        logLine("UiWindow close: STATUS");
         layoutState.statusVisible = false;
     };
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    content.add(new UiLabel("NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 22.0f));
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f));
+    content.add(new UiLabel(platformText, 0.0f, 0.0f, UiTextStyle.small, [0.72f, 0.96f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 4.0f));
+    content.add(new UiLabel(vulkanVersionText, 0.0f, 0.0f, UiTextStyle.small, [0.72f, 0.96f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 4.0f));
     content.add(new UiLabel(format("FRAME RATE: %.0f FPS", fps), 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 16.0f));
+    content.add(new UiSpacer(0.0f, 4.0f));
     content.add(new UiLabel(format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.small, [0.40f, 1.00f, 0.70f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 10.0f));
+    content.add(new UiSpacer(0.0f, 4.0f));
     content.add(new UiLabel(format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.small, [0.50f, 0.86f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiSpacer(0.0f, 4.0f));
     content.add(new UiLabel(format("ACTIVE SHAPE: %s", shapeName), 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 10.0f));
+    content.add(new UiSpacer(0.0f, 4.0f));
     content.add(new UiLabel(format("CURRENT MODE: %s", renderModeName), 0.0f, 0.0f, UiTextStyle.small, [1.00f, 0.90f, 0.45f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 4.0f));
+    content.add(new UiLabel(buildText, 0.0f, 0.0f, UiTextStyle.small, [0.86f, 0.96f, 1.00f, 1.00f], smallTextHeight));
     window.add(content);
     return window;
 }
 
-private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onSettings = null, void delegate() onToggleStatus = null, void delegate() onToggleSample = null, void delegate() onToggleInput = null, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
+private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null, void delegate() onPreviousShape = null, void delegate() onNextShape = null, void delegate() onSettings = null, void delegate() onToggleStatus = null, void delegate() onToggleSample = null, void delegate() onToggleInput = null, void delegate() onToggleCenter = null)
 {
     const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
-    const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
-    const buttonPadding = 20.0f;
+    const actionLabels = ["MODEL -", "MODEL +", "STATUS", "SAMPLE", "LOG", "SETTINGS", "DRAG ME"];
+    const buttonPadding = 12.0f;
 
     float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
         buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
+    foreach (label; actionLabels)
+        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
     buttonWidth += buttonPadding;
 
-    float actionWidth = 0.0f;
-    foreach (label; actionLabels)
-        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
-
     const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
-    const contentWidth = max(buttonRowWidth, actionWidth);
-    const width = contentWidth + 36.0f;
+    const contentWidth = buttonRowWidth;
+    const width = contentWidth + 22.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const height = 36.0f + (buttonHeight * 3.0f + 8.0f + 12.0f + smallTextHeight * 3.0f + 24.0f) + 20.0f;
+    const height = 28.0f + (buttonHeight * 4.0f + 12.0f + smallTextHeight * 2.0f) + 12.0f;
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 22.0f, 0.0f), max(rect.height - 22.0f, 0.0f));
 
     auto topRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
     auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
@@ -344,7 +371,7 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     litTexturedButton.onClick = onLitTextured;
     topRow.add(litTexturedButton);
     content.add(topRow);
-    content.add(new UiSpacer(0.0f, 4.0f));
+    content.add(new UiSpacer(0.0f, 3.0f));
 
     auto bottomRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
     auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
@@ -355,12 +382,17 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     bottomRow.add(hiddenLineButton);
     content.add(bottomRow);
 
-    content.add(new UiSpacer(0.0f, 4.0f));
-    auto settingsButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonRowWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
-    settingsButton.onClick = onSettings;
-    content.add(settingsButton);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    auto modelRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto previousShapeButton = new UiButton("MODEL -", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    previousShapeButton.onClick = onPreviousShape;
+    modelRow.add(previousShapeButton);
+    auto nextShapeButton = new UiButton("MODEL +", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    nextShapeButton.onClick = onNextShape;
+    modelRow.add(nextShapeButton);
+    content.add(modelRow);
 
-    content.add(new UiSpacer(0.0f, 4.0f));
+    content.add(new UiSpacer(0.0f, 3.0f));
     auto windowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
     auto statusButton = new UiButton("STATUS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     statusButton.onClick = onToggleStatus;
@@ -371,32 +403,22 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     content.add(windowRow);
 
     auto secondWindowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto inputButton = new UiButton("INPUT", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
-    inputButton.onClick = onToggleInput;
-    secondWindowRow.add(inputButton);
+    auto logButton = new UiButton("LOG", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    logButton.onClick = onToggleInput;
+    secondWindowRow.add(logButton);
     auto settingsToggleButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     settingsToggleButton.onClick = onSettings;
     secondWindowRow.add(settingsToggleButton);
+    auto centerToggleButton = new UiButton("DRAG ME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    centerToggleButton.onClick = onToggleCenter;
+    secondWindowRow.add(centerToggleButton);
     content.add(secondWindowRow);
 
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("ARROWS  ROTATE CAMERA", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("ESC  CLOSE APPLICATION", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
     window.add(content);
     return window;
 }
 
-HudWindowRect buildSettingsRect(float extentWidth, float extentHeight)
-{
-    const width = min(560.0f, max(extentWidth - 80.0f, 360.0f));
-    const height = min(470.0f, max(extentHeight - 80.0f, 320.0f));
-    return HudWindowRect(max((extentWidth - width) * 0.5f, 20.0f), max((extentHeight - height) * 0.5f, 20.0f), width, height);
-}
-
-private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref DemoSettings settingsDraft, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     float[4] labelColor = [1.00f, 1.00f, 1.00f, 1.00f];
     float[4] accentColor = [0.86f, 0.96f, 1.00f, 1.00f];
@@ -406,8 +428,21 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
     float wideButton = max(110.0f, textBlockWidth(smallFont, "FULLSCREEN"));
     float valueButton = max(80.0f, textBlockWidth(smallFont, "1920 x 1080"));
 
-    auto window = new UiWindow("SETTINGS", rect.left, rect.top, rect.width, rect.height, [0.09f, 0.11f, 0.15f, 0.96f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
+    auto window = new UiWindow("SETTINGS", rect.left, rect.top, rect.width, rect.height, [0.09f, 0.11f, 0.15f, 0.96f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, true);
     window.visible = layoutState.settingsVisible;
+    window.dragTracking = layoutState.settingsDragging;
+    window.onHeaderDragStart = (float cursorX, float cursorY)
+    {
+        hudBeginSettingsDrag(layoutState, rect, cursorX, cursorY);
+    };
+    window.onHeaderDragMove = (float cursorX, float cursorY)
+    {
+        hudSettingsDragTo(layoutState, cursorX, cursorY, extentWidth, extentHeight);
+    };
+    window.onHeaderDragEnd = ()
+    {
+        hudEndSettingsDrag(layoutState);
+    };
     window.onClose = ()
     {
         layoutState.settingsVisible = false;
@@ -535,7 +570,7 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
 /** Sends a pointer event to the settings dialog and reports whether it handled it. */
 bool hudDispatchSettingsWindowPointer(float extentWidth, float extentHeight, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, float mouseX, float mouseY, UiPointerEventKind kind, uint button, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    auto window = buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight), layoutState, settingsDraft, onApplySettings, smallFont, mediumFont);
+    auto window = buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight, layoutState), layoutState, extentWidth, extentHeight, settingsDraft, onApplySettings, smallFont, mediumFont);
     UiPointerEvent event;
     event.kind = kind;
     event.x = mouseX;
@@ -545,9 +580,9 @@ bool hudDispatchSettingsWindowPointer(float extentWidth, float extentHeight, ref
 }
 
 /** Sends a button-down event to the mode buttons and reports whether one handled it. */
-bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onSettings, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine)
+bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine, void delegate() onPreviousShape, void delegate() onNextShape, void delegate() onSettings, void delegate() onToggleStatus, void delegate() onToggleSample, void delegate() onToggleInput, void delegate() onToggleCenter)
 {
-    auto window = buildModeWindow(rect, smallFont, onSettings, onFlatColor, onLitTextured, onWireframe, onHiddenLine);
+    auto window = buildModeWindow(rect, smallFont, onFlatColor, onLitTextured, onWireframe, onHiddenLine, onPreviousShape, onNextShape, onSettings, onToggleStatus, onToggleSample, onToggleInput, onToggleCenter);
     UiPointerEvent event;
     event.kind = UiPointerEventKind.buttonDown;
     event.x = mouseX;
@@ -557,9 +592,9 @@ bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, r
 }
 
 /** Sends a pointer event to the status window and reports whether it handled it. */
-bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    auto window = buildStatusWindow(rect, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    auto window = buildStatusWindow(rect, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, smallFont, mediumFont);
     UiPointerEvent event;
     event.kind = kind;
     event.x = mouseX;
@@ -568,47 +603,49 @@ bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layou
     return window.dispatchPointerEvent(event);
 }
 
-private UiWindow buildSampleWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+private UiWindow buildSampleWindow(HudWindowRect rect, const(FontAtlas)[] fontAtlases, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
-    const sampleSmall = textBlockWidth(smallFont, "12 PX  THE QUICK BROWN FOX");
-    const sampleMedium = textBlockWidth(mediumFont, "18 PX  THE QUICK BROWN FOX");
-    const sampleLarge = textBlockWidth(largeFont, "24 PX  THE QUICK BROWN FOX");
-    const sampleFooter = textBlockWidth(smallFont, "REAL FONTS KEEP SIZES DISTINCT.");
-    const contentWidth = max(max(sampleSmall, sampleMedium), max(sampleLarge, sampleFooter));
+    const sample7Width = textBlockWidth(smallFont, "7 PX  THE QUICK BROWN FOX");
+    const sample8Width = textBlockWidth(smallFont, "8 PX  THE QUICK BROWN FOX");
+    const sample9Width = textBlockWidth(mediumFont, "9 PX  THE QUICK BROWN FOX");
+    const sample10Width = textBlockWidth(mediumFont, "10 PX THE QUICK BROWN FOX");
+    const sample11Width = textBlockWidth(largeFont, "11 PX THE QUICK BROWN FOX");
+    const sample12Width = textBlockWidth(largeFont, "12 PX THE QUICK BROWN FOX");
+    const sampleMonoWidth = textBlockWidth(largeFont, "8 PX MONO THE QUICK BROWN FOX");
+    const contentWidth = max(max(sample7Width, sample8Width), max(max(sample9Width, sample10Width), max(max(sample11Width, sample12Width), sampleMonoWidth)));
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
     const largeTextHeight = textBlockHeight(largeFont);
-    const contentBottom = max(
-        max(max(
-            0.0f + smallTextHeight,
-            32.0f + mediumTextHeight),
-            74.0f + largeTextHeight),
-        124.0f + smallTextHeight);
-    const height = 36.0f + contentBottom + 20.0f;
+    const contentBottom = max(max(max(max(max(max(
+        0.0f + smallTextHeight,
+        4.0f + smallTextHeight),
+        8.0f + mediumTextHeight),
+        12.0f + mediumTextHeight),
+        16.0f + largeTextHeight),
+        20.0f + largeTextHeight),
+        24.0f + largeTextHeight);
+    const height = 32.0f + contentBottom + 12.0f;
 
-    auto window = new UiWindow("FONT SIZES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    content.add(new UiLabel("12 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
-    content.add(new UiSpacer(0.0f, 20.0f));
-    content.add(new UiLabel("18 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 24.0f));
-    content.add(new UiLabel("24 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.large, [1.00f, 1.00f, 1.00f, 1.00f], largeTextHeight));
-    content.add(new UiSpacer(0.0f, 26.0f));
-    content.add(new UiLabel("REAL FONTS KEEP SIZES DISTINCT.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    auto window = new UiWindow("FONT SAMPLE", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 2.0f);
+    content.add(new UiLabel("7 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample7, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiLabel("8 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiLabel("9 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample9, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
+    content.add(new UiLabel("10 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
+    content.add(new UiLabel("11 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample11, [1.00f, 1.00f, 1.00f, 1.00f], largeTextHeight));
+    content.add(new UiLabel("12 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.large, [1.00f, 1.00f, 1.00f, 1.00f], largeTextHeight));
+    const monoTextHeight = textBlockHeight(fontAtlases[6]);
+    content.add(new UiLabel("10 PX MONO THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sampleMono, [1.00f, 1.00f, 1.00f, 1.00f], monoTextHeight));
     window.add(content);
     return window;
 }
 
 private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) smallFont)
 {
-    auto window = new UiWindow("INPUT", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    content.add(new UiLabel("LEFT BUTTON DRAGS THE CENTER WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("CLICK OUTSIDE THE UI TO ROTATE 3D.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("HEADER BAR IS THE DRAG HANDLE.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    auto window = new UiWindow("LOG", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 4.0f);
+    content.add(new UiTextBlock("INPUT WINDOW BECOMES A LOG WINDOW.\n\n- FUTURE CONSOLE TARGET\n- MULTILINE RETAINED TEXT\n- EVENT AND DIAGNOSTICS OUTPUT\n- READY FOR ADMIN COMMANDS", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight * 7.0f));
     window.add(content);
     return window;
 }
@@ -625,14 +662,13 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
         layoutState.middleResizing = false;
         layoutState.middleResizeHandle = UiResizeHandle.none;
     };
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    content.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("UI HITS DO NOT FALL THROUGH TO 3D.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("OUTSIDE HITS GO TO THE OBJECT LAYER.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
-    content.add(new UiSpacer(0.0f, 12.0f));
-    content.add(new UiLabel("DRAGGING USES THE HEADER BAR ONLY.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 4.0f);
+    content.add(new UiLabel("DRAG ME", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f], mediumFont.lineHeight));
+    content.add(new UiTextBlock("- USE THE BLUE HEADER BAR TO DRAG\n- RESIZE FROM THE CORNERS\n- THIS WINDOW IS THE RELAYOUT TEST BED\n- GOOD PLACE TO CHECK VBOX/HBOX BEHAVIOR", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight * 5.0f));
+    auto footerRow = new UiHBox(0.0f, 0.0f, 0.0f, smallFont.lineHeight, 6.0f);
+    footerRow.add(new UiLabel("HEADER = DRAG", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    footerRow.add(new UiLabel("CORNERS = RESIZE", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(footerRow);
     window.add(content);
     window.dragTracking = layoutState.middleDragging;
     window.resizeTracking = layoutState.middleResizing;
@@ -676,91 +712,113 @@ bool hudDispatchCenterWindowPointer(HudWindowRect rect, ref HudLayoutState layou
     return window.dispatchPointerEvent(event);
 }
 
+HudWindowRect buildSettingsRect(float extentWidth, float extentHeight, ref HudLayoutState layoutState)
+{
+    const preferredWidth = 560.0f;
+    const preferredHeight = 470.0f;
+    const width = min(preferredWidth, max(extentWidth - 80.0f, 360.0f));
+    const height = min(preferredHeight, max(extentHeight - 80.0f, 320.0f));
+
+    if (!layoutState.settingsInitialized)
+    {
+        layoutState.settingsWidth = width;
+        layoutState.settingsHeight = height;
+        layoutState.settingsLeft = max((extentWidth - width) * 0.5f, 20.0f);
+        layoutState.settingsTop = max((extentHeight - height) * 0.5f, 20.0f);
+        layoutState.settingsInitialized = true;
+    }
+
+    layoutState.settingsWidth = max(layoutState.settingsWidth, width);
+    layoutState.settingsHeight = max(layoutState.settingsHeight, height);
+
+    const maximumLeft = extentWidth > layoutState.settingsWidth ? extentWidth - layoutState.settingsWidth : 0.0f;
+    const maximumTop = extentHeight > layoutState.settingsHeight ? extentHeight - layoutState.settingsHeight : 0.0f;
+    layoutState.settingsLeft = clampFloat(layoutState.settingsLeft, 0.0f, maximumLeft);
+    layoutState.settingsTop = clampFloat(layoutState.settingsTop, 0.0f, maximumTop);
+
+    return HudWindowRect(layoutState.settingsLeft, layoutState.settingsTop, layoutState.settingsWidth, layoutState.settingsHeight);
+}
+
 private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    const firstBodyWidth = textBlockWidth(smallFont, "NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.");
-    const secondBodyWidth = textBlockWidth(mediumFont, format("FRAME RATE: %.0f FPS", fps));
-    const thirdBodyWidth = textBlockWidth(smallFont, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI));
-    const fourthBodyWidth = textBlockWidth(smallFont, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI));
-    const fifthBodyWidth = textBlockWidth(smallFont, format("ACTIVE SHAPE: %s", shapeName));
-    const sixthBodyWidth = textBlockWidth(smallFont, format("CURRENT MODE: %s", renderModeName));
-    const contentWidth = max(max(max(max(firstBodyWidth, secondBodyWidth), max(thirdBodyWidth, fourthBodyWidth)), fifthBodyWidth), sixthBodyWidth);
-    const titleWidth = textBlockWidth(mediumFont, "DESKTOP OVERLAY");
-    const width = max(titleWidth + 24.0f, contentWidth + 36.0f);
+    const titleWidth = textBlockWidth(mediumFont, "STATUS");
+    const contentWidth = max(
+        max(
+            max(textBlockWidth(smallFont, "PLATFORM: X"), textBlockWidth(smallFont, "VULKAN API: 1.3.0")),
+            max(textBlockWidth(mediumFont, "FRAME RATE: 999 FPS"), textBlockWidth(smallFont, "CAMERA PITCH: 999.9 DEGREES"))),
+        max(
+            max(textBlockWidth(smallFont, "CAMERA YAW: 999.9 DEGREES"), textBlockWidth(smallFont, "ACTIVE SHAPE: ICOSAHEDRON")),
+            max(textBlockWidth(smallFont, "CURRENT MODE: HIDDEN LINE"), textBlockWidth(smallFont, "BUILD: X"))));
+    const width = max(titleWidth + 18.0f, contentWidth + 24.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const contentBottom = max(max(max(max(max(smallTextHeight, 34.0f + mediumTextHeight), 68.0f + smallTextHeight), 90.0f + smallTextHeight), 114.0f + smallTextHeight), 136.0f + smallTextHeight);
-    const height = 36.0f + contentBottom + 20.0f;
+    const height = 32.0f + (smallTextHeight * 6.0f + mediumTextHeight + 6.0f * 6.0f) + 16.0f;
     return HudWindowRect(18.0f, 18.0f, width, height);
 }
 
 private HudWindowRect buildModesRect(float extentWidth, float extentHeight, ref const(FontAtlas) smallFont)
 {
-    const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
-    const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
-    const buttonPadding = 20.0f;
+    const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE", "MODEL -", "MODEL +", "STATUS", "SAMPLE", "LOG", "SETTINGS"];
+    const buttonPadding = 12.0f;
     float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
         buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
     buttonWidth += buttonPadding;
 
-    float actionWidth = 0.0f;
-    foreach (label; actionLabels)
-        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
-
     const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
-    const contentWidth = max(buttonRowWidth, actionWidth);
-    const width = contentWidth + 36.0f;
+    const width = max(buttonRowWidth + 24.0f, 360.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const contentBottom = max(max(max(max(0.0f + buttonHeight, (buttonHeight + 4.0f) + buttonHeight), (buttonHeight + 4.0f) * 2.0f + buttonHeight), (buttonHeight + 4.0f) * 3.0f + buttonHeight), 168.0f + smallTextHeight);
-    const contentBottomWithLabels = max(contentBottom, max(120.0f + smallTextHeight, 144.0f + smallTextHeight));
-    const height = 36.0f + contentBottomWithLabels + 20.0f;
+    const height = 32.0f + (buttonHeight * 4.0f + 12.0f + smallTextHeight * 2.0f + 16.0f) + 16.0f;
     return HudWindowRect(max(18.0f, extentWidth - 18.0f - width), 18.0f, width, height);
 }
 
-private HudWindowRect buildSampleRect(float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+private HudWindowRect buildSampleRect(float extentWidth, float extentHeight, const(FontAtlas)[] fontAtlases)
 {
-    const sampleSmall = textBlockWidth(smallFont, "12 PX  THE QUICK BROWN FOX");
-    const sampleMedium = textBlockWidth(mediumFont, "18 PX  THE QUICK BROWN FOX");
-    const sampleLarge = textBlockWidth(largeFont, "24 PX  THE QUICK BROWN FOX");
-    const sampleFooter = textBlockWidth(smallFont, "REAL FONTS KEEP SIZES DISTINCT.");
-    const contentWidth = max(max(sampleSmall, sampleMedium), max(sampleLarge, sampleFooter));
+    const sample7Width = textBlockWidth(fontAtlases[3], "7 PX  THE QUICK BROWN FOX");
+    const sample8Width = textBlockWidth(fontAtlases[0], "8 PX  THE QUICK BROWN FOX");
+    const sample9Width = textBlockWidth(fontAtlases[4], "9 PX  THE QUICK BROWN FOX");
+    const sample10Width = textBlockWidth(fontAtlases[1], "10 PX THE QUICK BROWN FOX");
+    const sample11Width = textBlockWidth(fontAtlases[5], "11 PX THE QUICK BROWN FOX");
+    const sample12Width = textBlockWidth(fontAtlases[2], "12 PX THE QUICK BROWN FOX");
+    const sampleMonoWidth = textBlockWidth(fontAtlases[6], "10 PX MONO THE QUICK BROWN FOX");
+    const contentWidth = max(max(sample7Width, sample8Width), max(max(sample9Width, sample10Width), max(max(sample11Width, sample12Width), sampleMonoWidth)));
     const width = contentWidth + 36.0f;
-    const smallTextHeight = textBlockHeight(smallFont);
-    const mediumTextHeight = textBlockHeight(mediumFont);
-    const largeTextHeight = textBlockHeight(largeFont);
-    const contentBottom = max(max(max(0.0f + smallTextHeight, 32.0f + mediumTextHeight), 74.0f + largeTextHeight), 124.0f + smallTextHeight);
-    const height = 36.0f + contentBottom + 20.0f;
+    const smallTextHeight = textBlockHeight(fontAtlases[0]);
+    const mediumTextHeight = textBlockHeight(fontAtlases[1]);
+    const largeTextHeight = textBlockHeight(fontAtlases[2]);
+    const monoTextHeight = textBlockHeight(fontAtlases[6]);
+    const contentHeight = smallTextHeight * 3.0f + mediumTextHeight * 2.0f + largeTextHeight * 2.0f + monoTextHeight + 2.0f * 6.0f;
+    const height = 32.0f + contentHeight + 16.0f;
     return HudWindowRect(18.0f, max(18.0f, extentHeight - 18.0f - height), width, height);
 }
 
 private HudWindowRect buildInputRect(float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    const titleWidth = textBlockWidth(mediumFont, "INPUT");
-    const lineOne = textBlockWidth(smallFont, "LEFT BUTTON DRAGS THE CENTER WINDOW.");
-    const lineTwo = textBlockWidth(smallFont, "CLICK OUTSIDE THE UI TO ROTATE 3D.");
-    const lineThree = textBlockWidth(smallFont, "HEADER BAR IS THE DRAG HANDLE.");
+    const titleWidth = textBlockWidth(mediumFont, "LOG");
+    const lineOne = textBlockWidth(smallFont, "INPUT WINDOW BECOMES A LOG WINDOW.");
+    const lineTwo = textBlockWidth(smallFont, "FUTURE ADMIN CONSOLE / MULTILINE TEXT BASE.");
+    const lineThree = textBlockWidth(smallFont, "EVENTS, DIAGNOSTICS, COMMANDS, AND NOTES.");
     const contentWidth = max(max(lineOne, lineTwo), lineThree);
     const width = max(titleWidth + 24.0f, contentWidth + 36.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const height = 36.0f + max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f) + 20.0f;
+    const height = 36.0f + max(max(0.0f + smallTextHeight, smallTextHeight * 2.0f + 12.0f), smallTextHeight * 6.0f + 28.0f) + 20.0f;
     return HudWindowRect(max(18.0f, extentWidth - 18.0f - width), max(18.0f, extentHeight - 18.0f - height), width, height);
 }
 
 private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref HudLayoutState layoutState, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     const titleWidth = textBlockWidth(mediumFont, "DRAG ME");
-    const lineOne = textBlockWidth(smallFont, "GRAB THE BLUE BAR TO MOVE THIS WINDOW.");
-    const lineTwo = textBlockWidth(smallFont, "UI HITS DO NOT FALL THROUGH TO 3D.");
-    const lineThree = textBlockWidth(smallFont, "OUTSIDE HITS GO TO THE OBJECT LAYER.");
-    const lineFour = textBlockWidth(smallFont, "DRAGGING USES THE HEADER BAR ONLY.");
+    const lineOne = textBlockWidth(smallFont, "USE THE BLUE HEADER BAR TO DRAG.");
+    const lineTwo = textBlockWidth(smallFont, "RESIZE FROM THE CORNERS.");
+    const lineThree = textBlockWidth(smallFont, "THIS WINDOW IS THE RELAYOUT TEST BED.");
+    const lineFour = textBlockWidth(smallFont, "GOOD FOR CHECKING VBOX / HBOX REFLOW.");
     const contentWidth = max(max(lineOne, lineTwo), max(lineThree, lineFour));
     const measuredWidth = max(titleWidth + 24.0f, contentWidth + 36.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const measuredHeight = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
+    const measuredHeight = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight * 2.0f + 12.0f), smallTextHeight * 5.0f + 20.0f), smallTextHeight * 5.0f + 40.0f) + 20.0f;
 
     layoutState.middleMinimumWidth = measuredWidth;
     layoutState.middleMinimumHeight = measuredHeight;
@@ -783,6 +841,38 @@ private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref
     layoutState.middleTop = clampFloat(layoutState.middleTop, 0.0f, maximumTop);
 
     return HudWindowRect(layoutState.middleLeft, layoutState.middleTop, width, height);
+}
+
+/** Starts dragging the settings window from the supplied cursor position. */
+void hudBeginSettingsDrag(ref HudLayoutState state, HudWindowRect rect, float cursorX, float cursorY)
+{
+    logLine("Settings drag start at ", cursorX, ", ", cursorY);
+    state.settingsDragging = true;
+    state.settingsDragOffsetX = cursorX - rect.left;
+    state.settingsDragOffsetY = cursorY - rect.top;
+}
+
+/** Updates the dragged settings window position and clamps it to the viewport. */
+void hudSettingsDragTo(ref HudLayoutState state, float cursorX, float cursorY, float extentWidth, float extentHeight)
+{
+    if (!state.settingsDragging)
+        return;
+
+    const windowWidth = state.settingsWidth > 0.0f ? state.settingsWidth : 360.0f;
+    const windowHeight = state.settingsHeight > 0.0f ? state.settingsHeight : 320.0f;
+    const newLeft = cursorX - state.settingsDragOffsetX;
+    const newTop = cursorY - state.settingsDragOffsetY;
+    const maximumLeft = extentWidth > windowWidth ? extentWidth - windowWidth : 0.0f;
+    const maximumTop = extentHeight > windowHeight ? extentHeight - windowHeight : 0.0f;
+    state.settingsLeft = clampFloat(newLeft, 0.0f, maximumLeft);
+    state.settingsTop = clampFloat(newTop, 0.0f, maximumTop);
+}
+
+/** Stops any active settings-window drag. */
+void hudEndSettingsDrag(ref HudLayoutState state)
+{
+    logLine("Settings drag end");
+    state.settingsDragging = false;
 }
 
 private float anchoredLayoutPosition(float preferredPosition, float widgetSpan, float availableSpan)
