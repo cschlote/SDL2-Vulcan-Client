@@ -9,7 +9,7 @@ module vulkan.ui.ui_window;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_widget : UiWidget;
-import vulkan.ui.ui_widget_helpers : appendTextLine, appendWindowFrame;
+import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowFrame;
 
 /** Simple retained window with a title bar and a content region. */
 final class UiWindow : UiWidget
@@ -20,9 +20,13 @@ final class UiWindow : UiWidget
     float[4] titleColor;
     float headerHeight = 7.0f;
     bool dragTracking;
+    bool resizeTracking;
     void delegate(float, float) onHeaderDragStart;
     void delegate(float, float) onHeaderDragMove;
     void delegate() onHeaderDragEnd;
+    void delegate() onResizeStart;
+    void delegate(float, float) onResizeMove;
+    void delegate() onResizeEnd;
 
     this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor)
     {
@@ -58,6 +62,24 @@ final class UiWindow : UiWidget
             }
         }
 
+        if (resizeTracking)
+        {
+            if (event.kind == UiPointerEventKind.move)
+            {
+                if (onResizeMove !is null)
+                    onResizeMove(event.x, event.y);
+                return true;
+            }
+
+            if (event.kind == UiPointerEventKind.buttonUp && event.button == 1)
+            {
+                if (onResizeEnd !is null)
+                    onResizeEnd();
+                resizeTracking = false;
+                return true;
+            }
+        }
+
         if (width > 0.0f && height > 0.0f && !contains(event.x, event.y))
             return false;
 
@@ -71,11 +93,21 @@ final class UiWindow : UiWidget
                 return true;
         }
 
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
+        {
+            if (onResizeStart !is null)
+                onResizeStart();
+            resizeTracking = true;
+            dragTracking = false;
+            return true;
+        }
+
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInHeader(event.x, event.y))
         {
             if (onHeaderDragStart !is null)
                 onHeaderDragStart(event.x, event.y);
             dragTracking = true;
+            resizeTracking = false;
             return true;
         }
 
@@ -87,11 +119,17 @@ protected:
     {
         appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyColor, headerColor, context.depthBase);
         appendTextLine(context, UiTextStyle.medium, title, 12.0f, 6.0f, titleColor, context.depthBase - 0.001f);
+        appendButtonFrame(context, width - 16.0f, height - 16.0f, width - 2.0f, height - 2.0f, [0.14f, 0.16f, 0.20f, 0.88f], [0.20f, 0.56f, 0.98f, 0.92f], context.depthBase - 0.0005f);
     }
 
 private:
     bool isInHeader(float localX, float localY) const
     {
         return localX >= x && localY >= y && localX < x + width && localY < y + headerHeight;
+    }
+
+    bool isInResizeGrip(float localX, float localY) const
+    {
+        return localX >= x + width - 16.0f && localY >= y + height - 16.0f && localX < x + width && localY < y + height;
     }
 }

@@ -66,6 +66,8 @@ struct HudLayoutState
     bool middleInitialized;
     /** Whether a drag is currently active. */
     bool middleDragging;
+    /** Whether a resize is currently active. */
+    bool middleResizing;
     /** Cursor offset captured when the drag starts. */
     float dragOffsetX;
     /** Cursor offset captured when the drag starts. */
@@ -381,6 +383,19 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     {
         hudEndDrag(layoutState);
     };
+    window.resizeTracking = layoutState.middleResizing;
+    window.onResizeStart = ()
+    {
+        hudBeginResize(layoutState);
+    };
+    window.onResizeMove = (float cursorX, float cursorY)
+    {
+        hudResizeTo(layoutState, cursorX, cursorY, extentWidth, extentHeight);
+    };
+    window.onResizeEnd = ()
+    {
+        hudEndResize(layoutState);
+    };
     return window;
 }
 
@@ -471,10 +486,13 @@ private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref
     const lineThree = textBlockWidth(smallFont, "OUTSIDE HITS GO TO THE OBJECT LAYER.");
     const lineFour = textBlockWidth(smallFont, "DRAGGING USES THE HEADER BAR ONLY.");
     const contentWidth = max(max(lineOne, lineTwo), max(lineThree, lineFour));
-    const width = max(titleWidth + 24.0f, contentWidth + 36.0f);
+    const measuredWidth = max(titleWidth + 24.0f, contentWidth + 36.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const height = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
+    const measuredHeight = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
+
+    const width = max(measuredWidth, layoutState.middleWidth);
+    const height = max(measuredHeight, layoutState.middleHeight);
 
     layoutState.middleWidth = width;
     layoutState.middleHeight = height;
@@ -549,8 +567,16 @@ bool hudPointInHeader(HudWindowRect rect, float x, float y)
 void hudBeginDrag(ref HudLayoutState state, HudWindowRect rect, float cursorX, float cursorY)
 {
     state.middleDragging = true;
+    state.middleResizing = false;
     state.dragOffsetX = cursorX - rect.left;
     state.dragOffsetY = cursorY - rect.top;
+}
+
+/** Starts resizing the center window. */
+void hudBeginResize(ref HudLayoutState state)
+{
+    state.middleResizing = true;
+    state.middleDragging = false;
 }
 
 /** Updates the dragged center window position and clamps it to the viewport. */
@@ -567,10 +593,30 @@ void hudDragTo(ref HudLayoutState state, float cursorX, float cursorY, float ext
     state.middleTop = clampFloat(newTop, 0.0f, maximumTop);
 }
 
+/** Updates the resized center window size and clamps it to the viewport. */
+void hudResizeTo(ref HudLayoutState state, float cursorX, float cursorY, float extentWidth, float extentHeight)
+{
+    if (!state.middleResizing)
+        return;
+
+    const minimumWidth = 240.0f;
+    const minimumHeight = 168.0f;
+    const availableWidth = extentWidth > state.middleLeft ? extentWidth - state.middleLeft : 0.0f;
+    const availableHeight = extentHeight > state.middleTop ? extentHeight - state.middleTop : 0.0f;
+    state.middleWidth = clampFloat(cursorX - state.middleLeft, minimumWidth, availableWidth);
+    state.middleHeight = clampFloat(cursorY - state.middleTop, minimumHeight, availableHeight);
+}
+
 /** Stops any active center-window drag. */
 void hudEndDrag(ref HudLayoutState state)
 {
     state.middleDragging = false;
+}
+
+/** Stops any active center-window resize. */
+void hudEndResize(ref HudLayoutState state)
+{
+    state.middleResizing = false;
 }
 
 private float clampFloat(float value, float minimum, float maximum)
