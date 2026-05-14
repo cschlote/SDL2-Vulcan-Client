@@ -1,4 +1,12 @@
-/** $purposeofFile
+/** Bootstraps SDL, Vulkan, and the renderer.
+ *
+ * Loads the native bindings, initializes the SDL video subsystem, creates the
+ * window wrapper, constructs the Vulkan renderer, and performs shutdown in the
+ * correct order. The bootstrap flow mirrors the step-by-step frame lifecycle
+ * described in docs/vulkan-quickstart.md.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

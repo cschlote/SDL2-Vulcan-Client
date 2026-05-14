@@ -1,4 +1,16 @@
-/** $purposeofFile
+/** Builds font atlases and emits textured text geometry.
+ *
+ * Loads fonts through FreeType, derives glyph metrics, creates atlas textures,
+ * and appends screen-space text quads for the UI and overlay layers. The atlas
+ * output is used by source/vulkan/ui.d and source/vulkan/ui_layer.d, while the
+ * wider build pipeline is described in docs/vulkan-quickstart.md and
+ * docs/shaders.md.
+ *
+ * See_Also:
+ *   source/vulkan/ui.d
+ *   source/vulkan/ui_layer.d
+ *   docs/vulkan-quickstart.md
+ *   docs/shaders.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -16,7 +28,11 @@ import std.string : indexOf, toStringz;
 
 import vulkan.pipeline : Vertex;
 
-/** Describes one glyph stored in a font atlas. */
+/** Describes one glyph stored in a font atlas.
+ *
+ * The glyph record keeps the rendering metrics and atlas coordinates together
+ * so the UI code can place text without duplicating FreeType queries.
+ */
 struct FontGlyph
 {
     /** Horizontal advance in pixels. */
@@ -39,7 +55,11 @@ struct FontGlyph
     float v1;
 }
 
-/** Holds one FreeType-rasterized atlas and the glyph metrics for it. */
+/** Holds one FreeType-rasterized atlas and the glyph metrics for it.
+ *
+ * The renderer keeps one atlas per requested text size so the UI layer can draw
+ * small, medium, and large labels without resampling.
+ */
 struct FontAtlas
 {
     /** Requested pixel height for the font. */
@@ -63,6 +83,10 @@ struct FontAtlas
 private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,:;!?/\\+-()[]%";
 
 /** Chooses a reasonable system font path for the current platform.
+ *
+ * The renderer consults this helper when no explicit font path was supplied,
+ * which keeps the sample runnable on a fresh system.
+ *
  *
  * @returns A usable font file path.
  */
@@ -95,6 +119,10 @@ string selectDefaultFontPath()
 }
 
 /** Builds a FreeType-rasterized atlas for the requested glyph set.
+ *
+ * The resulting atlas is consumed by the UI and overlay modules, which render
+ * text by appending textured quads into the shared vertex buffers.
+ *
  *
  * @param fontPath = Path to the font file.
  * @param pixelHeight = Requested pixel height.
@@ -189,6 +217,10 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
 }
 
 /** Appends text quads using the texture coordinates stored in a font atlas.
+ *
+ * The UI layer passes the current vertex list and a depth value so text can be
+ * layered with the rest of the retained widgets and the HUD overlay.
+ *
  *
  * @param vertices = Destination vertex list.
  * @param atlas = Font atlas used for the text.

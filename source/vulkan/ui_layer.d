@@ -1,4 +1,13 @@
-/** $purposeofFile
+/** Builds the demo's HUD layout and overlay geometry.
+ *
+ * Organizes the window stack, drag state, and per-window draw ranges that keep
+ * the overlay geometry grouped by window during rendering. The layout feeds
+ * the retained widgets in source/vulkan/ui.d and the command-buffer
+ * orchestration in source/vulkan/renderer.d.
+ *
+ * See_Also:
+ *   source/vulkan/ui.d
+ *   source/vulkan/renderer.d
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -14,54 +23,99 @@ import std.math : PI;
 
 import vulkan.font : FontAtlas;
 import vulkan.pipeline : Vertex;
-import vulkan.ui : UiButton, UiContainer, UiLabel, UiRenderContext, UiTextStyle, UiWindow;
+import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_widgets : UiButton, UiContainer, UiLabel, UiWindow;
 
-/** Describes one HUD window rectangle in pixel coordinates. */
+/** Describes one HUD window rectangle in pixel coordinates.
+ *
+ * The renderer uses these rectangles to place the corner windows and the
+ * draggable center window in native screen space.
+ */
 struct HudWindowRect
 {
+    /** Left edge in pixels. */
     float left;
+    /** Top edge in pixels. */
     float top;
+    /** Width in pixels. */
     float width;
+    /** Height in pixels. */
     float height;
 }
 
-/** Tracks the draggable middle window and keeps it within the viewport. */
+/** Tracks the draggable middle window and keeps it within the viewport.
+ *
+ * This state survives frame-to-frame so mouse dragging can continue smoothly
+ * while the center window stays clamped to the swapchain extent.
+ */
 struct HudLayoutState
 {
+    /** Current left edge of the center window. */
     float middleLeft;
+    /** Current top edge of the center window. */
     float middleTop;
+    /** Current width of the center window. */
     float middleWidth;
+    /** Current height of the center window. */
     float middleHeight;
+    /** Whether the center window has been initialized once. */
     bool middleInitialized;
+    /** Whether a drag is currently active. */
     bool middleDragging;
+    /** Cursor offset captured when the drag starts. */
     float dragOffsetX;
+    /** Cursor offset captured when the drag starts. */
     float dragOffsetY;
 }
 
-/** Pixel layout for all HUD windows. */
+/** Pixel layout for all HUD windows.
+ *
+ * The renderer keeps the status, modes, sample, input, and center windows in
+ * separate rectangles so hit testing and drawing can stay deterministic.
+ */
 struct HudLayout
 {
+    /** Top-left status window. */
     HudWindowRect status;
+    /** Top-right render-modes window. */
     HudWindowRect modes;
+    /** Bottom-left font sample window. */
     HudWindowRect sample;
+    /** Bottom-right input help window. */
     HudWindowRect input;
+    /** Draggable center window. */
     HudWindowRect center;
 }
 
-/** Describes one contiguous draw block inside the overlay buffers. */
+/** Describes one contiguous draw block inside the overlay buffers.
+ *
+ * Each range maps one logical window to a contiguous set of panel and text
+ * vertices so the renderer can preserve the intended stacking order.
+ */
 struct HudWindowDrawRange
 {
+    /** Start index for panel vertices. */
     uint panelsStart;
+    /** Vertex count for panel geometry. */
     uint panelsCount;
+    /** Start index for small text vertices. */
     uint smallTextStart;
+    /** Vertex count for small text geometry. */
     uint smallTextCount;
+    /** Start index for medium text vertices. */
     uint mediumTextStart;
+    /** Vertex count for medium text geometry. */
     uint mediumTextCount;
+    /** Start index for large text vertices. */
     uint largeTextStart;
+    /** Vertex count for large text geometry. */
     uint largeTextCount;
 }
 
 /** Holds the panel and text geometry for the HUD overlay.
+ *
+ * The renderer uploads each vertex list independently and uses the draw ranges
+ * to emit one logical window at a time.
  */
 struct HudOverlayGeometry
 {
@@ -78,6 +132,10 @@ struct HudOverlayGeometry
 }
 
 /** Builds the HUD overlay geometry for the current frame.
+ *
+ * The output is the bridge between the retained widget tree and the renderer's
+ * per-frame vertex buffers.
+ *
  *
  * @param extentWidth = Swapchain width in pixels.
  * @param extentHeight = Swapchain height in pixels.
@@ -147,7 +205,11 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
     return geometry;
 }
 
-/** Builds the pixel layout for all HUD windows. */
+/** Builds the pixel layout for all HUD windows.
+ *
+ * This layout is shared by hit testing, dragging, and rendering so the HUD
+ * stays consistent across the input and draw paths.
+ */
 HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
     HudLayout layout;

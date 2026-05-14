@@ -1,4 +1,13 @@
-/** $purposeofFile
+/** Runs the main Vulkan frame loop and scene rendering.
+ *
+ * Handles input, camera motion, mesh transforms, overlay uploads, and command
+ * buffer recording for both the 3D scene and the retained UI layer. See
+ * docs/vulkan-quickstart.md for the frame sequence and https://vkguide.dev/
+ * for an external Vulkan walkthrough.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
+ *   https://vkguide.dev/
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -221,7 +230,7 @@ class VulkanRenderer
         pipeline = PipelineResources(device.handle, swapchain.extent, swapchain.imageFormat, device.depthFormat, vertexShaderPath, fragmentShaderPath);
 
         shapeMeshes = buildPlatonicSolids();
-        currentShapeIndex = 1;
+        currentShapeIndex = 3;
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
         foreach (mesh; shapeMeshes)

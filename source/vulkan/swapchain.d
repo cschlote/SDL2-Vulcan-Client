@@ -1,4 +1,12 @@
-/** $purposeofFile
+/** Owns the Vulkan swapchain and its image views.
+ *
+ * Chooses the presentation extent, recreates swapchain resources when needed,
+ * and exposes the images and views consumed by the renderer. See
+ * docs/vulkan-quickstart.md for the role of the swapchain in the frame
+ * pipeline.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -9,13 +17,22 @@ module vulkan.swapchain;
 import bindbc.vulkan;
 import std.exception : enforce;
 
-/** Owns the Vulkan swapchain and its image views. */
+/** Owns the Vulkan swapchain and its image views.
+ *
+ * The renderer recreates this wrapper whenever the window surface changes size
+ * or the swapchain becomes invalid.
+ */
 struct Swapchain
 {
+    /** Swapchain handle used for presentation. */
     VkSwapchainKHR handle = VK_NULL_HANDLE;
+    /** Final color format selected for the presentation images. */
     VkFormat imageFormat = VkFormat.VK_FORMAT_UNDEFINED;
+    /** Chosen swapchain extent in pixels. */
     VkExtent2D extent;
+    /** Backing images returned by Vulkan. */
     VkImage[] images;
+    /** Image views created for the swapchain images. */
     VkImageView[] imageViews;
 
     /** Creates the swapchain and image views for the current window extent.
