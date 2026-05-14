@@ -2,8 +2,9 @@
 
 ## Unreleased
 
-## Release 26.20.9999
+## Release 26.20.4916
 
+- The release helper script now runs correctly through DUB, so the release workflow is easier to repeat.
 - The app now starts on the dodecahedron, and the UI code is split into smaller modules so it is easier to follow and extend.
 
 ## Release 26.20.4126
