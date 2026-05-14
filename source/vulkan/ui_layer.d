@@ -24,7 +24,10 @@ import std.math : PI;
 import vulkan.font : FontAtlas;
 import vulkan.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_widgets : UiButton, UiContainer, UiLabel, UiWindow;
+import vulkan.ui.ui_button : UiButton;
+import vulkan.ui.ui_container : UiContainer;
+import vulkan.ui.ui_label : UiLabel;
+import vulkan.ui.ui_window : UiWindow;
 
 /** Describes one HUD window rectangle in pixel coordinates.
  *
