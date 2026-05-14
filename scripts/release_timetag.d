@@ -1,4 +1,8 @@
 #!/usr/bin/env dub
+/+ dub.sdl:
+name "release-timetag"
+dependency "va_toolbox" version="~>0.4.0"
++/
 /** Prints the release timetag and matching Git tag.
  *
  * Uses the shared time-tag helper to derive the current release version and
@@ -13,10 +17,6 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
  * License: CC-BY-NC-SA 4.0
  */
-/+ dub.sdl:
-name "release-timetag"
-dependency "va_toolbox" version="~>0.4.0"
-+/
 module scripts.release_timetag;
 
 import std.stdio : writefln;
