@@ -24,6 +24,7 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
+import demo_settings : DemoSettings;
 import logging : logLine, logLineVerbose;
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
@@ -89,6 +90,7 @@ class VulkanRenderer
 {
     private SdlWindow* window;
     private string baseTitle;
+    private DemoSettings* demoSettings;
     private VulkanInstance instance;
     private VkSurfaceKHR surface = VK_NULL_HANDLE;
     private VulkanDevice device;
@@ -208,9 +210,10 @@ class VulkanRenderer
      *   window = SDL window used for surface creation and size queries.
      *   buildVersion = Git describe string used in the window title.
      */
-    this(SdlWindow* window, string buildVersion)
+    this(SdlWindow* window, string buildVersion, DemoSettings* demoSettings = null)
     {
         this.window = window;
+        this.demoSettings = demoSettings;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -232,9 +235,11 @@ class VulkanRenderer
         pipeline = PipelineResources(device.handle, swapchain.extent, swapchain.imageFormat, device.depthFormat, vertexShaderPath, fragmentShaderPath);
 
         shapeMeshes = buildPlatonicSolids();
-        currentShapeIndex = 3;
+        currentShapeIndex = findStartingShapeIndex();
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        if (demoSettings !is null)
+            setRenderMode(renderModeFromSetting(demoSettings.gameplay.startupRenderMode, currentRenderMode));
         foreach (mesh; shapeMeshes)
         {
             if (mesh.vertices.length > maxShapeVertexCount)
@@ -266,6 +271,8 @@ class VulkanRenderer
     {
         if (device.handle != VK_NULL_HANDLE)
             vkDeviceWaitIdle(device.handle);
+
+        syncDemoSettings();
 
         destroySyncObjects();
         destroyDescriptors();
@@ -1551,6 +1558,7 @@ class VulkanRenderer
 
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        syncDemoSettings();
         updateWindowTitle();
     }
 
@@ -1564,7 +1572,62 @@ class VulkanRenderer
     {
         currentRenderMode = mode;
         currentRenderModeName = renderModeLabel(mode);
+        syncDemoSettings();
         updateWindowTitle();
+    }
+
+    /** Resolves the configured startup shape name to a mesh index. */
+    private size_t findStartingShapeIndex() const
+    {
+        if (demoSettings is null)
+            return 3;
+
+        foreach (index, mesh; shapeMeshes)
+        {
+            if (mesh.name == demoSettings.gameplay.startupShape)
+                return index;
+        }
+
+        return 3;
+    }
+
+    /** Converts the stored startup render mode setting to the internal enum. */
+    private static RenderMode renderModeFromSetting(string value, RenderMode fallback)
+    {
+        if (value == "flatColor")
+            return RenderMode.flatColor;
+        if (value == "litTextured")
+            return RenderMode.litTextured;
+        if (value == "wireframe")
+            return RenderMode.wireframe;
+        if (value == "hiddenLine")
+            return RenderMode.hiddenLine;
+
+        return fallback;
+    }
+
+    /** Stores the current runtime UI state back into the demo settings bundle. */
+    private void syncDemoSettings()
+    {
+        if (demoSettings is null)
+            return;
+
+        demoSettings.display.windowWidth = swapchain.extent.width;
+        demoSettings.display.windowHeight = swapchain.extent.height;
+        demoSettings.gameplay.startupShape = currentShapeName;
+        demoSettings.gameplay.startupRenderMode = renderModeSettingName(currentRenderMode);
+    }
+
+    /** Returns the stable config key for a render mode. */
+    private static string renderModeSettingName(RenderMode mode)
+    {
+        final switch (mode)
+        {
+            case RenderMode.flatColor: return "flatColor";
+            case RenderMode.litTextured: return "litTextured";
+            case RenderMode.wireframe: return "wireframe";
+            case RenderMode.hiddenLine: return "hiddenLine";
+        }
     }
 
     /** Returns the human-readable label for a render mode.
