@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Improved the on-screen window interactions and added clearer debug logging for development.
+
 ## Release 26.20.4916
 
 - The release helper script now runs correctly through DUB, so the release workflow is easier to repeat.
