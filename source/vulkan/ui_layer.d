@@ -274,59 +274,44 @@ private UiWindow buildStatusWindow(HudWindowRect rect, float fps, float yawAngle
 
 private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
 {
-    const buttonLabels = [
-        "F  FLAT COLOR",
-        "T  LIT / TEXTURED",
-        "W  WIREFRAME",
-        "H  HIDDEN LINE",
-    ];
-    const actionLabels = [
-        "+ / -  SWITCH SHAPE",
-        "ARROWS  ROTATE CAMERA",
-        "ESC  CLOSE APPLICATION",
-    ];
+    const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
+    const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
+    const buttonPadding = 20.0f;
+
     float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
         buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
+    buttonWidth += buttonPadding;
 
-    float labelWidth = 0.0f;
+    float actionWidth = 0.0f;
     foreach (label; actionLabels)
-        labelWidth = max(labelWidth, textBlockWidth(smallFont, label));
+        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
 
     const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
-    const contentWidth = max(buttonRowWidth, labelWidth);
+    const contentWidth = max(buttonRowWidth, actionWidth);
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const contentBottom = max(
-        max(max(max(
-            0.0f + buttonHeight,
-            (buttonHeight + 4.0f) + buttonHeight),
-            (buttonHeight + 4.0f) * 2.0f + buttonHeight),
-            (buttonHeight + 4.0f) * 3.0f + buttonHeight),
-        168.0f + smallTextHeight);
-    const contentBottomWithLabels = max(contentBottom, max(120.0f + smallTextHeight, 144.0f + smallTextHeight));
-    const height = 36.0f + contentBottomWithLabels + 20.0f;
+    const height = 36.0f + (buttonHeight * 2.0f + 4.0f + 12.0f + smallTextHeight * 3.0f + 24.0f) + 20.0f;
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    auto topRow = new UiHBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), buttonHeight, 4.0f);
+
+    auto topRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
     auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     flatColorButton.onClick = onFlatColor;
     topRow.add(flatColorButton);
-
-    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     litTexturedButton.onClick = onLitTextured;
     topRow.add(litTexturedButton);
     content.add(topRow);
     content.add(new UiSpacer(0.0f, 4.0f));
 
-    auto bottomRow = new UiHBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), buttonHeight, 4.0f);
-    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto bottomRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     wireframeButton.onClick = onWireframe;
     bottomRow.add(wireframeButton);
-
-    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     hiddenLineButton.onClick = onHiddenLine;
     bottomRow.add(hiddenLineButton);
     content.add(bottomRow);
@@ -473,12 +458,18 @@ private HudWindowRect buildModesRect(float extentWidth, float extentHeight, ref 
 {
     const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
     const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
-    float contentWidth = 0.0f;
+    const buttonPadding = 20.0f;
+    float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
-    foreach (label; actionLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
+        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
+    buttonWidth += buttonPadding;
 
+    float actionWidth = 0.0f;
+    foreach (label; actionLabels)
+        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
+
+    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
+    const contentWidth = max(buttonRowWidth, actionWidth);
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
