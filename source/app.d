@@ -20,6 +20,7 @@ import bindbc.vulkan : VulkanSupport, loadVulkan;
 import std.stdio : stderr;
 import std.string : fromStringz;
 
+import logging : logLine, logLineVerbose, setVerboseOutputs;
 import window;
 import vulkan.renderer : VulkanRenderer;
 import version_info : getGitDescribeVersion;
@@ -63,6 +64,18 @@ private bool loadVulkanBindings()
  */
 int runApplication(string[] args)
 {
+    bool verbose = false;
+    foreach (arg; args[1 .. $])
+    {
+        if (arg == "-v" || arg == "--verbose")
+            verbose = true;
+    }
+
+    setVerboseOutputs(verbose);
+    logLine("Starting SDL2 Vulkan demo.");
+    logLineVerbose("Verbose logging enabled.");
+    logLineVerbose("Arguments: ", args);
+
     if (!loadSdlBindings())
         return 1;
 
@@ -79,7 +92,8 @@ int runApplication(string[] args)
     try
     {
         const buildVersion = getGitDescribeVersion();
-        stderr.writeln("Build version: ", buildVersion);
+        logLine("Build version: ", buildVersion);
+        logLineVerbose("SDL and Vulkan bindings loaded successfully.");
 
         auto window = SdlWindow("SDL2 Vulkan Demo " ~ buildVersion, 1280, 720);
         scope (exit)
@@ -89,6 +103,7 @@ int runApplication(string[] args)
         scope (exit)
             renderer.destroy();
 
+        logLineVerbose("Entering renderer loop.");
         renderer.run();
     }
     catch (Exception exception)
