@@ -11,6 +11,7 @@ import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_container : UiContainer;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowFrame;
+import logging : logLineVerbose;
 
 /** Simple retained window with a title bar and a content region. */
 final class UiWindow : UiWidget
@@ -91,6 +92,26 @@ final class UiWindow : UiWidget
             }
         }
 
+        if (resizable && event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
+        {
+            logLineVerbose("UiWindow resize grip hit: ", title, " at ", event.x, ", ", event.y);
+            if (onResizeStart !is null)
+                onResizeStart();
+            resizeTracking = true;
+            dragTracking = false;
+            return true;
+        }
+
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInHeader(event.x, event.y))
+        {
+            logLineVerbose("UiWindow header hit: ", title, " at ", event.x, ", ", event.y);
+            if (onHeaderDragStart !is null)
+                onHeaderDragStart(event.x, event.y);
+            dragTracking = true;
+            resizeTracking = false;
+            return true;
+        }
+
         if (width > 0.0f && height > 0.0f && !contains(event.x, event.y))
             return false;
 
@@ -102,24 +123,6 @@ final class UiWindow : UiWidget
         {
             if (children[cast(size_t)index].dispatchPointerEvent(childEvent))
                 return true;
-        }
-
-        if (resizable && event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
-        {
-            if (onResizeStart !is null)
-                onResizeStart();
-            resizeTracking = true;
-            dragTracking = false;
-            return true;
-        }
-
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInHeader(event.x, event.y))
-        {
-            if (onHeaderDragStart !is null)
-                onHeaderDragStart(event.x, event.y);
-            dragTracking = true;
-            resizeTracking = false;
-            return true;
         }
 
         return handlePointerEvent(event);
