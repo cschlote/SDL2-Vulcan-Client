@@ -1,4 +1,11 @@
-/** Simple retained text label widget. */
+/** Simple retained text label widget.
+ *
+ * This module defines a simple text label widget that can be used for future interactive
+ *
+ * Authors: Carsten Schlote, schlote@vahanus.net
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
+ * License: CC-BY-NC-SA 4.0
+ */
 module vulkan.ui.ui_label;
 
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
