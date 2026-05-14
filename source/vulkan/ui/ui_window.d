@@ -19,6 +19,7 @@ final class UiWindow : UiWidget
     float[4] headerColor;
     float[4] titleColor;
     float headerHeight = 7.0f;
+    bool resizable;
     bool dragTracking;
     bool resizeTracking;
     void delegate(float, float) onHeaderDragStart;
@@ -28,13 +29,14 @@ final class UiWindow : UiWidget
     void delegate(float, float) onResizeMove;
     void delegate() onResizeEnd;
 
-    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor)
+    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool resizable = false)
     {
         super(x, y, width, height);
         this.title = title;
         this.bodyColor = bodyColor;
         this.headerColor = headerColor;
         this.titleColor = titleColor;
+        this.resizable = resizable;
         childOffsetX = 18.0f;
         childOffsetY = 36.0f;
     }
@@ -62,7 +64,7 @@ final class UiWindow : UiWidget
             }
         }
 
-        if (resizeTracking)
+        if (resizable && resizeTracking)
         {
             if (event.kind == UiPointerEventKind.move)
             {
@@ -93,7 +95,7 @@ final class UiWindow : UiWidget
                 return true;
         }
 
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
+        if (resizable && event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
         {
             if (onResizeStart !is null)
                 onResizeStart();
@@ -119,7 +121,8 @@ protected:
     {
         appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyColor, headerColor, context.depthBase);
         appendTextLine(context, UiTextStyle.medium, title, 12.0f, 6.0f, titleColor, context.depthBase - 0.001f);
-        appendButtonFrame(context, width - 16.0f, height - 16.0f, width - 2.0f, height - 2.0f, [0.14f, 0.16f, 0.20f, 0.88f], [0.20f, 0.56f, 0.98f, 0.92f], context.depthBase - 0.0005f);
+        if (resizable)
+            appendButtonFrame(context, width - 16.0f, height - 16.0f, width - 2.0f, height - 2.0f, [0.14f, 0.16f, 0.20f, 0.88f], [0.20f, 0.56f, 0.98f, 0.92f], context.depthBase - 0.0005f);
     }
 
 private:

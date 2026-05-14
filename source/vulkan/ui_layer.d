@@ -62,6 +62,10 @@ struct HudLayoutState
     float middleWidth;
     /** Current height of the center window. */
     float middleHeight;
+    /** Minimum width required by the current center-window content. */
+    float middleMinimumWidth;
+    /** Minimum height required by the current center-window content. */
+    float middleMinimumHeight;
     /** Whether the center window has been initialized once. */
     bool middleInitialized;
     /** Whether a drag is currently active. */
@@ -491,8 +495,11 @@ private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref
     const mediumTextHeight = textBlockHeight(mediumFont);
     const measuredHeight = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
 
-    const width = max(measuredWidth, layoutState.middleWidth);
-    const height = max(measuredHeight, layoutState.middleHeight);
+    layoutState.middleMinimumWidth = measuredWidth;
+    layoutState.middleMinimumHeight = measuredHeight;
+
+    const width = layoutState.middleInitialized ? max(layoutState.middleWidth, measuredWidth) : measuredWidth;
+    const height = layoutState.middleInitialized ? max(layoutState.middleHeight, measuredHeight) : measuredHeight;
 
     layoutState.middleWidth = width;
     layoutState.middleHeight = height;
@@ -599,8 +606,8 @@ void hudResizeTo(ref HudLayoutState state, float cursorX, float cursorY, float e
     if (!state.middleResizing)
         return;
 
-    const minimumWidth = 240.0f;
-    const minimumHeight = 168.0f;
+    const minimumWidth = state.middleMinimumWidth > 0.0f ? state.middleMinimumWidth : 240.0f;
+    const minimumHeight = state.middleMinimumHeight > 0.0f ? state.middleMinimumHeight : 168.0f;
     const availableWidth = extentWidth > state.middleLeft ? extentWidth - state.middleLeft : 0.0f;
     const availableHeight = extentHeight > state.middleTop ? extentHeight - state.middleTop : 0.0f;
     state.middleWidth = clampFloat(cursorX - state.middleLeft, minimumWidth, availableWidth);
