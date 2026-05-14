@@ -28,7 +28,7 @@ import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_container : UiContainer;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiSpacer, UiVBox;
+import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_window : UiWindow;
 
 /** Describes one HUD window rectangle in pixel coordinates.
@@ -294,6 +294,8 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
+    const buttonWidth = contentWidth;
+    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
     const contentBottom = max(
         max(max(max(
             0.0f + buttonHeight,
@@ -303,27 +305,30 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
         168.0f + smallTextHeight);
     const contentBottomWithLabels = max(contentBottom, max(120.0f + smallTextHeight, 144.0f + smallTextHeight));
     const height = 36.0f + contentBottomWithLabels + 20.0f;
+    const windowWidth = max(width, buttonRowWidth + 36.0f);
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
-    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto topRow = new UiHBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), buttonHeight, 4.0f);
+    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     flatColorButton.onClick = onFlatColor;
-    content.add(flatColorButton);
-    content.add(new UiSpacer(0.0f, 4.0f));
+    topRow.add(flatColorButton);
 
-    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     litTexturedButton.onClick = onLitTextured;
-    content.add(litTexturedButton);
+    topRow.add(litTexturedButton);
+    content.add(topRow);
     content.add(new UiSpacer(0.0f, 4.0f));
 
-    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto bottomRow = new UiHBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), buttonHeight, 4.0f);
+    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     wireframeButton.onClick = onWireframe;
-    content.add(wireframeButton);
-    content.add(new UiSpacer(0.0f, 4.0f));
+    bottomRow.add(wireframeButton);
 
-    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     hiddenLineButton.onClick = onHiddenLine;
-    content.add(hiddenLineButton);
+    bottomRow.add(hiddenLineButton);
+    content.add(bottomRow);
 
     content.add(new UiSpacer(0.0f, 12.0f));
     content.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
