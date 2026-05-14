@@ -8,6 +8,7 @@ module vulkan.ui.ui_window;
 
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_container : UiContainer;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowFrame;
 
@@ -22,6 +23,7 @@ final class UiWindow : UiWidget
     bool resizable;
     bool dragTracking;
     bool resizeTracking;
+    private UiContainer contentRoot;
     void delegate(float, float) onHeaderDragStart;
     void delegate(float, float) onHeaderDragMove;
     void delegate() onHeaderDragEnd;
@@ -37,8 +39,15 @@ final class UiWindow : UiWidget
         this.headerColor = headerColor;
         this.titleColor = titleColor;
         this.resizable = resizable;
+        contentRoot = new UiContainer();
+        super.add(contentRoot);
         childOffsetX = 18.0f;
         childOffsetY = 36.0f;
+    }
+
+    override void add(UiWidget child)
+    {
+        contentRoot.add(child);
     }
 
     override bool dispatchPointerEvent(ref UiPointerEvent event)

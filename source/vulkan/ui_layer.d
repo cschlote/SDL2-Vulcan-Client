@@ -369,7 +369,7 @@ private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) small
 
 private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f], true);
     window.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("UI HITS DO NOT FALL THROUGH TO 3D.", 0.0f, smallFont.lineHeight + 12.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("OUTSIDE HITS GO TO THE OBJECT LAYER.", 0.0f, smallFont.lineHeight * 2.0f + 24.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
