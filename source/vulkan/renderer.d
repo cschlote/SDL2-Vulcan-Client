@@ -1,7 +1,13 @@
 /** Runs the main Vulkan frame loop and scene rendering.
  *
  * Handles input, camera motion, mesh transforms, overlay uploads, and command
- * buffer recording for both the 3D scene and the retained UI layer.
+ * buffer recording for both the 3D scene and the retained UI layer. See
+ * docs/vulkan-quickstart.md for the frame sequence and https://vkguide.dev/
+ * for an external Vulkan walkthrough.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
+ *   https://vkguide.dev/
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

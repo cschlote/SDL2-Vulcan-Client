@@ -1,7 +1,13 @@
 /** Provides compact matrix and vector helpers for camera math.
  *
  * Supplies the small set of 3D operations needed for rotation, projection, and
- * other coordinate conversions inside the renderer.
+ * other coordinate conversions inside the renderer. The renderer uses these
+ * helpers alongside the frame-lifecycle notes in docs/vulkan-quickstart.md to
+ * keep the camera math explicit and easy to review.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
+ *   https://vkguide.dev/
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -11,20 +17,18 @@ module math.matrix;
 
 import std.math : PI, cos, sin, sqrt, tan;
 
+/** Simple 3D vector used by the camera and mesh helpers. */
 struct Vec3
 {
-    /** X coordinate. */
-    float x;
-    /** Y coordinate. */
-    float y;
-    /** Z coordinate. */
-    float z;
+    float x; /// X coordinate in object or camera space.
+    float y; /// Y coordinate in object or camera space.
+    float z; /// Z coordinate in object or camera space.
 }
 
+/** Column-major 4x4 matrix used for transforms and projection. */
 struct Mat4
 {
-    /** Matrix values stored in column-major order. */
-    float[16] m;
+    float[16] m; /// Matrix values stored in column-major order.
 
     /** Returns the 4x4 identity matrix. */
     static Mat4 identity() pure nothrow @nogc @safe

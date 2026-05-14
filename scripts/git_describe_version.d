@@ -2,7 +2,12 @@
 /** Writes the current Git describe string to a build artifact.
  *
  * Runs `git describe`, stores the result in `build/git-describe.txt`, and
- * prints the generated value for release and version diagnostics.
+ * prints the generated value for release and version diagnostics. The release
+ * workflow is described in README.md and CHANGELOG.md.
+ *
+ * See_Also:
+ *   README.md
+ *   CHANGELOG.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

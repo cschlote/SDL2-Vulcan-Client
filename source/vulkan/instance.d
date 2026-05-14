@@ -15,7 +15,12 @@ import bindbc.vulkan;
 private static immutable char[17] applicationName = "SDL2 Vulkan Demo";
 private static immutable char[17] engineName = "SDL2 Vulkan Demo";
 
-/** Creates a Vulkan instance using the SDL-required surface extensions.
+/** Wraps the Vulkan instance handle created from the SDL-required extensions.
+ *
+ * The instance is the first Vulkan object in the renderer's lifetime and is
+ * kept separate so the surface, device, and swapchain can all be created and
+ * destroyed in a controlled order.
+ *
  *
  * @param windowHandle = SDL window used to query required Vulkan extensions.
  * @returns Nothing.

@@ -1,7 +1,12 @@
 /** Selects a Vulkan physical device and creates the logical device.
  *
  * Finds the graphics and presentation queue families, validates swapchain
- * support, and builds the device and queue state used by the renderer.
+ * support, and builds the device and queue state used by the renderer. The
+ * device layer sits directly between the Vulkan instance and the swapchain in
+ * docs/vulkan-quickstart.md.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -13,14 +18,19 @@ import bindbc.vulkan;
 import std.exception : enforce;
 import std.string : fromStringz;
 
+/** Required Vulkan extension name for swapchain support. */
 enum swapchainExtensionName = "VK_KHR_swapchain";
 
-/** Stores the queue families needed by the renderer. */
+/** Stores the queue families needed by the renderer.
+ *
+ * The renderer only needs a graphics queue and a presentation queue, so this
+ * helper keeps those two capabilities together.
+ */
 struct QueueFamilyIndices
 {
-    /** Graphics queue family index. */
+    /** Graphics queue family index used for command submission and rendering. */
     uint graphicsFamily = uint.max;
-    /** Present queue family index. */
+    /** Present queue family index used for swapchain presentation. */
     uint presentFamily = uint.max;
 
     /** Reports whether both graphics and present queues were found.
@@ -34,6 +44,9 @@ struct QueueFamilyIndices
 }
 
 /** Selects a Vulkan physical device and creates the logical device used by the renderer.
+ *
+ * The wrapper keeps the queue-family selection and depth-format choice together
+ * so the renderer can treat them as a single capability bundle.
  *
  * @param instance = Vulkan instance handle.
  * @param surface = SDL-created Vulkan surface.

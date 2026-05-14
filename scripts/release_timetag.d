@@ -2,7 +2,12 @@
 /** Prints the release timetag and matching Git tag.
  *
  * Uses the shared time-tag helper to derive the current release version and
- * prints the Git tag prefix expected by the release workflow.
+ * prints the Git tag prefix expected by the release workflow. See README.md
+ * and CHANGELOG.md for the surrounding release notes.
+ *
+ * See_Also:
+ *   README.md
+ *   CHANGELOG.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

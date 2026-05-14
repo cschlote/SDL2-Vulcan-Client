@@ -2,7 +2,11 @@
 /** Compiles the repository's GLSL shaders into SPIR-V binaries.
  *
  * Checks source and output timestamps, creates the shader output directory,
- * and rebuilds the shader artifacts when the inputs changed.
+ * and rebuilds the shader artifacts when the inputs changed. The shader roles
+ * are documented in docs/shaders.md.
+ *
+ * See_Also:
+ *   docs/shaders.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

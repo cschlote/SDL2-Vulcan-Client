@@ -1,7 +1,13 @@
 /** Builds indexed meshes for the selectable Platonic solids.
  *
  * Reconstructs convex faces from the vertex sets, assigns per-face colors, and
- * emits triangulated mesh data that the renderer can upload directly.
+ * emits triangulated mesh data that the renderer can upload directly. The mesh
+ * builder feeds the scene path described in docs/vulkan-quickstart.md and the
+ * object selection controls in source/vulkan/renderer.d.
+ *
+ * See_Also:
+ *   docs/vulkan-quickstart.md
+ *   source/vulkan/renderer.d
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -14,11 +20,18 @@ import std.math : abs, atan2, sqrt;
 
 import vulkan.pipeline : Vertex;
 
-/** Describes a mesh that can be uploaded to the renderer. */
+/** Describes a mesh that can be uploaded to the renderer.
+ *
+ * Each mesh carries a name for UI display, vertex data for the GPU, and the
+ * triangulated index list used by the draw call.
+ */
 struct MeshData
 {
+    /** Human-readable mesh name shown in the HUD. */
     string name;
+    /** Vertices consumed by the renderer's vertex buffer. */
     Vertex[] vertices;
+    /** Triangle indices for indexed rendering. */
     uint[] indices;
 }
 
@@ -382,6 +395,7 @@ private float[3] normalize(float[3] value)
     return [value[0] / magnitude, value[1] / magnitude, value[2] / magnitude];
 }
 
+/** Vertex positions for the tetrahedron mesh. */
 private immutable float[3][] tetrahedronVertices = [
     [ 1.0f,  1.0f,  1.0f],
     [-1.0f, -1.0f,  1.0f],
@@ -389,6 +403,7 @@ private immutable float[3][] tetrahedronVertices = [
     [ 1.0f, -1.0f, -1.0f],
 ];
 
+/** Vertex positions for the cube mesh. */
 private immutable float[3][] cubeVertices = [
     [-1.0f, -1.0f,  1.0f],
     [ 1.0f, -1.0f,  1.0f],
@@ -400,6 +415,7 @@ private immutable float[3][] cubeVertices = [
     [ 1.0f,  1.0f, -1.0f],
 ];
 
+/** Vertex positions for the octahedron mesh. */
 private immutable float[3][] octahedronVertices = [
     [ 1.0f,  0.0f,  0.0f],
     [-1.0f,  0.0f,  0.0f],
@@ -409,6 +425,7 @@ private immutable float[3][] octahedronVertices = [
     [ 0.0f,  0.0f, -1.0f],
 ];
 
+/** Vertex positions for the icosahedron mesh. */
 private immutable float[3][] icosahedronVertices = [
     [ 0.0f,  1.0f,  1.618_034f],
     [ 0.0f, -1.0f,  1.618_034f],
@@ -424,6 +441,7 @@ private immutable float[3][] icosahedronVertices = [
     [-1.618_034f,  0.0f, -1.0f],
 ];
 
+/** Vertex positions for the dodecahedron mesh. */
 private immutable float[3][] dodecahedronVertices = [
     [ 1.0f,  1.0f,  1.0f],
     [ 1.0f,  1.0f, -1.0f],

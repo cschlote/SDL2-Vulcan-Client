@@ -1,7 +1,11 @@
 /** Defines shared vertex formats and graphics pipeline setup.
  *
  * Supplies the common vertex layout, loads shader binaries, and builds the
- * render pass and pipelines for the scene and overlay paths.
+ * render pass and pipelines for the scene and overlay paths. See docs/shaders.md
+ * for the shader-stage contract used here.
+ *
+ * See_Also:
+ *   docs/shaders.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
@@ -13,12 +17,20 @@ import bindbc.vulkan;
 import std.exception : enforce;
 import std.file : read;
 
-/** Shared vertex format used by the scene and overlay pipelines. */
+/** Shared vertex format used by the scene and overlay pipelines.
+ *
+ * The same layout is consumed by the 3D scene, the retained UI quads, and the
+ * font atlas text quads, which keeps the renderer's buffer uploads simple.
+ */
 struct Vertex
 {
+    /** Vertex position in clip-space or generated screen-space coordinates. */
     float[3] position;
+    /** Vertex color with alpha. */
     float[4] color;
+    /** Vertex normal used by the lit scene path. */
     float[3] normal;
+    /** Texture coordinates for the font atlas or other sampled quads. */
     float[2] uv;
 
     /** Creates a vertex from RGB color data and adds an implicit opaque alpha channel.
@@ -50,7 +62,12 @@ struct Vertex
     }
 }
 
-/** Owns the Vulkan render pass, descriptor layout, and scene/overlay pipelines. */
+/** Owns the Vulkan render pass, descriptor layout, and scene/overlay pipelines.
+ *
+ * The renderer uses one descriptor layout for scene uniforms and sampled font
+ * textures, then builds three pipelines for filled 3D, overlay, and wireframe
+ * drawing.
+ */
 struct PipelineResources
 {
     /** Render pass shared by the scene and overlay pipelines. */
@@ -67,6 +84,11 @@ struct PipelineResources
     VkPipeline wireframePipeline = VK_NULL_HANDLE;
 
     /** Creates the descriptor set layout, render pass, and graphics pipelines.
+     *
+     * The same pipeline bundle is reused by the main 3D mesh path and the HUD
+     * overlay path, which is why the vertex layout and descriptor layout are
+     * intentionally shared.
+     *
      *
      * @param device = Logical Vulkan device.
      * @param extent = Swapchain extent used for viewport state.
@@ -86,6 +108,10 @@ struct PipelineResources
     }
 
     /** Releases all pipeline-related Vulkan objects owned by the structure.
+     *
+     * The renderer destroys this after waiting for the device to go idle so the
+     * render pass and pipeline handles can be torn down deterministically.
+     *
      *
      * @param device = Logical Vulkan device that owns the resources.
      * @returns Nothing.

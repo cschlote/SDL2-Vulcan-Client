@@ -16,6 +16,9 @@ import std.string : fromStringz, toStringz;
 
 /** Creates a resizable Vulkan-capable SDL window.
  *
+ * The wrapper keeps the native handle alive for the renderer, applies a minimum
+ * size, and provides the SDL surface that starts the Vulkan frame pipeline.
+ *
  * @param title = Initial window title.
  * @param width = Initial window width in pixels.
  * @param height = Initial window height in pixels.
@@ -23,7 +26,7 @@ import std.string : fromStringz, toStringz;
  */
 struct SdlWindow
 {
-    /** Owning SDL window handle. */
+    /** Owning SDL window handle used for surface creation and event routing. */
     SDL_Window* handle;
 
     this(string title, int width, int height)
