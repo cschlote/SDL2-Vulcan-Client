@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Improved the on-screen window interactions and added clearer debug logging for development.
+- Started a box-based layout system for the on-screen windows.
 
 ## Release 26.20.4916
 

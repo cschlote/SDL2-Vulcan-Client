@@ -19,9 +19,9 @@ final class UiLabel : UiWidget
     UiTextStyle style;
     float[4] color;
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color)
+    this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
-        super(x, y, 0, 0);
+        super(x, y, 0, height);
         this.text = text;
         this.style = style;
         this.color = color;

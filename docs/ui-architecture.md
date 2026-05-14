@@ -70,6 +70,28 @@ They should:
 
 In the current project this is especially relevant for the render-mode window, where the button row is already a natural candidate for local event handling.
 
+## Layout Strategy
+
+The layout system should be introduced now, not later.
+
+The current demo already behaves like a manually positioned grid: sizes, offsets, and positions are calculated in code and then used to place widgets directly. That is acceptable for a small prototype, but it does not scale well once resizable windows, docking, or richer content are added.
+
+The preferred direction is a small retained layout core with two main primitives:
+
+- horizontal and vertical boxes for most content areas
+- a simple grid for places where explicit X/Y positioning is still the clearest option
+
+That gives the project a practical middle ground. The window chrome can stay explicit and hand-placed, while the inner content area can be arranged automatically by layout rules instead of fixed coordinates.
+
+This approach has a few advantages:
+
+- resize behavior becomes a natural consequence of the layout tree
+- content can reflow without rewriting every widget position by hand
+- later docking and grouping features have a stable foundation
+- the code stays readable because most cases are handled by a small number of containers
+
+The layout system does not need to solve every UI problem on day one. It should first cover the common retained-widget cases and leave special-purpose placement to the grid path.
+
 ## Icons and Small Graphics
 
 The UI should support small decorative graphics in addition to text.
@@ -92,12 +114,19 @@ Resizable windows:
 - windows should eventually support size changes
 - content should react to window dimensions instead of relying only on fixed offsets
 - minimum sizes and content clipping will matter once resizing is enabled
+- the current demo can still grow the window without re-laying out the widgets, but that should only be a temporary stepping stone
 
 Docking and grouping:
 
 - windows may need to snap or dock to each other
 - grouped windows would make complex layouts easier to manage
 - docking will require clear geometry and neighbor relationships
+
+Hybrid layout:
+
+- chrome and decoration should remain explicit
+- inner content should use the layout system
+- manual placement should remain available for special cases, icons, and tight control surfaces
 
 These features are easier to add if the widget tree, the hit testing, and the event dispatch are already explicit.
 
@@ -119,7 +148,8 @@ The following questions should be answered as the implementation grows:
 
 - should signals be synchronous or queued
 - should widgets emit typed events or a generic event structure
-- should layout be fully manual, constraint-based, or partially automatic
+- should the layout core be box-first with a small grid escape hatch
+- how much of the chrome should stay manual versus layout-driven
 - should animation live inside the widget or in a separate presentation layer
 - how should dragging, docking, and resizing interact when multiple widgets overlap
 
