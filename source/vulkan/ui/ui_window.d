@@ -1,60 +1,143 @@
-/** Retained window widget with title bar and content region.
+/** Retained window widget with title bar, content region, and chrome helpers.
  *
- * Authors: Carsten Schlote, schlote@vahanus.net
- * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
- * License: CC-BY-NC-SA 4.0
+ * The window keeps the content tree separate from the chrome so the caller can
+ * keep using ordinary retained widgets for the body while the window class
+ * owns title emphasis, drag/resize affordances, close handling, and header
+ * layout composition.
  */
 module vulkan.ui.ui_window;
 
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
-import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import std.algorithm : max;
+
+import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_container : UiContainer;
+import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
+import vulkan.ui.ui_layout : UiHBox;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowFrame;
-import logging : logLineVerbose;
+import logging : logLine, logLineVerbose;
 
-/** Simple retained window with a title bar and a content region. */
+/** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
 {
+    /** Window caption shown in the highlighted title badge. */
     string title;
+    /** Fill color for the window body. */
     float[4] bodyColor;
+    /** Base header color used when the window is not dragable. */
     float[4] headerColor;
+    /** Text color for the highlighted title badge. */
     float[4] titleColor;
-    float headerHeight = 7.0f;
-    bool resizable;
+    /** True when the window can be resized from its corners. */
+    bool sizeable;
+    /** True when the window exposes a close button in the header. */
+    bool closable;
+    /** True when the header indicates drag support and accepts drag gestures. */
+    bool dragable;
+    /** True while a drag gesture is active. */
     bool dragTracking;
+    /** True while a resize gesture is active. */
     bool resizeTracking;
-    private UiContainer contentRoot;
-    void delegate(float, float) onHeaderDragStart;
-    void delegate(float, float) onHeaderDragMove;
-    void delegate() onHeaderDragEnd;
-    void delegate() onResizeStart;
-    void delegate(float, float) onResizeMove;
-    void delegate() onResizeEnd;
+    /** Active resize corner while a resize gesture is running. */
+    UiResizeHandle resizeHandle = UiResizeHandle.none;
+    /** Height of the decorative header bar. */
+    float headerHeight = 26.0f;
 
-    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool resizable = false)
+    /** Body widgets are kept in a separate root so chrome stays explicit. */
+    private UiContainer contentRoot;
+    /** Optional extra header widgets placed to the left of the close button. */
+    private UiHBox headerExtras;
+    /** Optional close button rendered in the header. */
+    private UiButton closeButton;
+    /** Cached width of all extra header widgets. */
+    private float headerExtrasWidth;
+    /** Cached height of all extra header widgets. */
+    private float headerExtrasHeight;
+
+    /** Notified when a header drag starts. */
+    void delegate(float, float) onHeaderDragStart;
+    /** Notified while a header drag is running. */
+    void delegate(float, float) onHeaderDragMove;
+    /** Notified when a header drag ends. */
+    void delegate() onHeaderDragEnd;
+    /** Notified when a resize gesture starts. */
+    void delegate(UiResizeHandle) onResizeStart;
+    /** Notified while a resize gesture is running. */
+    void delegate(UiResizeHandle, float, float) onResizeMove;
+    /** Notified when a resize gesture ends. */
+    void delegate(UiResizeHandle) onResizeEnd;
+    /** Notified when the built-in close button is activated. */
+    void delegate() onClose;
+
+    /**
+     * Creates a retained window with explicit chrome flags.
+     *
+     * Params:
+     *   title = Window title shown in the highlighted badge.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Window width in pixels.
+     *   height = Window height in pixels.
+     *   bodyColor = Window body fill color.
+     *   headerColor = Base header color used when the window is not dragable.
+     *   titleColor = Title text color.
+     *   sizeable = Enables the four resize corner grips.
+     *   closable = Shows a close button in the header.
+     *   dragable = Makes the header visually distinct and accepts drag gestures.
+     */
+    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false)
     {
         super(x, y, width, height);
         this.title = title;
         this.bodyColor = bodyColor;
         this.headerColor = headerColor;
         this.titleColor = titleColor;
-        this.resizable = resizable;
+        this.sizeable = sizeable;
+        this.closable = closable;
+        this.dragable = dragable;
+
         contentRoot = new UiContainer();
         super.add(contentRoot);
+
+        headerExtras = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+
+        if (closable)
+        {
+            closeButton = new UiButton("X", 0.0f, 0.0f, 16.0f, 16.0f, [0.55f, 0.10f, 0.12f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f], UiTextStyle.small, 4.0f, 0.5f);
+            closeButton.onClick = &handleCloseButton;
+        }
+
         childOffsetX = 18.0f;
         childOffsetY = 36.0f;
     }
 
+    /** Adds a child widget to the window body. */
     override void add(UiWidget child)
     {
         contentRoot.add(child);
     }
 
+    /** Adds a widget to the header layout, left of the built-in close button. */
+    void addHeaderWidget(UiWidget child)
+    {
+        headerExtras.add(child);
+        refreshHeaderMetrics();
+    }
+
+    /** Alias for callers that prefer header-button terminology. */
+    void addHeaderButton(UiWidget child)
+    {
+        addHeaderWidget(child);
+    }
+
+    /** Routes pointer events through the chrome before the body content. */
     override bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         if (!visible)
             return false;
+
+        updateChromeLayout();
 
         if (dragTracking)
         {
@@ -69,47 +152,77 @@ final class UiWindow : UiWidget
             {
                 if (onHeaderDragEnd !is null)
                     onHeaderDragEnd();
+                logLine("UiWindow drag end: ", title);
                 dragTracking = false;
                 return true;
             }
         }
 
-        if (resizable && resizeTracking)
+        if (resizeTracking)
         {
             if (event.kind == UiPointerEventKind.move)
             {
                 if (onResizeMove !is null)
-                    onResizeMove(event.x, event.y);
+                    onResizeMove(resizeHandle, event.x, event.y);
                 return true;
             }
 
             if (event.kind == UiPointerEventKind.buttonUp && event.button == 1)
             {
                 if (onResizeEnd !is null)
-                    onResizeEnd();
+                    onResizeEnd(resizeHandle);
+                logLine("UiWindow resize end: ", title, " [", resizeHandle, "]");
                 resizeTracking = false;
+                resizeHandle = UiResizeHandle.none;
                 return true;
             }
         }
 
-        if (resizable && event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInResizeGrip(event.x, event.y))
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
         {
-            logLineVerbose("UiWindow resize grip hit: ", title, " at ", event.x, ", ", event.y);
-            if (onResizeStart !is null)
-                onResizeStart();
-            resizeTracking = true;
-            dragTracking = false;
-            return true;
-        }
+            const handle = hitResizeHandle(event.x, event.y);
+            if (handle != UiResizeHandle.none)
+            {
+                logLine("UiWindow resize hit: ", title, " [", handle, "] at ", event.x, ", ", event.y);
+                resizeHandle = handle;
+                resizeTracking = true;
+                dragTracking = false;
+                if (onResizeStart !is null)
+                    onResizeStart(handle);
+                return true;
+            }
 
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1 && isInHeader(event.x, event.y))
-        {
-            logLineVerbose("UiWindow header hit: ", title, " at ", event.x, ", ", event.y);
-            if (onHeaderDragStart !is null)
-                onHeaderDragStart(event.x, event.y);
-            dragTracking = true;
-            resizeTracking = false;
-            return true;
+            if (closeButton !is null)
+            {
+                auto closeEvent = event;
+                closeEvent.x -= x;
+                closeEvent.y -= y;
+                if (closeButton.dispatchPointerEvent(closeEvent))
+                {
+                    logLine("UiWindow close hit: ", title, " at ", event.x, ", ", event.y);
+                    return true;
+                }
+            }
+
+            if (headerExtras.children.length > 0)
+            {
+                auto headerEvent = event;
+                headerEvent.x -= x;
+                headerEvent.y -= y;
+                if (headerExtras.dispatchPointerEvent(headerEvent))
+                    return true;
+            }
+
+            if (dragable && isInDragHeader(event.x, event.y))
+            {
+                logLine("UiWindow drag start: ", title, " at ", event.x, ", ", event.y);
+                if (onHeaderDragStart !is null)
+                    onHeaderDragStart(event.x, event.y);
+                dragTracking = true;
+                resizeTracking = false;
+                resizeHandle = UiResizeHandle.none;
+                return true;
+            }
         }
 
         if (width > 0.0f && height > 0.0f && !contains(event.x, event.y))
@@ -129,22 +242,149 @@ final class UiWindow : UiWidget
     }
 
 protected:
+    /** Draws the chrome and the title badge before the body children are rendered. */
     override void renderSelf(ref UiRenderContext context)
     {
-        appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyColor, headerColor, context.depthBase);
-        appendTextLine(context, UiTextStyle.medium, title, 12.0f, 6.0f, titleColor, context.depthBase - 0.001f);
-        if (resizable)
-            appendButtonFrame(context, width - 16.0f, height - 16.0f, width - 2.0f, height - 2.0f, [0.14f, 0.16f, 0.20f, 0.88f], [0.20f, 0.56f, 0.98f, 0.92f], context.depthBase - 0.0005f);
+        updateChromeLayout();
+
+        // Keep the header fill flat; the extra blue highlight is intentionally disabled.
+        const headerFill = headerColor;
+        appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyColor, headerFill, context.depthBase);
+
+        if (sizeable)
+        {
+            float[4] gripFill = [0.18f, 0.24f, 0.36f, 0.92f];
+            float[4] gripBorder = [0.32f, 0.68f, 0.98f, 0.98f];
+            appendButtonFrame(context, 0.0f, 0.0f, 16.0f, 16.0f, gripFill, gripBorder, context.depthBase - 0.0005f);
+            appendButtonFrame(context, width - 16.0f, 0.0f, width, 16.0f, gripFill, gripBorder, context.depthBase - 0.0005f);
+            appendButtonFrame(context, 0.0f, height - 16.0f, 16.0f, height, gripFill, gripBorder, context.depthBase - 0.0005f);
+            appendButtonFrame(context, width - 16.0f, height - 16.0f, width, height, gripFill, gripBorder, context.depthBase - 0.0005f);
+        }
+
+        const titleX = sizeable ? 20.0f : 10.0f;
+        appendTextLine(context, UiTextStyle.medium, title, titleX, 2.0f, titleColor, context.depthBase - 0.001f);
+
+        if (headerExtras.children.length > 0)
+        {
+            headerExtras.render(context);
+        }
+
+        if (closeButton !is null)
+        {
+            closeButton.render(context);
+        }
     }
 
 private:
-    bool isInHeader(float localX, float localY) const
+    /** Positions the header controls so they stay clear of the resize grip. */
+    void updateChromeLayout()
     {
-        return localX >= x && localY >= y && localX < x + width && localY < y + headerHeight;
+        const closeWidth = closeButton !is null ? closeButton.width : 0.0f;
+        const closeGap = closeButton !is null ? 4.0f : 0.0f;
+        const gripReserve = sizeable ? 18.0f : 0.0f;
+
+        headerExtras.width = headerExtrasWidth;
+        headerExtras.height = headerExtrasHeight;
+        headerExtras.x = max(10.0f, width - gripReserve - closeWidth - closeGap - headerExtrasWidth - 12.0f);
+        headerExtras.y = 4.0f;
+
+        if (closeButton !is null)
+        {
+            closeButton.x = width - gripReserve - closeWidth - 3.0f;
+            closeButton.y = 5.0f;
+        }
     }
 
-    bool isInResizeGrip(float localX, float localY) const
+    /** Recomputes the cached size of the header widgets. */
+    void refreshHeaderMetrics()
     {
-        return localX >= x + width - 16.0f && localY >= y + height - 16.0f && localX < x + width && localY < y + height;
+        float totalWidth = 0.0f;
+        float tallest = 0.0f;
+
+        foreach (index, child; headerExtras.children)
+        {
+            totalWidth += child.width;
+            if (index > 0)
+                totalWidth += headerExtras.spacing;
+            if (child.height > tallest)
+                tallest = child.height;
+        }
+
+        headerExtrasWidth = totalWidth;
+        headerExtrasHeight = tallest;
+    }
+
+    /** Handles activation of the built-in close button. */
+    void handleCloseButton()
+    {
+        if (onClose !is null)
+            onClose();
+        else
+            visible = false;
+    }
+
+    /** Returns whether the pointer lies in the active header band. */
+    bool isInDragHeader(float localX, float localY) const
+    {
+        if (localX < x || localX >= x + width || localY < y || localY >= y + headerHeight)
+            return false;
+
+        if (sizeable)
+        {
+            if (localX < x + 16.0f && localY < y + 16.0f)
+                return false;
+
+            if (localX >= x + width - 16.0f && localY < y + 16.0f)
+                return false;
+        }
+
+        if (closeButton !is null)
+        {
+            if (localX >= x + closeButton.x && localX < x + closeButton.x + closeButton.width &&
+                localY >= y + closeButton.y && localY < y + closeButton.y + closeButton.height)
+            {
+                return false;
+            }
+        }
+
+        if (headerExtras.children.length > 0)
+        {
+            if (localX >= x + headerExtras.x && localX < x + headerExtras.x + headerExtras.width &&
+                localY >= y + headerExtras.y && localY < y + headerExtras.y + headerExtras.height)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /** Returns the resize corner hit by the pointer, if any. */
+    UiResizeHandle hitResizeHandle(float localX, float localY) const
+    {
+        if (!sizeable)
+            return UiResizeHandle.none;
+
+        if (localX >= x && localX < x + 16.0f && localY >= y && localY < y + 16.0f)
+            return UiResizeHandle.topLeft;
+        if (localX >= x + width - 16.0f && localX < x + width && localY >= y && localY < y + 16.0f)
+            return UiResizeHandle.topRight;
+        if (localX >= x && localX < x + 16.0f && localY >= y + height - 16.0f && localY < y + height)
+            return UiResizeHandle.bottomLeft;
+        if (localX >= x + width - 16.0f && localX < x + width && localY >= y + height - 16.0f && localY < y + height)
+            return UiResizeHandle.bottomRight;
+
+        return UiResizeHandle.none;
+    }
+
+    /** Tints a color tuple by a small amount without changing the alpha channel. */
+    static float[4] tintColor(float[4] color, float amount)
+    {
+        return [
+            color[0] + (1.0f - color[0]) * amount,
+            color[1] + (1.0f - color[1]) * amount,
+            color[2] + (1.0f - color[2]) * amount,
+            color[3],
+        ];
     }
 }
