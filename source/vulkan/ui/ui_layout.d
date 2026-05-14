@@ -12,6 +12,7 @@ module vulkan.ui.ui_layout;
 
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
 /** Invisible widget that only contributes space to a layout. */
@@ -72,6 +73,33 @@ protected:
     float innerHeight() const
     {
         return height > paddingTop + paddingBottom ? height - paddingTop - paddingBottom : 0.0f;
+    }
+}
+
+/** Box-style layout container with optional background and border. */
+final class UiSurfaceBox : UiLayoutContainer
+{
+    float[4] backgroundColor;
+    float[4] borderColor;
+    bool drawBorder = true;
+    bool drawBackground = true;
+
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, paddingLeft, paddingTop, paddingRight, paddingBottom);
+        this.backgroundColor = backgroundColor;
+        this.borderColor = borderColor;
+    }
+
+protected:
+    override void renderSelf(ref UiRenderContext context)
+    {
+        appendSurfaceFrame(context, 0.0f, 0.0f, width, height, backgroundColor, borderColor, context.depthBase, drawBackground, drawBorder);
+        layoutChildren();
+    }
+
+    override void layoutChildren()
+    {
     }
 }
 
