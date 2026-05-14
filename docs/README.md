@@ -8,6 +8,7 @@ This folder collects the project-facing documentation for the codebase and its a
 - [Shader Guide](shaders.md) explains the GLSL sources and how they map to the renderer.
 - [Rendering Architecture](rendering-architecture.md) describes the layered image composition and the placeholder geometry strategy.
 - [UI Architecture](ui-architecture.md) captures the current widget, input, layout, and chrome ideas for the retained UI layer.
+- [Demo UI Plan](demo-ui-plan.md) outlines the next widget, window, and settings steps before implementation.
 
 ## Scope
 
