@@ -5,6 +5,22 @@
  * helpers alongside the frame-lifecycle notes in docs/vulkan-quickstart.md to
  * keep the camera math explicit and easy to review.
  *
+ * Q&A:
+ *   Q: Why does this module use float instead of integer types?
+ *   A: Matrix and vector math for camera work needs fractions, trigonometric
+ *      results, and smooth interpolation. Integer arithmetic cannot represent
+ *      those values cleanly, so it would break rotation and projection math.
+ *
+ *   Q: Why not use double everywhere?
+ *   A: Double is more precise, but the renderer and shader inputs are float-
+ *      based. For the scene scale in this project, float keeps the data smaller
+ *      and matches the GPU pipeline without losing meaningful visual precision.
+ *
+ *   Q: When would double make sense?
+ *   A: If the world coordinates became extremely large, or if the code needed
+ *      to accumulate many transforms before upload, a double-precision internal
+ *      path could help. The final renderer-facing data can still stay float.
+ *
  * See_Also:
  *   docs/vulkan-quickstart.md
  *   https://vkguide.dev/
