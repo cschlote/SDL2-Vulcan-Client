@@ -73,6 +73,10 @@ struct HudLayoutState
     bool middleInitialized;
     /** Whether the status window is currently shown. */
     bool statusVisible = true;
+    /** Whether the font sample window is currently shown. */
+    bool sampleVisible = true;
+    /** Whether the input help window is currently shown. */
+    bool inputVisible = true;
     /** Whether the center window is currently shown. */
     bool centerVisible = true;
     /** Whether the settings dialog is currently shown. */
@@ -184,10 +188,19 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
 
     const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, smallFont, mediumFont, largeFont);
     UiWindow[] windows;
-    windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
-    windows ~= buildModeWindow(layout.modes, smallFont, onOpenSettings);
-    windows ~= buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont);
-    windows ~= buildInputWindow(layout.input, smallFont);
+    if (layoutState.statusVisible)
+        windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    windows ~= buildModeWindow(
+        layout.modes,
+        smallFont,
+        onOpenSettings,
+        () { layoutState.statusVisible = !layoutState.statusVisible; },
+        () { layoutState.sampleVisible = !layoutState.sampleVisible; },
+        () { layoutState.inputVisible = !layoutState.inputVisible; });
+    if (layoutState.sampleVisible)
+        windows ~= buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont);
+    if (layoutState.inputVisible)
+        windows ~= buildInputWindow(layout.input, smallFont);
     windows ~= buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont);
 
     if (layoutState.settingsVisible)
@@ -298,7 +311,7 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
     return window;
 }
 
-private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onSettings = null, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
+private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onSettings = null, void delegate() onToggleStatus = null, void delegate() onToggleSample = null, void delegate() onToggleInput = null, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
 {
     const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
     const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
@@ -346,6 +359,25 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     auto settingsButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonRowWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     settingsButton.onClick = onSettings;
     content.add(settingsButton);
+
+    content.add(new UiSpacer(0.0f, 4.0f));
+    auto windowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto statusButton = new UiButton("STATUS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    statusButton.onClick = onToggleStatus;
+    windowRow.add(statusButton);
+    auto sampleButton = new UiButton("SAMPLE", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    sampleButton.onClick = onToggleSample;
+    windowRow.add(sampleButton);
+    content.add(windowRow);
+
+    auto secondWindowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto inputButton = new UiButton("INPUT", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    inputButton.onClick = onToggleInput;
+    secondWindowRow.add(inputButton);
+    auto settingsToggleButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    settingsToggleButton.onClick = onSettings;
+    secondWindowRow.add(settingsToggleButton);
+    content.add(secondWindowRow);
 
     content.add(new UiSpacer(0.0f, 12.0f));
     content.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));

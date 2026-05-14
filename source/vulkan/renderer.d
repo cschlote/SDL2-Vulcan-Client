@@ -413,8 +413,8 @@ class VulkanRenderer
         const mouseY = event.wheel.mouseY;
         if (hudPointInRect(layout.status, mouseX, mouseY)
             || hudPointInRect(layout.modes, mouseX, mouseY)
-            || hudPointInRect(layout.sample, mouseX, mouseY)
-            || hudPointInRect(layout.input, mouseX, mouseY)
+            || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
+            || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
             || hudPointInRect(layout.center, mouseX, mouseY))
         {
             return false;
@@ -1226,8 +1226,8 @@ class VulkanRenderer
                 }
 
                 const hitHud = hudPointInRect(layout.modes, mouseX, mouseY)
-                    || hudPointInRect(layout.sample, mouseX, mouseY)
-                    || hudPointInRect(layout.input, mouseX, mouseY)
+                    || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
+                    || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
                     || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
                     || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
 
