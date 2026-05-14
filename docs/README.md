@@ -7,6 +7,7 @@ This folder collects the project-facing documentation for the codebase and its a
 - [Vulkan Quickstart](vulkan-quickstart.md) gives a senior-level overview of the rendering stack, resource flow, and frame lifecycle.
 - [Shader Guide](shaders.md) explains the GLSL sources and how they map to the renderer.
 - [Rendering Architecture](rendering-architecture.md) describes the layered image composition and the placeholder geometry strategy.
+- [UI Architecture](ui-architecture.md) captures the current widget, input, signal, and layout ideas for the retained UI layer.
 
 ## Scope
 
