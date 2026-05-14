@@ -285,17 +285,19 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
         "ARROWS  ROTATE CAMERA",
         "ESC  CLOSE APPLICATION",
     ];
-    float contentWidth = 0.0f;
+    float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
-    foreach (label; actionLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
+        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
 
+    float labelWidth = 0.0f;
+    foreach (label; actionLabels)
+        labelWidth = max(labelWidth, textBlockWidth(smallFont, label));
+
+    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
+    const contentWidth = max(buttonRowWidth, labelWidth);
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const buttonWidth = contentWidth;
-    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
     const contentBottom = max(
         max(max(max(
             0.0f + buttonHeight,
@@ -305,7 +307,6 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
         168.0f + smallTextHeight);
     const contentBottomWithLabels = max(contentBottom, max(120.0f + smallTextHeight, 144.0f + smallTextHeight));
     const height = 36.0f + contentBottomWithLabels + 20.0f;
-    const windowWidth = max(width, buttonRowWidth + 36.0f);
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
