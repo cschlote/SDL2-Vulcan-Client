@@ -92,6 +92,27 @@ This approach has a few advantages:
 
 The layout system does not need to solve every UI problem on day one. It should first cover the common retained-widget cases and leave special-purpose placement to the grid path.
 
+## Backgrounds, Frames, and Spacing
+
+The next presentation step should separate three concerns that are currently mixed together in a few widgets:
+
+- background fill for the widget body or chrome surface
+- frame or border decoration around the surface
+- layout spacing inside or around the widget content
+
+This keeps translucent surfaces predictable. A widget should not need to fake transparency by painting over its children; instead, the widget can simply choose a background color with alpha, or skip drawing the background entirely when it should be fully transparent.
+
+The same idea applies to frame styling. A frame should be a renderable surface decoration, while margins and padding should stay in the layout layer. That gives the UI a familiar box model without forcing every widget to manually reserve space for borders or visual gutters.
+
+The practical target is a small box-style widget layer that can:
+
+- paint an optional background with alpha
+- paint an optional border or frame
+- expose padding and margin for layout
+- leave children responsible for their own surface style
+
+This is the right level for the current codebase because the retained tree already knows local coordinates, and the chrome widgets already own their interaction behavior. The next step is to move visual surface policy into reusable box helpers instead of hard-coding it in window chrome.
+
 ## Icons and Small Graphics
 
 The UI should support small decorative graphics in addition to text.
@@ -150,6 +171,7 @@ The following questions should be answered as the implementation grows:
 - should widgets emit typed events or a generic event structure
 - should the layout core be box-first with a small grid escape hatch
 - how much of the chrome should stay manual versus layout-driven
+- should box widgets own background, frame, padding, and margin policy
 - should animation live inside the widget or in a separate presentation layer
 - how should dragging, docking, and resizing interact when multiple widgets overlap
 

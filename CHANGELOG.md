@@ -4,6 +4,7 @@
 
 - Improved the on-screen window interactions and added clearer debug logging for development.
 - Started a box-based layout system for the on-screen windows.
+- Clarified the UI surface direction so window backgrounds, borders, and spacing stay separate.
 
 ## Release 26.20.4916
 
