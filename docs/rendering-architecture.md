@@ -115,7 +115,7 @@ The current repository is best understood as a compact rendering spine that leav
 ## Related Files
 
 - [source/vulkan/renderer.d](../source/vulkan/renderer.d)
-- [source/vulkan/hud.d](../source/vulkan/hud.d)
+- [source/vulkan/ui_layer.d](../source/vulkan/ui_layer.d)
 - [source/vulkan/polyhedra.d](../source/vulkan/polyhedra.d)
 - [docs/vulkan-quickstart.md](vulkan-quickstart.md)
 - [docs/shaders.md](shaders.md)

@@ -1,8 +1,8 @@
 # UI Architecture
 
-This document captures the current UI direction for the project and the ideas we want to preserve before the implementation grows further.
+This document captures the current UI direction for the project and the implementation details we want to preserve as the retained widget tree grows.
 
-The goal is to keep the interface understandable, self-contained, and easy to extend. The current retained widget layer is a good starting point, but the next step is to make input flow and widget communication explicit enough that the UI can express more behavior on its own.
+The goal is to keep the interface understandable, self-contained, and easy to extend. The current retained widget layer already has explicit window chrome, box helpers, and layout containers, so the next step is to keep those pieces consistent as more behavior is added.
 
 ## Design Goals
 
@@ -23,11 +23,11 @@ This is closer to classic retained UI systems than to a pure immediate-mode appr
 The existing UI code already has the right building blocks:
 
 - a retained widget tree in [source/vulkan/ui/ui_widget.d](../source/vulkan/ui/ui_widget.d)
-- window, container, label, and button widgets in [source/vulkan/ui/](../source/vulkan/ui/)
+- window, container, label, button, and layout widgets in [source/vulkan/ui/](../source/vulkan/ui/)
 - a render context that carries the current origin and target buffers in [source/vulkan/ui/ui_context.d](../source/vulkan/ui/ui_context.d)
 - the HUD assembly path in [source/vulkan/ui_layer.d](../source/vulkan/ui_layer.d)
 
-That means the project already thinks in terms of widgets and local coordinates. What is still missing is a first-class event model that lets widgets react directly to input and publish meaningful output.
+That means the project already thinks in terms of widgets and local coordinates. The remaining work is to keep event handling, geometry generation, and layout policy aligned as the UI grows.
 
 ## Input Ownership
 
@@ -55,6 +55,8 @@ They allow widgets to communicate without hard-wiring one widget to another. Exa
 
 This is useful because it keeps the widget responsible for its own interaction while still allowing other parts of the UI to react.
 
+The current code already uses direct callbacks for the built-in close button and the window chrome gestures, so signals remain an architectural option rather than a missing prerequisite.
+
 The intended effect is similar to Qt and other signal-based systems: the UI can express behavior without every action being manually forwarded through a central controller.
 
 ## Buttons and Events
@@ -72,9 +74,9 @@ In the current project this is especially relevant for the render-mode window, w
 
 ## Layout Strategy
 
-The layout system should be introduced now, not later.
+The layout system is already part of the codebase and should continue to be extended deliberately.
 
-The current demo already behaves like a manually positioned grid: sizes, offsets, and positions are calculated in code and then used to place widgets directly. That is acceptable for a small prototype, but it does not scale well once resizable windows, docking, or richer content are added.
+The current demo still mixes explicit chrome placement with layout containers, but sizes, offsets, and positions are now handled by reusable box, row, column, and grid widgets instead of being hard-coded everywhere. That is acceptable for a small prototype, and it gives enough structure for resizable windows, docking, or richer content.
 
 The preferred direction is a small retained layout core with two main primitives:
 
@@ -90,11 +92,11 @@ This approach has a few advantages:
 - later docking and grouping features have a stable foundation
 - the code stays readable because most cases are handled by a small number of containers
 
-The layout system does not need to solve every UI problem on day one. It should first cover the common retained-widget cases and leave special-purpose placement to the grid path.
+The layout system does not need to solve every UI problem on day one. It already covers the common retained-widget cases and can leave special-purpose placement to the grid path.
 
 ## Backgrounds, Frames, and Spacing
 
-The next presentation step should separate three concerns that are currently mixed together in a few widgets:
+The current presentation layer already separates these concerns in some places, and the next step is to apply that split more consistently across the UI:
 
 - background fill for the widget body or chrome surface
 - frame or border decoration around the surface
@@ -115,7 +117,7 @@ The practical target is a small box-style widget layer that can:
 - expose padding and margin for layout
 - leave children responsible for their own surface style
 
-This is the right level for the current codebase because the retained tree already knows local coordinates, and the chrome widgets already own their interaction behavior. The next step is to move visual surface policy into reusable box helpers instead of hard-coding it in window chrome.
+This is the right level for the current codebase because the retained tree already knows local coordinates, and the chrome widgets already own their interaction behavior. The remaining work is to keep visual surface policy in reusable box helpers instead of hard-coding it in window chrome.
 
 ## Icons and Small Graphics
 
@@ -186,5 +188,7 @@ These are not blockers, but they should stay visible so the code does not drift 
 - [source/vulkan/ui/ui_widget.d](../source/vulkan/ui/ui_widget.d)
 - [source/vulkan/ui/ui_context.d](../source/vulkan/ui/ui_context.d)
 - [source/vulkan/ui/ui_widget_helpers.d](../source/vulkan/ui/ui_widget_helpers.d)
+- [source/vulkan/ui/ui_layout.d](../source/vulkan/ui/ui_layout.d)
+- [source/vulkan/ui/ui_window.d](../source/vulkan/ui/ui_window.d)
 - [source/vulkan/ui_layer.d](../source/vulkan/ui_layer.d)
 - [docs/rendering-architecture.md](rendering-architecture.md)
