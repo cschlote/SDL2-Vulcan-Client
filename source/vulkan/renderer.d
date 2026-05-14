@@ -11,7 +11,7 @@ import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
 import std.format : format;
-import std.math : PI, cos, sin;
+import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
@@ -121,6 +121,10 @@ class VulkanRenderer
     private enum largeFontPixelHeight = 24;
     private HudLayoutState hudLayoutState;
     private bool sceneMouseDragging;
+    private float cameraFieldOfViewY = 55.0f * PI / 180.0f;
+    private enum minCameraFieldOfViewY = 28.0f * PI / 180.0f;
+    private enum maxCameraFieldOfViewY = 85.0f * PI / 180.0f;
+    private enum cameraFovStep = 2.5f * PI / 180.0f;
 
     private VkSemaphore[maxFramesInFlight] imageAvailableSemaphores;
     private VkSemaphore[maxFramesInFlight] renderFinishedSemaphores;
@@ -342,6 +346,8 @@ class VulkanRenderer
                 return handleMouseButtonUp(event);
             case SDL_EventType.mouseMotion:
                 return handleMouseMotion(event);
+            case SDL_EventType.mouseWheel:
+                return handleMouseWheel(event);
             case SDL_EventType.keyUp:
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
@@ -360,6 +366,43 @@ class VulkanRenderer
             default:
                 return false;
         }
+
+    }
+
+    /** Adjusts the camera opening angle when the wheel is used outside the HUD. */
+    private bool handleMouseWheel(ref SDL_Event event)
+    {
+        const layout = buildHudLayout(
+            cast(float)swapchain.extent.width,
+            cast(float)swapchain.extent.height,
+            cast(float)fpsValue,
+            yawAngle,
+            pitchAngle,
+            currentShapeName,
+            currentRenderModeName,
+            hudLayoutState,
+            fontAtlases[0],
+            fontAtlases[1],
+            fontAtlases[2]);
+
+        const mouseX = event.wheel.mouseX;
+        const mouseY = event.wheel.mouseY;
+        if (hudPointInRect(layout.status, mouseX, mouseY)
+            || hudPointInRect(layout.modes, mouseX, mouseY)
+            || hudPointInRect(layout.sample, mouseX, mouseY)
+            || hudPointInRect(layout.input, mouseX, mouseY)
+            || hudPointInRect(layout.center, mouseX, mouseY))
+        {
+            return false;
+        }
+
+        cameraFieldOfViewY -= event.wheel.y * cameraFovStep;
+        if (cameraFieldOfViewY < minCameraFieldOfViewY)
+            cameraFieldOfViewY = minCameraFieldOfViewY;
+        else if (cameraFieldOfViewY > maxCameraFieldOfViewY)
+            cameraFieldOfViewY = maxCameraFieldOfViewY;
+
+        return false;
     }
 
     /** Acquires a swapchain image, updates buffers, submits rendering work, and presents the frame. */
@@ -1025,8 +1068,7 @@ class VulkanRenderer
             const rotatedZ = -x * sy + z * cy;
             const rotatedY = y * cx - rotatedZ * sx;
             const rotatedDepth = y * sx + rotatedZ * cx;
-            const cameraDistance = 2.8f;
-            const perspective = cameraDistance / (cameraDistance - rotatedDepth);
+            const perspective = 1.0f / tan(cameraFieldOfViewY * 0.5f);
 
             const screenX = rotatedX * 0.56f * perspective * cast(float)swapchain.extent.height / cast(float)swapchain.extent.width;
             const screenY = rotatedY * 0.56f * perspective;
