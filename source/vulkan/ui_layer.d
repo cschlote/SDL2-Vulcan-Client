@@ -163,7 +163,7 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
         buildModeWindow(layout.modes, smallFont),
         buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont),
         buildInputWindow(layout.input, smallFont),
-        buildCenterWindow(layout.center, smallFont, mediumFont),
+        buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont),
     ];
 
     foreach (index, window; windows)
@@ -361,14 +361,39 @@ private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) small
     return window;
 }
 
-private UiWindow buildCenterWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
     window.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("UI HITS DO NOT FALL THROUGH TO 3D.", 0.0f, smallFont.lineHeight + 12.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
     window.add(new UiLabel("OUTSIDE HITS GO TO THE OBJECT LAYER.", 0.0f, smallFont.lineHeight * 2.0f + 24.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
     window.add(new UiLabel("DRAGGING USES THE HEADER BAR ONLY.", 0.0f, smallFont.lineHeight * 3.0f + 36.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+    window.dragTracking = layoutState.middleDragging;
+    window.onHeaderDragStart = (float cursorX, float cursorY)
+    {
+        hudBeginDrag(layoutState, rect, cursorX, cursorY);
+    };
+    window.onHeaderDragMove = (float cursorX, float cursorY)
+    {
+        hudDragTo(layoutState, cursorX, cursorY, extentWidth, extentHeight);
+    };
+    window.onHeaderDragEnd = ()
+    {
+        hudEndDrag(layoutState);
+    };
     return window;
+}
+
+/** Sends center-window pointer events through the retained widget tree. */
+bool hudDispatchCenterWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    auto window = buildCenterWindow(rect, layoutState, extentWidth, extentHeight, smallFont, mediumFont);
+    UiPointerEvent event;
+    event.kind = kind;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = button;
+    return window.dispatchPointerEvent(event);
 }
 
 private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)

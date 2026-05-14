@@ -41,7 +41,7 @@ abstract class UiWidget
     }
 
     /** Routes a pointer event through the widget tree. */
-    final bool dispatchPointerEvent(ref UiPointerEvent event)
+    bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         if (!visible)
             return false;
@@ -88,7 +88,7 @@ protected:
         return false;
     }
 
-private:
+protected:
     /** Returns whether the event hits the widget body in parent space. */
     bool contains(float localX, float localY) const
     {

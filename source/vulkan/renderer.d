@@ -25,7 +25,8 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchModeButtonDown, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui.ui_event : UiPointerEventKind;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -1182,6 +1183,12 @@ class VulkanRenderer
                     return false;
                 }
 
+                if (hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                {
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
                 const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
                     || hudPointInRect(layout.modes, mouseX, mouseY)
                     || hudPointInRect(layout.sample, mouseX, mouseY)
@@ -1205,6 +1212,24 @@ class VulkanRenderer
                 if (event.button.button != 1)
                     return false;
 
+                const layout = buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+
+                if (hudLayoutState.middleDragging)
+                {
+                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
+                }
+
                 if (hudLayoutState.middleDragging)
                     hudEndDrag(hudLayoutState);
 
@@ -1217,7 +1242,20 @@ class VulkanRenderer
             {
                 if (hudLayoutState.middleDragging)
                 {
-                    hudDragTo(hudLayoutState, cast(float)event.motion.x, cast(float)event.motion.y, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height);
+                    const layout = buildHudLayout(
+                        cast(float)swapchain.extent.width,
+                        cast(float)swapchain.extent.height,
+                        cast(float)fpsValue,
+                        yawAngle,
+                        pitchAngle,
+                        currentShapeName,
+                        currentRenderModeName,
+                        hudLayoutState,
+                        fontAtlases[0],
+                        fontAtlases[1],
+                        fontAtlases[2]);
+
+                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.motion.x, cast(float)event.motion.y, UiPointerEventKind.move, 0, fontAtlases[0], fontAtlases[1]);
                     return false;
                 }
 
