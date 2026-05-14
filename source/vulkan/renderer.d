@@ -24,11 +24,11 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
-import demo_settings : DemoSettings;
+import demo_settings : DemoSettings, saveDemoSettings;
 import logging : logLine, logLineVerbose;
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -91,6 +91,7 @@ class VulkanRenderer
     private SdlWindow* window;
     private string baseTitle;
     private DemoSettings* demoSettings;
+    private DemoSettings settingsDraft;
     private VulkanInstance instance;
     private VkSurfaceKHR surface = VK_NULL_HANDLE;
     private VulkanDevice device;
@@ -134,6 +135,7 @@ class VulkanRenderer
     private enum largeFontPixelHeight = 24;
     private HudLayoutState hudLayoutState;
     private bool sceneMouseDragging;
+    private bool settingsCommitRequested;
     private float cameraFieldOfViewY = 55.0f * PI / 180.0f;
     private enum minCameraFieldOfViewY = 28.0f * PI / 180.0f;
     private enum maxCameraFieldOfViewY = 85.0f * PI / 180.0f;
@@ -214,6 +216,7 @@ class VulkanRenderer
     {
         this.window = window;
         this.demoSettings = demoSettings;
+        settingsDraft = demoSettings !is null ? *demoSettings : DemoSettings.init;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -239,7 +242,7 @@ class VulkanRenderer
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
         if (demoSettings !is null)
-            setRenderMode(renderModeFromSetting(demoSettings.gameplay.startupRenderMode, currentRenderMode));
+            setRenderMode(renderModeFromSetting(settingsDraft.gameplay.startupRenderMode, currentRenderMode));
         foreach (mesh; shapeMeshes)
         {
             if (mesh.vertices.length > maxShapeVertexCount)
@@ -390,6 +393,9 @@ class VulkanRenderer
     /** Adjusts the camera opening angle when the wheel is used outside the HUD. */
     private bool handleMouseWheel(ref SDL_Event event)
     {
+        if (hudLayoutState.settingsVisible)
+            return false;
+
         const layout = buildHudLayout(
             cast(float)swapchain.extent.width,
             cast(float)swapchain.extent.height,
@@ -1114,6 +1120,9 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             hudLayoutState,
+            settingsDraft,
+            &openSettingsDialog,
+            &applySettingsDialog,
             fontAtlases[0],
             fontAtlases[1],
             fontAtlases[2]);
@@ -1185,6 +1194,7 @@ class VulkanRenderer
                     mouseX,
                     mouseY,
                     fontAtlases[0],
+                    &openSettingsDialog,
                     { setRenderMode(RenderMode.flatColor); },
                     { setRenderMode(RenderMode.litTextured); },
                     { setRenderMode(RenderMode.wireframe); },
@@ -1197,6 +1207,13 @@ class VulkanRenderer
                 if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
                 {
                     logLineVerbose("Status window handled the press.");
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                if (hudLayoutState.settingsVisible && hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]))
+                {
+                    logLineVerbose("Settings window handled the press.");
                     sceneMouseDragging = false;
                     return false;
                 }
@@ -1251,6 +1268,9 @@ class VulkanRenderer
                     hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
                 }
 
+                if (hudLayoutState.settingsVisible)
+                    hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]);
+
                 if (hudLayoutState.middleDragging)
                     hudEndDrag(hudLayoutState);
                 if (hudLayoutState.middleResizing)
@@ -1282,6 +1302,9 @@ class VulkanRenderer
                     hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.motion.x, cast(float)event.motion.y, UiPointerEventKind.move, 0, fontAtlases[0], fontAtlases[1]);
                     return false;
                 }
+
+                if (hudLayoutState.settingsVisible)
+                    return false;
 
                 if (sceneMouseDragging)
                 {
@@ -1574,6 +1597,25 @@ class VulkanRenderer
         currentRenderModeName = renderModeLabel(mode);
         syncDemoSettings();
         updateWindowTitle();
+    }
+
+    /** Opens the settings dialog with a fresh copy of the current live settings. */
+    private void openSettingsDialog()
+    {
+        if (demoSettings !is null)
+            settingsDraft = *demoSettings;
+
+        hudLayoutState.settingsVisible = true;
+    }
+
+    /** Applies the settings draft to the live bundle and writes it to disk. */
+    private void applySettingsDialog()
+    {
+        if (demoSettings is null)
+            return;
+
+        *demoSettings = settingsDraft;
+        saveDemoSettings(*demoSettings);
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

@@ -18,9 +18,10 @@
 module vulkan.ui_layer;
 
 import std.format : format;
-import std.algorithm : max;
+import std.algorithm : max, min;
 import std.math : PI;
 
+import demo_settings : DemoSettings;
 import vulkan.font : FontAtlas;
 import vulkan.pipeline : Vertex;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
@@ -74,6 +75,8 @@ struct HudLayoutState
     bool statusVisible = true;
     /** Whether the center window is currently shown. */
     bool centerVisible = true;
+    /** Whether the settings dialog is currently shown. */
+    bool settingsVisible;
     /** Whether a drag is currently active. */
     bool middleDragging;
     /** Whether a resize is currently active. */
@@ -175,18 +178,20 @@ struct HudOverlayGeometry
  * @param largeFont = Font atlas used for 24 px comparison samples.
  * @returns Panel and text vertex lists that can be uploaded to the GPU.
  */
-HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, void delegate() onOpenSettings, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
     HudOverlayGeometry geometry;
 
     const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, smallFont, mediumFont, largeFont);
-    UiWindow[5] windows = [
-           buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont),
-        buildModeWindow(layout.modes, smallFont),
-        buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont),
-        buildInputWindow(layout.input, smallFont),
-        buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont),
-    ];
+    UiWindow[] windows;
+    windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    windows ~= buildModeWindow(layout.modes, smallFont, onOpenSettings);
+    windows ~= buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont);
+    windows ~= buildInputWindow(layout.input, smallFont);
+    windows ~= buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont);
+
+    if (layoutState.settingsVisible)
+        windows ~= buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight), layoutState, settingsDraft, onApplySettings, smallFont, mediumFont);
 
     foreach (index, window; windows)
     {
@@ -293,7 +298,7 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
     return window;
 }
 
-private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
+private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onSettings = null, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
 {
     const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
     const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
@@ -313,7 +318,7 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const height = 36.0f + (buttonHeight * 2.0f + 4.0f + 12.0f + smallTextHeight * 3.0f + 24.0f) + 20.0f;
+    const height = 36.0f + (buttonHeight * 3.0f + 8.0f + 12.0f + smallTextHeight * 3.0f + 24.0f) + 20.0f;
 
     auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
@@ -337,6 +342,11 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     bottomRow.add(hiddenLineButton);
     content.add(bottomRow);
 
+    content.add(new UiSpacer(0.0f, 4.0f));
+    auto settingsButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonRowWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    settingsButton.onClick = onSettings;
+    content.add(settingsButton);
+
     content.add(new UiSpacer(0.0f, 12.0f));
     content.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
     content.add(new UiSpacer(0.0f, 12.0f));
@@ -347,10 +357,165 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallF
     return window;
 }
 
-/** Sends a button-down event to the mode buttons and reports whether one handled it. */
-bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine)
+HudWindowRect buildSettingsRect(float extentWidth, float extentHeight)
 {
-    auto window = buildModeWindow(rect, smallFont, onFlatColor, onLitTextured, onWireframe, onHiddenLine);
+    const width = min(560.0f, max(extentWidth - 80.0f, 360.0f));
+    const height = min(470.0f, max(extentHeight - 80.0f, 320.0f));
+    return HudWindowRect(max((extentWidth - width) * 0.5f, 20.0f), max((extentHeight - height) * 0.5f, 20.0f), width, height);
+}
+
+private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    float[4] labelColor = [1.00f, 1.00f, 1.00f, 1.00f];
+    float[4] accentColor = [0.86f, 0.96f, 1.00f, 1.00f];
+    float[4] buttonFill = [0.16f, 0.18f, 0.24f, 0.96f];
+    float[4] buttonBorder = [0.20f, 0.56f, 0.98f, 1.00f];
+    float buttonHeight = max(cast(float)smallFont.lineHeight + 10.0f, 24.0f);
+    float wideButton = max(110.0f, textBlockWidth(smallFont, "FULLSCREEN"));
+    float valueButton = max(80.0f, textBlockWidth(smallFont, "1920 x 1080"));
+
+    auto window = new UiWindow("SETTINGS", rect.left, rect.top, rect.width, rect.height, [0.09f, 0.11f, 0.15f, 0.96f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
+    window.visible = layoutState.settingsVisible;
+    window.onClose = ()
+    {
+        layoutState.settingsVisible = false;
+    };
+
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f), 6.0f);
+    content.add(new UiLabel("VIDEO AND DISPLAY", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+
+    auto displayRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
+    auto windowedButton = new UiButton("WINDOWED", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    windowedButton.onClick = ()
+    {
+        settingsDraft.display.windowMode = "windowed";
+        settingsDraft.display.fullscreen = false;
+    };
+    displayRow.add(windowedButton);
+    auto fullscreenButton = new UiButton("FULLSCREEN", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    fullscreenButton.onClick = ()
+    {
+        settingsDraft.display.windowMode = "fullscreen";
+        settingsDraft.display.fullscreen = true;
+    };
+    displayRow.add(fullscreenButton);
+    auto vsyncButton = new UiButton(settingsDraft.display.vsync ? "VSYNC ON" : "VSYNC OFF", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    vsyncButton.onClick = ()
+    {
+        settingsDraft.display.vsync = !settingsDraft.display.vsync;
+    };
+    displayRow.add(vsyncButton);
+    content.add(displayRow);
+
+    auto resolutionRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
+    auto resolutionLabel = new UiLabel(format("RESOLUTION: %s x %s", settingsDraft.display.windowWidth, settingsDraft.display.windowHeight), 0.0f, 0.0f, UiTextStyle.small, labelColor, cast(float)smallFont.lineHeight);
+    content.add(resolutionLabel);
+    auto lowerResolutionButton = new UiButton("-", 0.0f, 0.0f, 36.0f, buttonHeight, buttonFill, buttonBorder, labelColor);
+    lowerResolutionButton.onClick = ()
+    {
+        if (settingsDraft.display.windowWidth > 1024)
+        {
+            settingsDraft.display.windowWidth = 1280;
+            settingsDraft.display.windowHeight = 720;
+        }
+        else
+        {
+            settingsDraft.display.windowWidth = 1024;
+            settingsDraft.display.windowHeight = 576;
+        }
+    };
+    resolutionRow.add(lowerResolutionButton);
+    auto presetResolutionButton = new UiButton("1600 x 900", 0.0f, 0.0f, valueButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    presetResolutionButton.onClick = ()
+    {
+        settingsDraft.display.windowWidth = 1600;
+        settingsDraft.display.windowHeight = 900;
+    };
+    resolutionRow.add(presetResolutionButton);
+    auto higherResolutionButton = new UiButton("1920 x 1080", 0.0f, 0.0f, valueButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    higherResolutionButton.onClick = ()
+    {
+        settingsDraft.display.windowWidth = 1920;
+        settingsDraft.display.windowHeight = 1080;
+    };
+    resolutionRow.add(higherResolutionButton);
+    content.add(resolutionRow);
+
+    content.add(new UiSpacer(0.0f, 6.0f));
+    content.add(new UiLabel("GAMEPLAY AND INPUT", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+    auto gameplayRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
+    auto flatButton = new UiButton("FLAT COLOR", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    flatButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "flatColor"; };
+    gameplayRow.add(flatButton);
+    auto litButton = new UiButton("LIT TEXTURED", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    litButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "litTextured"; };
+    gameplayRow.add(litButton);
+    auto wireButton = new UiButton("WIREFRAME", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    wireButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "wireframe"; };
+    gameplayRow.add(wireButton);
+    auto hiddenButton = new UiButton("HIDDEN LINE", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    hiddenButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "hiddenLine"; };
+    gameplayRow.add(hiddenButton);
+    content.add(gameplayRow);
+
+    content.add(new UiSpacer(0.0f, 6.0f));
+    content.add(new UiLabel("AUDIO AND UI", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+    auto uiRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
+    auto compactButton = new UiButton(settingsDraft.ui.compactWindows ? "COMPACT ON" : "COMPACT OFF", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    compactButton.onClick = () { settingsDraft.ui.compactWindows = !settingsDraft.ui.compactWindows; };
+    uiRow.add(compactButton);
+    auto fontDownButton = new UiButton("FONT -", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    fontDownButton.onClick = () { settingsDraft.ui.fontScale = max(0.8f, settingsDraft.ui.fontScale - 0.1f); };
+    uiRow.add(fontDownButton);
+    auto fontUpButton = new UiButton("FONT +", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
+    fontUpButton.onClick = () { settingsDraft.ui.fontScale = min(1.6f, settingsDraft.ui.fontScale + 0.1f); };
+    uiRow.add(fontUpButton);
+    content.add(uiRow);
+
+    content.add(new UiSpacer(0.0f, 2.0f));
+    auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
+    auto applyButton = new UiButton("APPLY", 0.0f, 0.0f, wideButton, buttonHeight, [0.20f, 0.34f, 0.22f, 0.96f], [0.28f, 0.80f, 0.46f, 1.00f], labelColor);
+    applyButton.onClick = ()
+    {
+        if (onApplySettings !is null)
+            onApplySettings();
+        layoutState.settingsVisible = false;
+    };
+    actionRow.add(applyButton);
+    auto resetButton = new UiButton("RESET", 0.0f, 0.0f, wideButton, buttonHeight, [0.22f, 0.20f, 0.16f, 0.96f], [0.82f, 0.66f, 0.28f, 1.00f], labelColor);
+    resetButton.onClick = ()
+    {
+        settingsDraft = DemoSettings.init;
+    };
+    actionRow.add(resetButton);
+    auto closeButton = new UiButton("CLOSE", 0.0f, 0.0f, wideButton, buttonHeight, [0.42f, 0.16f, 0.16f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f], labelColor);
+    closeButton.onClick = ()
+    {
+        layoutState.settingsVisible = false;
+    };
+    actionRow.add(closeButton);
+    content.add(actionRow);
+
+    window.add(content);
+    return window;
+}
+
+/** Sends a pointer event to the settings dialog and reports whether it handled it. */
+bool hudDispatchSettingsWindowPointer(float extentWidth, float extentHeight, ref HudLayoutState layoutState, ref DemoSettings settingsDraft, float mouseX, float mouseY, UiPointerEventKind kind, uint button, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    auto window = buildSettingsWindow(buildSettingsRect(extentWidth, extentHeight), layoutState, settingsDraft, onApplySettings, smallFont, mediumFont);
+    UiPointerEvent event;
+    event.kind = kind;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = button;
+    return window.dispatchPointerEvent(event);
+}
+
+/** Sends a button-down event to the mode buttons and reports whether one handled it. */
+bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onSettings, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine)
+{
+    auto window = buildModeWindow(rect, smallFont, onSettings, onFlatColor, onLitTextured, onWireframe, onHiddenLine);
     UiPointerEvent event;
     event.kind = UiPointerEventKind.buttonDown;
     event.x = mouseX;
