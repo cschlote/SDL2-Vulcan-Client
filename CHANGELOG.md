@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Centered the close button in the window header.
+
 ## Release 26.20.5274
 
 - Improved the on-screen window interactions and debug logging.

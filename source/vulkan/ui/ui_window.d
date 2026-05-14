@@ -311,7 +311,7 @@ private:
         if (closeButton !is null)
         {
             closeButton.x = width - gripReserve - closeWidth - 3.0f;
-            closeButton.y = chromeTopInset + 1.0f;
+            closeButton.y = max(0.0f, (headerHeight - closeButton.height) * 0.5f);
         }
     }
 
