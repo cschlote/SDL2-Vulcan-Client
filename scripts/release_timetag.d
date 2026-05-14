@@ -14,7 +14,7 @@ dependency "va_toolbox" version="~>0.4.0"
  *   CHANGELOG.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
- * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
+ * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
 module scripts.release_timetag;
