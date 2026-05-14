@@ -230,7 +230,7 @@ class VulkanRenderer
         pipeline = PipelineResources(device.handle, swapchain.extent, swapchain.imageFormat, device.depthFormat, vertexShaderPath, fragmentShaderPath);
 
         shapeMeshes = buildPlatonicSolids();
-        currentShapeIndex = 1;
+        currentShapeIndex = 3;
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
         foreach (mesh; shapeMeshes)

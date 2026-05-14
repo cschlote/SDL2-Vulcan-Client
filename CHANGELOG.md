@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## Release 26.20.9999
+
+- The app now starts on the dodecahedron, and the UI code is split into smaller modules so it is easier to follow and extend.
+
 ## Release 26.20.4126
 
 - Improved the custom overlay documentation and clarified the retained UI layout.
