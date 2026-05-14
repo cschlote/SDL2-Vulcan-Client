@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Release 26.20.5344
+
 - Centered the close button in the window header.
 
 ## Release 26.20.5274
