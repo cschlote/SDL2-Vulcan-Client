@@ -85,7 +85,7 @@ final class UiWindow : UiWidget
      *   closable = Shows a close button in the header.
      *   dragable = Makes the header visually distinct and accepts drag gestures.
      */
-    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false)
+    this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false, float contentPaddingLeft = 18.0f, float contentPaddingTop = 10.0f, float contentPaddingRight = 18.0f, float contentPaddingBottom = 10.0f)
     {
         super(x, y, width, height);
         this.title = title;
@@ -96,7 +96,7 @@ final class UiWindow : UiWidget
         this.closable = closable;
         this.dragable = dragable;
 
-        contentRoot = new UiSurfaceBox(0.0f, headerHeight, width, max(height - headerHeight, 0.0f), [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], 18.0f, 10.0f, 18.0f, 10.0f);
+        contentRoot = new UiSurfaceBox(0.0f, headerHeight, width, max(height - headerHeight, 0.0f), [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], contentPaddingLeft, contentPaddingTop, contentPaddingRight, contentPaddingBottom);
         contentRoot.drawBackground = false;
         contentRoot.drawBorder = false;
         super.add(contentRoot);

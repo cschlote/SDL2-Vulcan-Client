@@ -342,77 +342,84 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
 
 private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null, void delegate() onPreviousShape = null, void delegate() onNextShape = null, void delegate() onSettings = null, void delegate() onToggleStatus = null, void delegate() onToggleSample = null, void delegate() onToggleInput = null, void delegate() onToggleCenter = null)
 {
-    const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
-    const actionLabels = ["MODEL -", "MODEL +", "STATUS", "SAMPLE", "LOG", "SETTINGS", "DRAG ME"];
+    const leftButtonLabels = ["F  FLAT COLOR", "W  WIREFRAME", "MODEL -", "STATUS", "LOG"];
+    const rightButtonLabels = ["T  LIT / TEXTURED", "H  HIDDEN LINE", "MODEL +", "SAMPLE", "SETTINGS"];
     const buttonPadding = 12.0f;
 
-    float buttonWidth = 0.0f;
-    foreach (label; buttonLabels)
-        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
-    foreach (label; actionLabels)
-        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
-    buttonWidth += buttonPadding;
+    float leftButtonWidth = 0.0f;
+    foreach (label; leftButtonLabels)
+        leftButtonWidth = max(leftButtonWidth, textBlockWidth(smallFont, label));
+    leftButtonWidth += buttonPadding;
 
-    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
+    float rightButtonWidth = 0.0f;
+    foreach (label; rightButtonLabels)
+        rightButtonWidth = max(rightButtonWidth, textBlockWidth(smallFont, label));
+    rightButtonWidth += buttonPadding;
+
+    const buttonRowWidth = leftButtonWidth + rightButtonWidth + 4.0f;
     const contentWidth = buttonRowWidth;
-    const width = contentWidth + 22.0f;
+    const width = contentWidth + 18.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const height = 28.0f + (buttonHeight * 4.0f + 12.0f + smallTextHeight * 2.0f) + 12.0f;
+    const height = 28.0f + (buttonHeight * 5.0f + 15.0f + smallTextHeight * 2.0f) + 12.0f;
 
-    auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], false, false, false, 6.0f, 6.0f, 6.0f, 6.0f);
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 22.0f, 0.0f), max(rect.height - 22.0f, 0.0f));
 
     auto topRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, leftButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     flatColorButton.onClick = onFlatColor;
     topRow.add(flatColorButton);
-    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, 0.0f, rightButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     litTexturedButton.onClick = onLitTextured;
     topRow.add(litTexturedButton);
     content.add(topRow);
     content.add(new UiSpacer(0.0f, 3.0f));
 
     auto bottomRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, leftButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     wireframeButton.onClick = onWireframe;
     bottomRow.add(wireframeButton);
-    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, 0.0f, rightButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     hiddenLineButton.onClick = onHiddenLine;
     bottomRow.add(hiddenLineButton);
     content.add(bottomRow);
 
     content.add(new UiSpacer(0.0f, 3.0f));
     auto modelRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto previousShapeButton = new UiButton("MODEL -", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto previousShapeButton = new UiButton("MODEL -", 0.0f, 0.0f, leftButtonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     previousShapeButton.onClick = onPreviousShape;
     modelRow.add(previousShapeButton);
-    auto nextShapeButton = new UiButton("MODEL +", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto nextShapeButton = new UiButton("MODEL +", 0.0f, 0.0f, rightButtonWidth, buttonHeight, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     nextShapeButton.onClick = onNextShape;
     modelRow.add(nextShapeButton);
     content.add(modelRow);
 
     content.add(new UiSpacer(0.0f, 3.0f));
     auto windowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto statusButton = new UiButton("STATUS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto statusButton = new UiButton("STATUS", 0.0f, 0.0f, leftButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     statusButton.onClick = onToggleStatus;
     windowRow.add(statusButton);
-    auto sampleButton = new UiButton("SAMPLE", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto sampleButton = new UiButton("SAMPLE", 0.0f, 0.0f, rightButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     sampleButton.onClick = onToggleSample;
     windowRow.add(sampleButton);
     content.add(windowRow);
 
     auto secondWindowRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
-    auto logButton = new UiButton("LOG", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto logButton = new UiButton("LOG", 0.0f, 0.0f, leftButtonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     logButton.onClick = onToggleInput;
     secondWindowRow.add(logButton);
-    auto settingsToggleButton = new UiButton("SETTINGS", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    auto settingsToggleButton = new UiButton("SETTINGS", 0.0f, 0.0f, rightButtonWidth, buttonHeight, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     settingsToggleButton.onClick = onSettings;
     secondWindowRow.add(settingsToggleButton);
-    auto centerToggleButton = new UiButton("DRAG ME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
-    centerToggleButton.onClick = onToggleCenter;
-    secondWindowRow.add(centerToggleButton);
     content.add(secondWindowRow);
+
+    content.add(new UiSpacer(0.0f, 3.0f));
+    auto centerRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto centerToggleButton = new UiButton("DRAG ME", 0.0f, 0.0f, buttonRowWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    centerToggleButton.onClick = onToggleCenter;
+    centerRow.add(centerToggleButton);
+    content.add(centerRow);
 
     window.add(content);
     return window;
@@ -663,8 +670,7 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
         layoutState.middleResizeHandle = UiResizeHandle.none;
     };
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 4.0f);
-    content.add(new UiLabel("DRAG ME", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f], mediumFont.lineHeight));
-    content.add(new UiTextBlock("- USE THE BLUE HEADER BAR TO DRAG\n- RESIZE FROM THE CORNERS\n- THIS WINDOW IS THE RELAYOUT TEST BED\n- GOOD PLACE TO CHECK VBOX/HBOX BEHAVIOR", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight * 5.0f));
+    content.add(new UiTextBlock("- USE THE BLUE HEADER BAR TO DRAG\n- RESIZE FROM THE CORNERS\n- THIS WINDOW IS THE RELAYOUT TEST BED\n- GOOD PLACE TO CHECK VBOX/HBOX BEHAVIOR", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight * 4.0f));
     auto footerRow = new UiHBox(0.0f, 0.0f, 0.0f, smallFont.lineHeight, 6.0f);
     footerRow.add(new UiLabel("HEADER = DRAG", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
     footerRow.add(new UiLabel("CORNERS = RESIZE", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
@@ -766,7 +772,7 @@ private HudWindowRect buildModesRect(float extentWidth, float extentHeight, ref 
     buttonWidth += buttonPadding;
 
     const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
-    const width = max(buttonRowWidth + 24.0f, 360.0f);
+    const width = buttonRowWidth + 24.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
     const height = 32.0f + (buttonHeight * 4.0f + 12.0f + smallTextHeight * 2.0f + 16.0f) + 16.0f;
