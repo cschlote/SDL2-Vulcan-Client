@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Selects a Vulkan physical device and creates the logical device.
+ *
+ * Finds the graphics and presentation queue families, validates swapchain
+ * support, and builds the device and queue state used by the renderer.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

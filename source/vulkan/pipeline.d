@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Defines shared vertex formats and graphics pipeline setup.
+ *
+ * Supplies the common vertex layout, loads shader binaries, and builds the
+ * render pass and pipelines for the scene and overlay paths.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

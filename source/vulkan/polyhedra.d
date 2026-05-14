@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Builds indexed meshes for the selectable Platonic solids.
+ *
+ * Reconstructs convex faces from the vertex sets, assigns per-face colors, and
+ * emits triangulated mesh data that the renderer can upload directly.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

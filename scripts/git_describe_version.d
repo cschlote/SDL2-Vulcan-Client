@@ -1,5 +1,8 @@
 #!/usr/bin/env rdmd
-/** $purposeofFile
+/** Writes the current Git describe string to a build artifact.
+ *
+ * Runs `git describe`, stores the result in `build/git-describe.txt`, and
+ * prints the generated value for release and version diagnostics.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

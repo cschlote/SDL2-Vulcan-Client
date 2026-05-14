@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Implements retained UI widgets and frame rendering helpers.
+ *
+ * Provides the small widget tree, window and control primitives, and recursive
+ * rendering helpers used by the retained overlay layer.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

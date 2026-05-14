@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Owns the Vulkan swapchain and its image views.
+ *
+ * Chooses the presentation extent, recreates swapchain resources when needed,
+ * and exposes the images and views consumed by the renderer.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

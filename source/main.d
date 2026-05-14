@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Runs the application entry point for the demo.
+ *
+ * Forwards the command-line arguments to the bootstrap layer and returns the
+ * process exit code from the renderer workflow.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

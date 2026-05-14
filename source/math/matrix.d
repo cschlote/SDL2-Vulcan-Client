@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Provides compact matrix and vector helpers for camera math.
+ *
+ * Supplies the small set of 3D operations needed for rotation, projection, and
+ * other coordinate conversions inside the renderer.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

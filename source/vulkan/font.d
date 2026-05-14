@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Builds font atlases and emits textured text geometry.
+ *
+ * Loads fonts through FreeType, derives glyph metrics, creates atlas textures,
+ * and appends screen-space text quads for the UI and overlay layers.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

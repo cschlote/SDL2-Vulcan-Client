@@ -1,5 +1,8 @@
 #!/usr/bin/env dub
-/** $purposeofFile
+/** Prints the release timetag and matching Git tag.
+ *
+ * Uses the shared time-tag helper to derive the current release version and
+ * prints the Git tag prefix expected by the release workflow.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018

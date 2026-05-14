@@ -1,4 +1,7 @@
-/** $purposeofFile
+/** Builds the demo's HUD layout and overlay geometry.
+ *
+ * Organizes the window stack, drag state, and per-window draw ranges that keep
+ * the overlay geometry grouped by window during rendering.
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018
