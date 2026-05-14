@@ -23,8 +23,14 @@ import std.math : PI;
 
 import vulkan.font : FontAtlas;
 import vulkan.pipeline : Vertex;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_widgets : UiButton, UiContainer, UiLabel, UiWindow;
+import vulkan.ui.ui_button : UiButton;
+import vulkan.ui.ui_container : UiContainer;
+import vulkan.ui.ui_label : UiLabel;
+import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
+import vulkan.ui.ui_window : UiWindow;
+import logging : logLine;
 
 /** Describes one HUD window rectangle in pixel coordinates.
  *
@@ -58,10 +64,30 @@ struct HudLayoutState
     float middleWidth;
     /** Current height of the center window. */
     float middleHeight;
+    /** Minimum width required by the current center-window content. */
+    float middleMinimumWidth;
+    /** Minimum height required by the current center-window content. */
+    float middleMinimumHeight;
     /** Whether the center window has been initialized once. */
     bool middleInitialized;
+    /** Whether the status window is currently shown. */
+    bool statusVisible = true;
+    /** Whether the center window is currently shown. */
+    bool centerVisible = true;
     /** Whether a drag is currently active. */
     bool middleDragging;
+    /** Whether a resize is currently active. */
+    bool middleResizing;
+    /** Corner currently driving the resize gesture. */
+    UiResizeHandle middleResizeHandle;
+    /** Left edge captured when the resize starts. */
+    float middleResizeStartLeft;
+    /** Top edge captured when the resize starts. */
+    float middleResizeStartTop;
+    /** Width captured when the resize starts. */
+    float middleResizeStartWidth;
+    /** Height captured when the resize starts. */
+    float middleResizeStartHeight;
     /** Cursor offset captured when the drag starts. */
     float dragOffsetX;
     /** Cursor offset captured when the drag starts. */
@@ -155,11 +181,11 @@ HudOverlayGeometry buildHudOverlayVertices(float extentWidth, float extentHeight
 
     const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, smallFont, mediumFont, largeFont);
     UiWindow[5] windows = [
-        buildStatusWindow(layout.status, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont),
+           buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont),
         buildModeWindow(layout.modes, smallFont),
         buildSampleWindow(layout.sample, smallFont, mediumFont, largeFont),
         buildInputWindow(layout.input, smallFont),
-        buildCenterWindow(layout.center, smallFont, mediumFont),
+        buildCenterWindow(layout.center, layoutState, extentWidth, extentHeight, smallFont, mediumFont),
     ];
 
     foreach (index, window; windows)
@@ -221,7 +247,7 @@ HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float
     return layout;
 }
 
-private UiWindow buildStatusWindow(HudWindowRect rect, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     const titleText = "DESKTOP OVERLAY";
     const firstBodyWidth = textBlockWidth(smallFont, "NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.");
@@ -244,57 +270,105 @@ private UiWindow buildStatusWindow(HudWindowRect rect, float fps, float yawAngle
             114.0f + smallTextHeight),
         136.0f + smallTextHeight);
     const height = 36.0f + contentBottom + 20.0f;
-    auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiLabel("NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel(format("FRAME RATE: %.0f FPS", fps), 0.0f, 34.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel(format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 0.0f, 68.0f, UiTextStyle.small, [0.40f, 1.00f, 0.70f, 1.00f]));
-    window.add(new UiLabel(format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 0.0f, 90.0f, UiTextStyle.small, [0.50f, 0.86f, 1.00f, 1.00f]));
-    window.add(new UiLabel(format("ACTIVE SHAPE: %s", shapeName), 0.0f, 114.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel(format("CURRENT MODE: %s", renderModeName), 0.0f, 136.0f, UiTextStyle.small, [1.00f, 0.90f, 0.45f, 1.00f]));
+    auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.96f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
+    window.visible = layoutState.statusVisible;
+    window.onClose = ()
+    {
+        logLine("UiWindow close: DESKTOP OVERLAY");
+        layoutState.statusVisible = false;
+    };
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+    content.add(new UiLabel("NATIVE WINDOW PIXELS. REAL FONTS AT 12/18/24 PX.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 22.0f));
+    content.add(new UiLabel(format("FRAME RATE: %.0f FPS", fps), 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
+    content.add(new UiSpacer(0.0f, 16.0f));
+    content.add(new UiLabel(format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.small, [0.40f, 1.00f, 0.70f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 10.0f));
+    content.add(new UiLabel(format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.small, [0.50f, 0.86f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel(format("ACTIVE SHAPE: %s", shapeName), 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 10.0f));
+    content.add(new UiLabel(format("CURRENT MODE: %s", renderModeName), 0.0f, 0.0f, UiTextStyle.small, [1.00f, 0.90f, 0.45f, 1.00f], smallTextHeight));
+    window.add(content);
     return window;
 }
 
-private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont)
+private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null)
 {
-    const buttonLabels = [
-        "F  FLAT COLOR",
-        "T  LIT / TEXTURED",
-        "W  WIREFRAME",
-        "H  HIDDEN LINE",
-    ];
-    const actionLabels = [
-        "+ / -  SWITCH SHAPE",
-        "ARROWS  ROTATE CAMERA",
-        "ESC  CLOSE APPLICATION",
-    ];
-    float contentWidth = 0.0f;
-    foreach (label; buttonLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
-    foreach (label; actionLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
+    const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
+    const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
+    const buttonPadding = 20.0f;
 
+    float buttonWidth = 0.0f;
+    foreach (label; buttonLabels)
+        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
+    buttonWidth += buttonPadding;
+
+    float actionWidth = 0.0f;
+    foreach (label; actionLabels)
+        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
+
+    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
+    const contentWidth = max(buttonRowWidth, actionWidth);
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
-    const contentBottom = max(
-        max(max(max(
-            0.0f + buttonHeight,
-            (buttonHeight + 4.0f) + buttonHeight),
-            (buttonHeight + 4.0f) * 2.0f + buttonHeight),
-            (buttonHeight + 4.0f) * 3.0f + buttonHeight),
-        168.0f + smallTextHeight);
-    const contentBottomWithLabels = max(contentBottom, max(120.0f + smallTextHeight, 144.0f + smallTextHeight));
-    const height = 36.0f + contentBottomWithLabels + 20.0f;
+    const height = 36.0f + (buttonHeight * 2.0f + 4.0f + 12.0f + smallTextHeight * 3.0f + 24.0f) + 20.0f;
 
-    auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiButton("F  FLAT COLOR", 0.0f, 0.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("T  LIT / TEXTURED", 0.0f, buttonHeight + 4.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("W  WIREFRAME", 0.0f, (buttonHeight + 4.0f) * 2.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiButton("H  HIDDEN LINE", 0.0f, (buttonHeight + 4.0f) * 3.0f, width - 36.0f, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 120.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("ARROWS  ROTATE CAMERA", 0.0f, 144.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("ESC  CLOSE APPLICATION", 0.0f, 168.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
+    auto window = new UiWindow("RENDER MODES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+
+    auto topRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    flatColorButton.onClick = onFlatColor;
+    topRow.add(flatColorButton);
+    auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    litTexturedButton.onClick = onLitTextured;
+    topRow.add(litTexturedButton);
+    content.add(topRow);
+    content.add(new UiSpacer(0.0f, 4.0f));
+
+    auto bottomRow = new UiHBox(0.0f, 0.0f, buttonRowWidth, buttonHeight, 4.0f);
+    auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    wireframeButton.onClick = onWireframe;
+    bottomRow.add(wireframeButton);
+    auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, 0.0f, buttonWidth, buttonHeight, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
+    hiddenLineButton.onClick = onHiddenLine;
+    bottomRow.add(hiddenLineButton);
+    content.add(bottomRow);
+
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("+ / -  SWITCH SHAPE", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("ARROWS  ROTATE CAMERA", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("ESC  CLOSE APPLICATION", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    window.add(content);
     return window;
+}
+
+/** Sends a button-down event to the mode buttons and reports whether one handled it. */
+bool hudDispatchModeButtonDown(HudWindowRect rect, float mouseX, float mouseY, ref const(FontAtlas) smallFont, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine)
+{
+    auto window = buildModeWindow(rect, smallFont, onFlatColor, onLitTextured, onWireframe, onHiddenLine);
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = 1;
+    return window.dispatchPointerEvent(event);
+}
+
+/** Sends a pointer event to the status window and reports whether it handled it. */
+bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    auto window = buildStatusWindow(rect, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    UiPointerEvent event;
+    event.kind = kind;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = button;
+    return window.dispatchPointerEvent(event);
 }
 
 private UiWindow buildSampleWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
@@ -316,31 +390,93 @@ private UiWindow buildSampleWindow(HudWindowRect rect, ref const(FontAtlas) smal
         124.0f + smallTextHeight);
     const height = 36.0f + contentBottom + 20.0f;
 
-    auto window = new UiWindow("FONT SIZES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiLabel("12 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("18 PX  THE QUICK BROWN FOX", 0.0f, smallFont.lineHeight + 14.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("24 PX  THE QUICK BROWN FOX", 0.0f, smallFont.lineHeight + mediumFont.lineHeight + 32.0f, UiTextStyle.large, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("REAL FONTS KEEP SIZES DISTINCT.", 0.0f, smallFont.lineHeight + mediumFont.lineHeight + largeFont.lineHeight + 52.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
+    auto window = new UiWindow("FONT SIZES", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.94f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+    content.add(new UiLabel("12 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    content.add(new UiSpacer(0.0f, 20.0f));
+    content.add(new UiLabel("18 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
+    content.add(new UiSpacer(0.0f, 24.0f));
+    content.add(new UiLabel("24 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.large, [1.00f, 1.00f, 1.00f, 1.00f], largeTextHeight));
+    content.add(new UiSpacer(0.0f, 26.0f));
+    content.add(new UiLabel("REAL FONTS KEEP SIZES DISTINCT.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    window.add(content);
     return window;
 }
 
 private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) smallFont)
 {
-    auto window = new UiWindow("INPUT", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiLabel("LEFT BUTTON DRAGS THE CENTER WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("CLICK OUTSIDE THE UI TO ROTATE 3D.", 0.0f, smallFont.lineHeight + 12.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("HEADER BAR IS THE DRAG HANDLE.", 0.0f, smallFont.lineHeight * 2.0f + 24.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+    auto window = new UiWindow("INPUT", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+    content.add(new UiLabel("LEFT BUTTON DRAGS THE CENTER WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("CLICK OUTSIDE THE UI TO ROTATE 3D.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("HEADER BAR IS THE DRAG HANDLE.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    window.add(content);
     return window;
 }
 
-private UiWindow buildCenterWindow(HudWindowRect rect, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    window.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("UI HITS DO NOT FALL THROUGH TO 3D.", 0.0f, smallFont.lineHeight + 12.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f]));
-    window.add(new UiLabel("OUTSIDE HITS GO TO THE OBJECT LAYER.", 0.0f, smallFont.lineHeight * 2.0f + 24.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
-    window.add(new UiLabel("DRAGGING USES THE HEADER BAR ONLY.", 0.0f, smallFont.lineHeight * 3.0f + 36.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+    auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true);
+    window.visible = layoutState.centerVisible;
+    window.onClose = ()
+    {
+        logLine("UiWindow close: DRAG ME");
+        layoutState.centerVisible = false;
+        layoutState.middleDragging = false;
+        layoutState.middleResizing = false;
+        layoutState.middleResizeHandle = UiResizeHandle.none;
+    };
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f));
+    content.add(new UiLabel("GRAB THE BLUE BAR TO MOVE THIS WINDOW.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("UI HITS DO NOT FALL THROUGH TO 3D.", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("OUTSIDE HITS GO TO THE OBJECT LAYER.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    content.add(new UiSpacer(0.0f, 12.0f));
+    content.add(new UiLabel("DRAGGING USES THE HEADER BAR ONLY.", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallFont.lineHeight));
+    window.add(content);
+    window.dragTracking = layoutState.middleDragging;
+    window.resizeTracking = layoutState.middleResizing;
+    window.resizeHandle = layoutState.middleResizeHandle;
+    window.onHeaderDragStart = (float cursorX, float cursorY)
+    {
+        hudBeginDrag(layoutState, rect, cursorX, cursorY);
+    };
+    window.onHeaderDragMove = (float cursorX, float cursorY)
+    {
+        hudDragTo(layoutState, cursorX, cursorY, extentWidth, extentHeight);
+    };
+    window.onHeaderDragEnd = ()
+    {
+        hudEndDrag(layoutState);
+    };
+    window.onResizeStart = (UiResizeHandle handle)
+    {
+        hudBeginResize(layoutState, handle, rect);
+    };
+    window.onResizeMove = (UiResizeHandle handle, float cursorX, float cursorY)
+    {
+        hudResizeTo(layoutState, handle, cursorX, cursorY, extentWidth, extentHeight);
+    };
+    window.onResizeEnd = (UiResizeHandle handle)
+    {
+        hudEndResize(layoutState, handle);
+    };
     return window;
+}
+
+/** Sends center-window pointer events through the retained widget tree. */
+bool hudDispatchCenterWindowPointer(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, float mouseX, float mouseY, UiPointerEventKind kind, uint button, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+{
+    auto window = buildCenterWindow(rect, layoutState, extentWidth, extentHeight, smallFont, mediumFont);
+    UiPointerEvent event;
+    event.kind = kind;
+    event.x = mouseX;
+    event.y = mouseY;
+    event.button = button;
+    return window.dispatchPointerEvent(event);
 }
 
 private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
@@ -365,12 +501,18 @@ private HudWindowRect buildModesRect(float extentWidth, float extentHeight, ref 
 {
     const buttonLabels = ["F  FLAT COLOR", "T  LIT / TEXTURED", "W  WIREFRAME", "H  HIDDEN LINE"];
     const actionLabels = ["+ / -  SWITCH SHAPE", "ARROWS  ROTATE CAMERA", "ESC  CLOSE APPLICATION"];
-    float contentWidth = 0.0f;
+    const buttonPadding = 20.0f;
+    float buttonWidth = 0.0f;
     foreach (label; buttonLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
-    foreach (label; actionLabels)
-        contentWidth = max(contentWidth, textBlockWidth(smallFont, label));
+        buttonWidth = max(buttonWidth, textBlockWidth(smallFont, label));
+    buttonWidth += buttonPadding;
 
+    float actionWidth = 0.0f;
+    foreach (label; actionLabels)
+        actionWidth = max(actionWidth, textBlockWidth(smallFont, label));
+
+    const buttonRowWidth = buttonWidth * 2.0f + 4.0f;
+    const contentWidth = max(buttonRowWidth, actionWidth);
     const width = contentWidth + 36.0f;
     const smallTextHeight = textBlockHeight(smallFont);
     const buttonHeight = max(smallTextHeight + 10.0f, 24.0f);
@@ -418,10 +560,16 @@ private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref
     const lineThree = textBlockWidth(smallFont, "OUTSIDE HITS GO TO THE OBJECT LAYER.");
     const lineFour = textBlockWidth(smallFont, "DRAGGING USES THE HEADER BAR ONLY.");
     const contentWidth = max(max(lineOne, lineTwo), max(lineThree, lineFour));
-    const width = max(titleWidth + 24.0f, contentWidth + 36.0f);
+    const measuredWidth = max(titleWidth + 24.0f, contentWidth + 36.0f);
     const smallTextHeight = textBlockHeight(smallFont);
     const mediumTextHeight = textBlockHeight(mediumFont);
-    const height = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
+    const measuredHeight = 36.0f + max(max(max(0.0f + smallTextHeight, smallTextHeight + 12.0f + smallTextHeight), smallTextHeight * 2.0f + 24.0f), smallTextHeight * 3.0f + 36.0f) + 20.0f;
+
+    layoutState.middleMinimumWidth = measuredWidth;
+    layoutState.middleMinimumHeight = measuredHeight;
+
+    const width = layoutState.middleInitialized ? max(layoutState.middleWidth, measuredWidth) : measuredWidth;
+    const height = layoutState.middleInitialized ? max(layoutState.middleHeight, measuredHeight) : measuredHeight;
 
     layoutState.middleWidth = width;
     layoutState.middleHeight = height;
@@ -495,9 +643,24 @@ bool hudPointInHeader(HudWindowRect rect, float x, float y)
 /** Starts dragging the center window from the supplied cursor position. */
 void hudBeginDrag(ref HudLayoutState state, HudWindowRect rect, float cursorX, float cursorY)
 {
+    logLine("Hud drag start at ", cursorX, ", ", cursorY);
     state.middleDragging = true;
+    state.middleResizing = false;
     state.dragOffsetX = cursorX - rect.left;
     state.dragOffsetY = cursorY - rect.top;
+}
+
+/** Starts resizing the center window from one of its corner grips. */
+void hudBeginResize(ref HudLayoutState state, UiResizeHandle handle, HudWindowRect rect)
+{
+    logLine("Hud resize start [", handle, "] at ", rect.left, ", ", rect.top);
+    state.middleResizing = true;
+    state.middleDragging = false;
+    state.middleResizeHandle = handle;
+    state.middleResizeStartLeft = rect.left;
+    state.middleResizeStartTop = rect.top;
+    state.middleResizeStartWidth = rect.width;
+    state.middleResizeStartHeight = rect.height;
 }
 
 /** Updates the dragged center window position and clamps it to the viewport. */
@@ -514,10 +677,75 @@ void hudDragTo(ref HudLayoutState state, float cursorX, float cursorY, float ext
     state.middleTop = clampFloat(newTop, 0.0f, maximumTop);
 }
 
+/** Updates the resized center window geometry and clamps it to the viewport. */
+void hudResizeTo(ref HudLayoutState state, UiResizeHandle handle, float cursorX, float cursorY, float extentWidth, float extentHeight)
+{
+    if (!state.middleResizing)
+        return;
+
+    const minimumWidth = state.middleMinimumWidth > 0.0f ? state.middleMinimumWidth : 240.0f;
+    const minimumHeight = state.middleMinimumHeight > 0.0f ? state.middleMinimumHeight : 168.0f;
+    const startLeft = state.middleResizeStartLeft;
+    const startTop = state.middleResizeStartTop;
+    const startRight = state.middleResizeStartLeft + state.middleResizeStartWidth;
+    const startBottom = state.middleResizeStartTop + state.middleResizeStartHeight;
+
+    final switch (handle)
+    {
+        case UiResizeHandle.topLeft:
+        {
+            const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
+            const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
+            state.middleLeft = newLeft;
+            state.middleTop = newTop;
+            state.middleWidth = startRight - newLeft;
+            state.middleHeight = startBottom - newTop;
+            break;
+        }
+        case UiResizeHandle.topRight:
+        {
+            const availableRight = extentWidth > startLeft ? extentWidth - startLeft : 0.0f;
+            const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
+            state.middleTop = newTop;
+            state.middleWidth = clampFloat(cursorX - startLeft, minimumWidth, availableRight);
+            state.middleHeight = startBottom - newTop;
+            break;
+        }
+        case UiResizeHandle.bottomLeft:
+        {
+            const availableBottom = extentHeight > startTop ? extentHeight - startTop : 0.0f;
+            const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
+            state.middleLeft = newLeft;
+            state.middleWidth = startRight - newLeft;
+            state.middleHeight = clampFloat(cursorY - startTop, minimumHeight, availableBottom);
+            break;
+        }
+        case UiResizeHandle.bottomRight:
+        {
+            const availableWidth = extentWidth > startLeft ? extentWidth - startLeft : 0.0f;
+            const availableHeight = extentHeight > startTop ? extentHeight - startTop : 0.0f;
+            state.middleWidth = clampFloat(cursorX - startLeft, minimumWidth, availableWidth);
+            state.middleHeight = clampFloat(cursorY - startTop, minimumHeight, availableHeight);
+            break;
+        }
+        case UiResizeHandle.none:
+            break;
+    }
+}
+
 /** Stops any active center-window drag. */
 void hudEndDrag(ref HudLayoutState state)
 {
+    logLine("Hud drag end");
     state.middleDragging = false;
+}
+
+/** Stops any active center-window resize. */
+void hudEndResize(ref HudLayoutState state, UiResizeHandle handle)
+{
+    logLine("Hud resize end [", handle, "]");
+    state.middleResizing = false;
+    state.middleResizeHandle = UiResizeHandle.none;
 }
 
 private float clampFloat(float value, float minimum, float maximum)

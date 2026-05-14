@@ -24,8 +24,10 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
+import logging : logLine, logLineVerbose;
 import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui.ui_event : UiPointerEventKind;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -1169,15 +1171,46 @@ class VulkanRenderer
 
                 const mouseX = cast(float)event.button.x;
                 const mouseY = cast(float)event.button.y;
-                const hitHud = hudPointInRect(layout.status, mouseX, mouseY)
-                    || hudPointInRect(layout.modes, mouseX, mouseY)
+                logLineVerbose("Mouse down at ", mouseX, ", ", mouseY, ".");
+                logLineVerbose("Center window before dispatch: drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing, ", rect=", layout.center.left, ",", layout.center.top, ",", layout.center.width, ",", layout.center.height);
+                if (hudDispatchModeButtonDown(
+                    layout.modes,
+                    mouseX,
+                    mouseY,
+                    fontAtlases[0],
+                    { setRenderMode(RenderMode.flatColor); },
+                    { setRenderMode(RenderMode.litTextured); },
+                    { setRenderMode(RenderMode.wireframe); },
+                    { setRenderMode(RenderMode.hiddenLine); }))
+                {
+                    logLineVerbose("Mode button handled the press.");
+                    return false;
+                }
+
+                if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                {
+                    logLineVerbose("Status window handled the press.");
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                if (hudLayoutState.centerVisible && hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                {
+                    logLineVerbose("Center window handled the press. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                const hitHud = hudPointInRect(layout.modes, mouseX, mouseY)
                     || hudPointInRect(layout.sample, mouseX, mouseY)
                     || hudPointInRect(layout.input, mouseX, mouseY)
-                    || hudPointInRect(layout.center, mouseX, mouseY);
+                    || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
+                    || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
 
-                if (hudPointInHeader(layout.center, mouseX, mouseY))
+                if (hudLayoutState.centerVisible && hudPointInHeader(layout.center, mouseX, mouseY))
                 {
                     hudBeginDrag(hudLayoutState, layout.center, mouseX, mouseY);
+                    logLineVerbose("Fallback header drag started.");
                     sceneMouseDragging = false;
                     return false;
                 }
@@ -1192,8 +1225,29 @@ class VulkanRenderer
                 if (event.button.button != 1)
                     return false;
 
+                const layout = buildHudLayout(
+                    cast(float)swapchain.extent.width,
+                    cast(float)swapchain.extent.height,
+                    cast(float)fpsValue,
+                    yawAngle,
+                    pitchAngle,
+                    currentShapeName,
+                    currentRenderModeName,
+                    hudLayoutState,
+                    fontAtlases[0],
+                    fontAtlases[1],
+                    fontAtlases[2]);
+
+                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
+                {
+                    logLineVerbose("Mouse up routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
+                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
+                }
+
                 if (hudLayoutState.middleDragging)
                     hudEndDrag(hudLayoutState);
+                if (hudLayoutState.middleResizing)
+                    logLineVerbose("Center resize ended.");
 
                 sceneMouseDragging = false;
                 return false;
@@ -1202,9 +1256,23 @@ class VulkanRenderer
             /** Routes mouse motion either to the draggable window or to the 3D layer. */
             private bool handleMouseMotion(ref SDL_Event event)
             {
-                if (hudLayoutState.middleDragging)
+                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
                 {
-                    hudDragTo(hudLayoutState, cast(float)event.motion.x, cast(float)event.motion.y, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height);
+                    const layout = buildHudLayout(
+                        cast(float)swapchain.extent.width,
+                        cast(float)swapchain.extent.height,
+                        cast(float)fpsValue,
+                        yawAngle,
+                        pitchAngle,
+                        currentShapeName,
+                        currentRenderModeName,
+                        hudLayoutState,
+                        fontAtlases[0],
+                        fontAtlases[1],
+                        fontAtlases[2]);
+
+                    logLineVerbose("Mouse move routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing, ", position=", event.motion.x, ",", event.motion.y);
+                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.motion.x, cast(float)event.motion.y, UiPointerEventKind.move, 0, fontAtlases[0], fontAtlases[1]);
                     return false;
                 }
 
