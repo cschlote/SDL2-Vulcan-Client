@@ -10,12 +10,11 @@ module vulkan.ui.ui_window;
 import std.algorithm : max;
 
 import vulkan.ui.ui_button : UiButton;
-import vulkan.ui.ui_container : UiContainer;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
-import vulkan.ui.ui_layout : UiHBox;
+import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox;
 import vulkan.ui.ui_widget : UiWidget;
-import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowFrame;
+import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
 import logging : logLine, logLineVerbose;
 
 /** Retained window chrome with optional close, drag, and resize behavior. */
@@ -45,7 +44,7 @@ final class UiWindow : UiWidget
     float headerHeight = 26.0f;
 
     /** Body widgets are kept in a separate root so chrome stays explicit. */
-    private UiContainer contentRoot;
+    private UiSurfaceBox contentRoot;
     /** Optional extra header widgets placed to the left of the close button. */
     private UiHBox headerExtras;
     /** Optional close button rendered in the header. */
@@ -97,7 +96,9 @@ final class UiWindow : UiWidget
         this.closable = closable;
         this.dragable = dragable;
 
-        contentRoot = new UiContainer();
+        contentRoot = new UiSurfaceBox(0.0f, headerHeight, width, max(height - headerHeight, 0.0f), [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], 18.0f, 10.0f, 18.0f, 10.0f);
+        contentRoot.drawBackground = false;
+        contentRoot.drawBorder = false;
         super.add(contentRoot);
 
         headerExtras = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
@@ -108,8 +109,8 @@ final class UiWindow : UiWidget
             closeButton.onClick = &handleCloseButton;
         }
 
-        childOffsetX = 18.0f;
-        childOffsetY = 36.0f;
+        childOffsetX = 0.0f;
+        childOffsetY = 0.0f;
     }
 
     /** Adds a child widget to the window body. */
@@ -247,9 +248,19 @@ protected:
     {
         updateChromeLayout();
 
-        // Keep the header fill flat; the extra blue highlight is intentionally disabled.
         const headerFill = headerColor;
-        appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyColor, headerFill, context.depthBase);
+        const bodyFill = bodyColor;
+
+        const gripInset = sizeable ? 18.0f : 0.0f;
+        float headerRightInset = gripInset;
+
+        if (headerExtras.children.length > 0)
+            headerRightInset += headerExtrasWidth + headerExtras.spacing + 12.0f;
+
+        if (closeButton !is null)
+            headerRightInset += closeButton.width + 8.0f;
+
+        appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyFill, headerFill, context.depthBase, gripInset, headerRightInset);
 
         if (sizeable)
         {
@@ -273,6 +284,8 @@ protected:
         {
             closeButton.render(context);
         }
+
+        appendWindowBorder(context, 0.0f, 0.0f, width, height, context.depthBase - 0.003f);
     }
 
 private:
@@ -282,16 +295,23 @@ private:
         const closeWidth = closeButton !is null ? closeButton.width : 0.0f;
         const closeGap = closeButton !is null ? 4.0f : 0.0f;
         const gripReserve = sizeable ? 18.0f : 0.0f;
+        const contentMargin = 3.0f;
+        const chromeTopInset = 7.0f;
 
         headerExtras.width = headerExtrasWidth;
         headerExtras.height = headerExtrasHeight;
         headerExtras.x = max(10.0f, width - gripReserve - closeWidth - closeGap - headerExtrasWidth - 12.0f);
-        headerExtras.y = 4.0f;
+        headerExtras.y = chromeTopInset + 1.0f;
+
+        contentRoot.x = contentMargin;
+        contentRoot.y = headerHeight + contentMargin;
+        contentRoot.width = max(width - contentMargin * 2.0f, 0.0f);
+        contentRoot.height = max(height - headerHeight - contentMargin * 2.0f, 0.0f);
 
         if (closeButton !is null)
         {
             closeButton.x = width - gripReserve - closeWidth - 3.0f;
-            closeButton.y = 5.0f;
+            closeButton.y = chromeTopInset + 1.0f;
         }
     }
 

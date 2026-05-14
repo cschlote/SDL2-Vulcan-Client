@@ -15,15 +15,49 @@ import vulkan.font : appendText;
 import vulkan.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 
-/** Appends the body and header quads for a retained window frame. */
-void appendWindowFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float headerHeight, float[4] bodyColor, float[4] headerColor, float z)
+/** Appends a generic surface fill with an optional border. */
+void appendSurfaceFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] backgroundColor, float[4] borderColor, float z, bool drawBackground = true, bool drawBorder = true)
+{
+    if (right <= left || bottom <= top)
+        return;
+
+    if (drawBackground)
+        appendQuad(context, left, top, right, bottom, z, backgroundColor);
+
+    if (drawBorder)
+    {
+        appendQuad(context, left, top, right, top + 1.0f, z - 0.001f, borderColor);
+        appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.001f, borderColor);
+        appendQuad(context, left, top, left + 1.0f, bottom, z - 0.001f, borderColor);
+        appendQuad(context, right - 1.0f, top, right, bottom, z - 0.001f, borderColor);
+    }
+}
+
+/** Appends the body and header quads for a retained window frame.
+ *
+ * The header band can reserve horizontal insets so the decorative fill stays
+ * clear of corner grips and header controls.
+ */
+void appendWindowFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float headerHeight, float[4] bodyColor, float[4] headerColor, float z, float headerLeftInset = 0.0f, float headerRightInset = 0.0f)
 {
     if (right <= left || bottom <= top)
         return;
 
     appendQuad(context, left, top, right, bottom, z, bodyColor);
-    appendQuad(context, left, top, right, top + headerHeight, z - 0.001f, headerColor);
-    appendQuad(context, left, top, right, top + 1.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.46f]);
+
+    const headerLeft = left + headerLeftInset;
+    const headerRight = right - headerRightInset;
+    if (headerRight > headerLeft)
+    {
+        appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
+        appendQuad(context, headerLeft, top, headerRight, top + 1.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.46f]);
+    }
+}
+
+/** Appends the outer border quads for a retained window frame. */
+void appendWindowBorder(ref UiRenderContext context, float left, float top, float right, float bottom, float z)
+{
+    appendQuad(context, left, top, right, top + 2.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.34f]);
     appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
     appendQuad(context, left, top, left + 1.0f, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
     appendQuad(context, right - 1.0f, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
