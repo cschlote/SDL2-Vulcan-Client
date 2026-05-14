@@ -35,8 +35,8 @@ void appendSurfaceFrame(ref UiRenderContext context, float left, float top, floa
 
 /** Appends the body and header quads for a retained window frame.
  *
- * The header band can reserve horizontal insets so the decorative fill stays
- * clear of corner grips and header controls.
+ * The header fill can reserve horizontal insets so the decorative surface
+ * stays clear of close buttons, resize grips, and header extras.
  */
 void appendWindowFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float headerHeight, float[4] bodyColor, float[4] headerColor, float z, float headerLeftInset = 0.0f, float headerRightInset = 0.0f)
 {
@@ -45,13 +45,13 @@ void appendWindowFrame(ref UiRenderContext context, float left, float top, float
 
     appendQuad(context, left, top, right, bottom, z, bodyColor);
 
-    const headerLeft = left + headerLeftInset;
-    const headerRight = right - headerRightInset;
-    if (headerRight > headerLeft)
-    {
-        appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
-        appendQuad(context, headerLeft, top, headerRight, top + 1.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.46f]);
-    }
+    // const headerLeft = left + headerLeftInset;
+    // const headerRight = right - headerRightInset;
+    // if (headerRight > headerLeft)
+    //     appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
+
+    appendQuad(context, left, top + headerHeight - 2.0f, right, top + headerHeight - 1.0f, z - 0.002f, [0.10f, 0.10f, 0.12f, 0.70f]);
+    appendQuad(context, left, top + headerHeight - 1.0f, right, top + headerHeight, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.48f]);
 }
 
 /** Appends the outer border quads for a retained window frame. */

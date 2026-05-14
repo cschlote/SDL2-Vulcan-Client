@@ -104,7 +104,7 @@ This keeps translucent surfaces predictable. A widget should not need to fake tr
 
 The same idea applies to frame styling. A frame should be a renderable surface decoration, while margins and padding should stay in the layout layer. That gives the UI a familiar box model without forcing every widget to manually reserve space for borders or visual gutters.
 
-In practice, the layout code should reserve chrome space by offsetting and padding child widgets, while the render code should only paint the surface it owns. A header background should stop short of explicit chrome controls and resize grips; those controls should sit in their own layout band instead of being covered by one large opaque strip.
+In practice, the layout code should reserve chrome space by offsetting and padding child widgets, while the render code should only paint the surface it owns. The header can keep a reserved control band on the right, and the content can then be separated from the header by a thin optical groove instead of a second full-width fill band.
 
 The first practical margin use case is the window body: keep the shell background visible all the way to the frame, then inset the content root by a few pixels so inner widgets do not sit directly on the border line.
 
