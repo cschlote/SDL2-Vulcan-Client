@@ -240,6 +240,8 @@ final class DemoUiScreen : UiScreen
     private UiVBox helpContent;
     private UiVBox statusContent;
     private UiVBox settingsContent;
+    private UiVBox settingsBody;
+    private UiHBox settingsActionRow;
     private UiButton initHelpButton;
     private UiButton initStatusButton;
     private UiButton initSettingsButton;
@@ -514,20 +516,24 @@ final class DemoUiScreen : UiScreen
         sizeRow.add(settingsWidthField);
         sizeRow.add(settingsHeightField);
 
-        auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
-        actionRow.add(settingsApplyButton);
-        actionRow.add(settingsSaveButton);
+        settingsBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        settingsBody.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        settingsBody.add(settingsTitleLabel);
+        settingsBody.add(settingsIntroLabel);
+        settingsBody.add(settingsProfileLabel);
+        settingsBody.add(settingsWindowModeDropdown);
+        settingsBody.add(sizeRow);
+        settingsBody.add(settingsVsyncToggle);
+        settingsBody.add(settingsScaleSlider);
+        settingsBody.add(settingsThemeDropdown);
+        settingsBody.add(settingsCompactToggle);
 
-        settingsContent.add(settingsTitleLabel);
-        settingsContent.add(settingsIntroLabel);
-        settingsContent.add(settingsProfileLabel);
-        settingsContent.add(settingsWindowModeDropdown);
-        settingsContent.add(sizeRow);
-        settingsContent.add(settingsVsyncToggle);
-        settingsContent.add(settingsScaleSlider);
-        settingsContent.add(settingsThemeDropdown);
-        settingsContent.add(settingsCompactToggle);
-        settingsContent.add(actionRow);
+        settingsActionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        settingsActionRow.add(settingsApplyButton);
+        settingsActionRow.add(settingsSaveButton);
+
+        settingsContent.add(settingsBody);
+        settingsContent.add(settingsActionRow);
         settingsWindow.add(settingsContent);
         settingsWindow.visible = false;
         settingsWindow.onClose = ()
