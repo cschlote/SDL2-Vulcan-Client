@@ -24,11 +24,11 @@ Implemented or partially implemented:
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
 - INI settings load/save model
+- generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
 
 Known migration debt:
 
 - `source/demo/demo_ui.d` still contains an old stateless HUD construction and dispatch block.
-- renderer-facing UI data still uses HUD-specific names.
 - `DemoUiScreen` duplicates logic that should move into or use `UiScreen`.
 - settings are currently too close to automatic persistence in some paths.
 
@@ -92,13 +92,9 @@ Expected behavior:
 
 This keeps temporary experimentation local until the user explicitly saves.
 
-## Rename And Cleanup Plan
+## Cleanup Plan
 
-Use generic UI names for renderer-facing data:
-
-- `HudOverlayGeometry` -> `UiOverlayGeometry`
-- `HudWindowDrawRange` -> `UiDrawRange` or `UiWindowDrawRange`
-- HUD-specific helper names should disappear from renderer imports
+Renderer-facing draw data now uses generic UI names. The remaining cleanup is to remove the old HUD construction path and keep only retained screen/window/widget construction.
 
 Remove legacy code:
 
@@ -118,7 +114,7 @@ Use `UiScreen` properly:
 ## Implementation Order
 
 1. Update documentation and plans to reflect the engine-first direction. Done.
-2. Rename renderer-facing HUD data types to generic UI names.
+2. Rename renderer-facing HUD data types to generic UI names. Done.
 3. Remove the old stateless HUD helper block from `demo_ui.d`.
 4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently.
 5. Fix settings persistence so only explicit Save writes to disk.

@@ -147,7 +147,7 @@ struct HudLayout
  * Each range maps one logical window to a contiguous set of panel and text
  * vertices so the renderer can preserve the intended stacking order.
  */
-struct HudWindowDrawRange
+struct UiWindowDrawRange
 {
     /** Start index for panel vertices. */
     uint panelsStart;
@@ -164,14 +164,14 @@ struct HudWindowDrawRange
  * The renderer uploads each vertex list independently and uses the draw ranges
  * to emit one logical window at a time.
  */
-struct HudOverlayGeometry
+struct UiOverlayGeometry
 {
     /** Window body and header quads. */
     Vertex[] panels;
     /** Text quads indexed by UiTextStyle. */
     Vertex[][7] textLayers;
     /** Draw ranges that keep each window's render calls contiguous. */
-    HudWindowDrawRange[] windows;
+    UiWindowDrawRange[] windows;
 }
 
 /** Builds the legacy overlay geometry for the current frame.
@@ -192,7 +192,7 @@ struct HudOverlayGeometry
  * @param largeFont = Font atlas used for 24 px comparison samples.
  * @returns Panel and text vertex lists that can be uploaded to the GPU.
  */
-HudOverlayGeometry buildHudOverlayVertices(
+UiOverlayGeometry buildHudOverlayVertices(
     float extentWidth,
     float extentHeight,
     float fps,
@@ -218,7 +218,7 @@ HudOverlayGeometry buildHudOverlayVertices(
     ref const(FontAtlas) mediumFont,
     ref const(FontAtlas) largeFont)
 {
-    HudOverlayGeometry geometry;
+    UiOverlayGeometry geometry;
 
     const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, layoutState, fontAtlases, smallFont, mediumFont, largeFont);
     UiWindow[] windows;
@@ -264,7 +264,7 @@ HudOverlayGeometry buildHudOverlayVertices(
 
         window.render(context);
 
-        HudWindowDrawRange range;
+        UiWindowDrawRange range;
         range.panelsStart = cast(uint)geometry.panels.length;
         range.panelsCount = cast(uint)windowPanels.length;
         foreach (layerIndex; 0 .. windowTextLayers.length)
@@ -1621,16 +1621,16 @@ final class DemoUiScreen : UiScreen
         return false;
     }
 
-    HudOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts)
     {
         syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion);
 
-        HudOverlayGeometry geometry;
+        UiOverlayGeometry geometry;
         geometry.panels = [];
         foreach (layerIndex; 0 .. geometry.textLayers.length)
             geometry.textLayers[layerIndex] = [];
 
-        HudWindowDrawRange[] drawRanges;
+        UiWindowDrawRange[] drawRanges;
         UiRenderContext context = UiRenderContext.init;
         context.extentWidth = extentWidth;
         context.extentHeight = extentHeight;
@@ -1648,7 +1648,7 @@ final class DemoUiScreen : UiScreen
             if (!window.visible)
                 continue;
 
-            HudWindowDrawRange range;
+            UiWindowDrawRange range;
             range.panelsStart = cast(uint)geometry.panels.length;
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
@@ -1680,7 +1680,7 @@ final class DemoUiScreen : UiScreen
         return layout;
     }
 
-    HudOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine, void delegate() onPreviousShape, void delegate() onNextShape, void delegate() onOpenSettings, void delegate() onApplySettings, const(FontAtlas)[] liveFonts, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, void delegate() onFlatColor, void delegate() onLitTextured, void delegate() onWireframe, void delegate() onHiddenLine, void delegate() onPreviousShape, void delegate() onNextShape, void delegate() onOpenSettings, void delegate() onApplySettings, const(FontAtlas)[] liveFonts, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
     {
         return buildOverlayVertices(extentWidth, extentHeight, fps, shapeName, renderModeName, buildVersion, liveFonts);
     }

@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import demo.demo_settings : DemoSettings, saveDemoSettings;
-import demo.demo_ui : DemoUiScreen, HudWindowDrawRange;
+import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.engine.device;
@@ -128,7 +128,7 @@ class VulkanRenderer
     private TextureResource[7] fontTextures;
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[7] overlayFonts;
-    private HudWindowDrawRange[] hudWindowRanges;
+    private UiWindowDrawRange[] uiWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -1113,7 +1113,7 @@ class VulkanRenderer
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
             enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "UI overlay text-layer vertex limit exceeded.");
 
-        hudWindowRanges = overlayVertices.windows;
+        uiWindowRanges = overlayVertices.windows;
 
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
@@ -1277,7 +1277,7 @@ class VulkanRenderer
             vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
         }
 
-        foreach (windowRange; hudWindowRanges)
+        foreach (windowRange; uiWindowRanges)
         {
             vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
             if (windowRange.panelsCount > 0)

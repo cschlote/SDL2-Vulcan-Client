@@ -133,14 +133,14 @@ Whether signals are synchronous delegates, queued events, or a small typed event
 
 The renderer should not know widget internals. It should receive generated UI geometry and draw ranges.
 
-Current migration issue:
+Current boundary:
 
-- `HudOverlayGeometry` and `HudWindowDrawRange` are still HUD-named data types.
+- `UiOverlayGeometry` and `UiWindowDrawRange` are the current generic renderer-facing data types.
 - The renderer imports `DemoUiScreen` because the demo currently owns overlay construction.
 
 Target direction:
 
-- rename renderer-facing UI geometry to generic `UiOverlayGeometry` / `UiDrawRange` names
+- keep renderer-facing UI geometry named generically
 - keep demo-specific screen construction in `source/demo/`
 - keep reusable widget and screen code in `source/vulkan/ui/`
 - remove stateless legacy HUD builder functions after the retained screen path fully replaces them
