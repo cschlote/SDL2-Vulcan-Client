@@ -71,7 +71,6 @@ struct UiOverlayGeometry
     UiWindowDrawRange[] windows;
 }
 
-
 private final class LayoutDemoProbeBox : UiWidget
 {
     private float[4] fillColor;
@@ -168,7 +167,7 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
 
 
 private enum float windowMargin = 18.0f;
-private enum float initWidth = 352.0f;
+private enum float initWidth = 160.0f;
 private enum float initHeight = 258.0f;
 private enum float helpWidth = 388.0f;
 private enum float helpHeight = 214.0f;
@@ -298,7 +297,7 @@ final class DemoUiScreen : UiScreen
         ensureWindowLayout();
     }
 
-    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts, bool debugWidgetBounds = false)
     {
         syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion);
 
@@ -314,6 +313,7 @@ final class DemoUiScreen : UiScreen
         context.originX = 0.0f;
         context.originY = 0.0f;
         context.depthBase = 0.10f;
+        context.debugWidgetBounds = debugWidgetBounds;
         foreach (index; 0 .. context.fonts.length)
             context.fonts[index] = index < liveFonts.length ? &liveFonts[index] : null;
         context.panels = &geometry.panels;
@@ -433,7 +433,7 @@ final class DemoUiScreen : UiScreen
         helpTitleLabel = new UiLabel("Keyboard and mouse controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
         helpIntroLabel = new UiLabel("Open windows: 0", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpLayoutLabel = new UiLabel("Arrow keys rotate, Shift accelerates, mouse drag rotates outside UI.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        helpCloseLabel = new UiLabel("F/T/W/H switch render modes, +/- changes the model, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpCloseLabel = new UiLabel("F/T/W/H switch render modes, D toggles UI bounds, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
 
         helpContent.add(helpTitleLabel);
         helpContent.add(helpIntroLabel);

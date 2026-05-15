@@ -52,6 +52,8 @@ struct UiRenderContext
     float originY;
     /** Base Z depth used to keep widget layers stable. */
     float depthBase;
+    /** Draws widget bounds as a debug overlay when enabled. */
+    bool debugWidgetBounds;
     /** Font atlases indexed by UiTextStyle. */
     const(FontAtlas)*[7] fonts;
     /** Destination vertex list for window and panel quads. */

@@ -48,6 +48,7 @@ The build runs the version helper and shader compiler before linking the executa
 - `T` selects lit and textured rendering.
 - `W` selects wireframe rendering.
 - `H` selects hidden-line rendering.
+- `D` toggles red UI widget bounds for layout debugging.
 - Arrow keys rotate the camera.
 - Hold `Shift` while rotating for faster camera movement.
 - Mouse drag outside UI windows rotates the scene.

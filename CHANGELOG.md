@@ -10,6 +10,7 @@
 - Rebuilt the demo settings window around generic controls with separate Apply and explicit Save actions.
 - Renamed the demo UI windows and actions around clearer app roles: demo control, status, controls/log, settings, and widget demo.
 - Fixed retained UI rendering after several windows by keeping overlay geometry in a stable depth range and disabling depth tests for the overlay pipeline.
+- Added a global `D` hotkey that overlays semi-transparent red bounds for every visible retained UI widget.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 

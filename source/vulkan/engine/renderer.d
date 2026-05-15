@@ -156,6 +156,7 @@ class VulkanRenderer
     private bool rotateRight;
     private bool rotateUp;
     private bool rotateDown;
+    private bool uiDebugMode;
     private float yawAngle = 0.22f;
     private float pitchAngle = 0.14f;
     private double fpsValue;
@@ -361,6 +362,8 @@ class VulkanRenderer
                     setRenderMode(RenderMode.wireframe);
                 else if (!event.key.repeat && event.key.scancode == SDL_Scancode.h)
                     setRenderMode(RenderMode.hiddenLine);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.d)
+                    toggleUiDebugMode();
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = true;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -1110,7 +1113,8 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             buildVersion,
-            fontAtlases[]);
+            fontAtlases[],
+            uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
@@ -1486,6 +1490,13 @@ class VulkanRenderer
         currentRenderModeName = renderModeLabel(mode);
         syncDemoSettings();
         updateWindowTitle();
+    }
+
+    /** Toggles the retained UI widget bounds debug overlay. */
+    private void toggleUiDebugMode()
+    {
+        uiDebugMode = !uiDebugMode;
+        logLine("UI debug bounds: ", uiDebugMode ? "on" : "off");
     }
 
     /** Opens the settings dialog with a fresh copy of the current live settings. */

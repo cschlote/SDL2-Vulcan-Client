@@ -12,6 +12,9 @@ module vulkan.ui.ui_widget;
 import vulkan.ui.ui_event : UiPointerEvent;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
+import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
+
+private immutable float[4] debugBoundsColor = [1.00f, 0.05f, 0.05f, 0.55f];
 
 /** Base class for all retained UI widgets. */
 abstract class UiWidget
@@ -132,6 +135,9 @@ abstract class UiWidget
             childContext.depthBase = localContext.depthBase - cast(float)(index + 1) * 0.001f;
             child.render(childContext);
         }
+
+        if (context.debugWidgetBounds && width > 0.0f && height > 0.0f)
+            appendSurfaceFrame(localContext, 0.0f, 0.0f, width, height, debugBoundsColor, debugBoundsColor, localContext.depthBase - 0.0005f, false, true);
     }
 
 protected:
