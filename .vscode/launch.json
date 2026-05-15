@@ -1,0 +1,23 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Start Programm",
+			"type": "lldb",
+			"request": "launch",
+			"program": "${workspaceFolder}/build/bin/sdl2-vulcan-client",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"terminal": "integrated"
+		},
+		{
+			"name": "Start Unittest Binary",
+			"type": "lldb",
+			"request": "launch",
+			"program": "${workspaceFolder}/build/bin/sdl2-vulcan-client-test-application",
+			"args": [],
+			"cwd": "${workspaceFolder}",
+			"terminal": "integrated"
+		}
+	]
+}
