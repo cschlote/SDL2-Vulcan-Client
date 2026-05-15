@@ -184,6 +184,7 @@ private enum float probeSpacing = 10.0f;
 private enum float probeMargin = 12.0f;
 private enum float windowContentPaddingX = 17.0f;
 private enum float windowContentPaddingY = 15.0f;
+private enum float overlayWindowDepth = 0.10f;
 
 private immutable float[4] initBodyColor = [0.10f, 0.12f, 0.16f, 0.96f];
 private immutable float[4] initHeaderColor = [0.14f, 0.16f, 0.20f, 0.98f];
@@ -319,7 +320,7 @@ final class DemoUiScreen : UiScreen
         foreach (index; 0 .. context.textLayers.length)
             context.textLayers[index] = &geometry.textLayers[index];
 
-        foreach (index, window; windowsInFrontToBack())
+        foreach (window; windowsInFrontToBack())
         {
             if (!window.visible)
                 continue;
@@ -329,7 +330,7 @@ final class DemoUiScreen : UiScreen
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
 
-            context.depthBase = 0.10f - cast(float)index * 0.02f;
+            context.depthBase = overlayWindowDepth;
             window.render(context);
 
             range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
