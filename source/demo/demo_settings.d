@@ -8,7 +8,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module demo_settings;
+module demo.demo_settings;
 
 import std.algorithm : canFind, splitter;
 import std.array : appender;

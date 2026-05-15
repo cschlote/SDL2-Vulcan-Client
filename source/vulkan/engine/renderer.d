@@ -24,7 +24,8 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
-import demo_settings : DemoSettings, saveDemoSettings;
+import demo.demo_settings : DemoSettings, saveDemoSettings;
+import demo.demo_ui : DemoUiScreen, HudWindowDrawRange;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.engine.device;
@@ -34,9 +35,7 @@ import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
-import vulkan.ui.ui_screen : UiScreen;
-import demo_ui : buildSettingsRect, hudBeginDrag, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect, HudWindowDrawRange;
-import window;
+import sdl2.window;
 
 private enum maxFramesInFlight = 2;
 
@@ -139,7 +138,7 @@ class VulkanRenderer
     private enum sample11FontPixelHeight = 11;
     private enum sample12FontPixelHeight = 12;
     private enum sampleMonoFontPixelHeight = 10;
-    private UiScreen uiScreen;
+    private DemoUiScreen uiScreen;
     private float cameraFieldOfViewY = 55.0f * PI / 180.0f;
     private enum minCameraFieldOfViewY = 28.0f * PI / 180.0f;
     private enum maxCameraFieldOfViewY = 85.0f * PI / 180.0f;
@@ -222,7 +221,7 @@ class VulkanRenderer
         this.buildVersion = buildVersion;
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
-        uiScreen = new UiScreen();
+        uiScreen = new DemoUiScreen();
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
