@@ -16,8 +16,17 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Use `immutable`, `const`, and `scope` when they clarify intent and improve correctness.
 - Apply `@safe`, `nothrow`, `pure`, and `@nogc` only when they are a natural fit for the code; do not force them if they make the code harder to read.
 - Use `unittest` blocks for behavior verification when adding or changing D modules.
+- When using Silly, name every `unittest` with a string UDA such as `@("descriptive test name")` so the runner can report and filter it cleanly.
 - Keep module dependencies minimal and prefer small helper functions over large monolithic functions.
 - Use DDoc tags for modules and other documentable language elements.
+- Only structure or class member variables may use an end-of-line DDoc comment when the description is short; use `/** ... */` before every structure, class, function, method, or longer member description.
+- For structs and classes, describe not only the shape but also the reason they exist and any important background or design context.
+- For every documented function, method, or helper, include a `Params:` section for arguments and a `Returns:` section for the result, even when the return value is `void`.
+- Document private types, methods, functions, and other meaningful helpers with DDoc.
+- Place a `unittest` directly after the function it tests when the target is a free function; for methods, place the `unittest` after the class definition so the object and its methods are tested together.
+- Use `logLine`, `logFLine`, `log`, or `logF` for user-visible state changes and important one-line progress updates that should always be visible.
+- Use `logLineVerbose`, `logFLineVerbose`, `logVerbose`, or `logFVerbose` for debugging detail, trace output, and extra diagnostics that should only appear when verbose logging is enabled.
+- Prefer concise log messages that describe what changed, which path was chosen, or which measurement was produced; keep verbose helpers for extra context rather than replacing normal status logging.
 
 ## Resource management
 
@@ -53,6 +62,9 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Merge feature branches with an explicit merge commit (`--no-ff`); do not fast-forward feature branch merges into long-lived branches.
 - For release commits, update `CHANGELOG.md`, generate the release timetag with `scripts/release_timetag.d`, and tag the commit with a leading `v`.
 - Do not commit generated build artifacts such as compiled helper binaries.
+- Before releasing or merging a feature branch, work through a checklist and confirm the change is ready for integration.
+- The checklist must include documentation and unit test completeness and consistency against the project rules, plus the relevant validation commands for the touched area.
+- Do not tag or merge until the checklist is satisfied and any gaps are either fixed or explicitly accepted.
 
 ## Patchstack and commits
 

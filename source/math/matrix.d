@@ -50,6 +50,7 @@ struct Mat4
     static Mat4 identity() pure nothrow @nogc @safe
     {
         Mat4 result;
+        result.m[] = 0;
         result.m[0] = 1;
         result.m[5] = 1;
         result.m[10] = 1;
@@ -202,7 +203,7 @@ Mat4 rotationZ(float radians)
  */
 Mat4 scale(Vec3 factors)
 {
-    Mat4 result;
+    auto result = Mat4.identity();
     result.m[0] = factors.x;
     result.m[5] = factors.y;
     result.m[10] = factors.z;

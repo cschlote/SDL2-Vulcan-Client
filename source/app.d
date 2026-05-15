@@ -21,6 +21,7 @@ import std.stdio : stderr;
 import std.string : fromStringz;
 
 import logging : logLine, logLineVerbose, setVerboseOutputs;
+import demo_settings : DemoSettings, loadDemoSettings, saveDemoSettings;
 import window;
 import vulkan.renderer : VulkanRenderer;
 import version_info : getGitDescribeVersion;
@@ -95,11 +96,15 @@ int runApplication(string[] args)
         logLine("Build version: ", buildVersion);
         logLineVerbose("SDL and Vulkan bindings loaded successfully.");
 
-        auto window = SdlWindow("SDL2 Vulkan Demo " ~ buildVersion, 1280, 720);
+        DemoSettings demoSettings = loadDemoSettings();
+        scope (exit)
+            saveDemoSettings(demoSettings);
+
+        auto window = SdlWindow("SDL2 Vulkan Demo " ~ buildVersion, demoSettings.display.windowWidth, demoSettings.display.windowHeight);
         scope (exit)
             window.destroy();
 
-        auto renderer = new VulkanRenderer(&window, buildVersion);
+        auto renderer = new VulkanRenderer(&window, buildVersion, &demoSettings);
         scope (exit)
             renderer.destroy();
 

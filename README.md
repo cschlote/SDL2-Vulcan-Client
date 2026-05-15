@@ -8,12 +8,14 @@ This repository is a compact Vulkan codebase in D that is meant to be read, exte
 - SDL owns the window, event loop, and Vulkan surface integration.
 - Vulkan owns rendering, presentation, and synchronization.
 - The shader path is explicit: GLSL in [shaders/](shaders), SPIR-V in `build/shaders/`.
-- The docs folder now holds the short Vulkan overview, shader notes, and DDox or ADRDox skeletons.
+- The docs folder now holds the short Vulkan overview, shader notes, and the rendering and UI architecture notes.
 
 ## What To Read First
 
 - [docs/vulkan-quickstart.md](docs/vulkan-quickstart.md) for the frame lifecycle and Vulkan object model.
 - [docs/shaders.md](docs/shaders.md) for the GLSL stage contract.
+- [docs/rendering-architecture.md](docs/rendering-architecture.md) for the layered frame composition.
+- [docs/ui-architecture.md](docs/ui-architecture.md) for the retained UI and window chrome model.
 - [docs/README.md](docs/README.md) for the documentation index.
 - [source/vulkan/renderer.d](source/vulkan/renderer.d) for the real frame orchestration and resource ownership.
 
@@ -50,7 +52,7 @@ The build runs the version helper and shader compiler before linking the executa
 
 - The overlay is rendered in native window pixels, not as a scaled texture, so it stays crisp.
 - The frame lifecycle is intentionally explicit so that the same swapchain and per-frame resource structure can support a custom overlay or another retained UI layer.
-- If you need deeper source documentation, start with the DDox skeleton in [docs/templates/ddox.md](docs/templates/ddox.md) and the ADRDox skeleton in [docs/templates/adrdox.md](docs/templates/adrdox.md).
+- If you need deeper source documentation, start with [docs/rendering-architecture.md](docs/rendering-architecture.md), [docs/ui-architecture.md](docs/ui-architecture.md), and the module-level DDoc comments in [source/vulkan/ui/](source/vulkan/ui) and [source/vulkan/renderer.d](source/vulkan/renderer.d).
 
 ## Release and Versioning
 

@@ -74,7 +74,7 @@ abstract class UiWidget
         auto childContext = localContext.offset(childOffsetX, childOffsetY);
         foreach (index, child; children)
         {
-            childContext.depthBase = localContext.depthBase - cast(float)index * 0.001f;
+            childContext.depthBase = localContext.depthBase - cast(float)(index + 1) * 0.001f;
             child.render(childContext);
         }
     }

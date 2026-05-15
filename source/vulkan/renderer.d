@@ -15,7 +15,7 @@
  */
 module vulkan.renderer;
 
-import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
+import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
@@ -24,10 +24,11 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
+import demo_settings : DemoSettings, saveDemoSettings;
 import logging : logLine, logLineVerbose;
-import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath;
+import vulkan.font.font_legacy : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
+import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
 import window;
 import vulkan.device;
@@ -89,6 +90,10 @@ class VulkanRenderer
 {
     private SdlWindow* window;
     private string baseTitle;
+    private string buildVersion;
+    private string platformName;
+    private DemoSettings* demoSettings;
+    private DemoSettings settingsDraft;
     private VulkanInstance instance;
     private VkSurfaceKHR surface = VK_NULL_HANDLE;
     private VulkanDevice device;
@@ -120,18 +125,23 @@ class VulkanRenderer
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
     private TextureResource sceneTexture;
-    private FontAtlas[3] fontAtlases;
-    private TextureResource[3] fontTextures;
+    private FontAtlas[7] fontAtlases;
+    private TextureResource[7] fontTextures;
     private OverlayLayerResources overlayPanels;
-    private OverlayLayerResources[3] overlayFonts;
+    private OverlayLayerResources[7] overlayFonts;
     private HudWindowDrawRange[] hudWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
-    private enum smallFontPixelHeight = 12;
-    private enum mediumFontPixelHeight = 18;
-    private enum largeFontPixelHeight = 24;
+    private enum sample7FontPixelHeight = 7;
+    private enum sample8FontPixelHeight = 8;
+    private enum sample9FontPixelHeight = 9;
+    private enum sample10FontPixelHeight = 10;
+    private enum sample11FontPixelHeight = 11;
+    private enum sample12FontPixelHeight = 12;
+    private enum sampleMonoFontPixelHeight = 10;
     private HudLayoutState hudLayoutState;
     private bool sceneMouseDragging;
+    private bool settingsCommitRequested;
     private float cameraFieldOfViewY = 55.0f * PI / 180.0f;
     private enum minCameraFieldOfViewY = 28.0f * PI / 180.0f;
     private enum maxCameraFieldOfViewY = 85.0f * PI / 180.0f;
@@ -208,9 +218,13 @@ class VulkanRenderer
      *   window = SDL window used for surface creation and size queries.
      *   buildVersion = Git describe string used in the window title.
      */
-    this(SdlWindow* window, string buildVersion)
+    this(SdlWindow* window, string buildVersion, DemoSettings* demoSettings = null)
     {
         this.window = window;
+        this.buildVersion = buildVersion;
+        this.platformName = fromStringz(SDL_GetPlatform()).idup;
+        this.demoSettings = demoSettings;
+        settingsDraft = demoSettings !is null ? *demoSettings : DemoSettings.init;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -232,9 +246,11 @@ class VulkanRenderer
         pipeline = PipelineResources(device.handle, swapchain.extent, swapchain.imageFormat, device.depthFormat, vertexShaderPath, fragmentShaderPath);
 
         shapeMeshes = buildPlatonicSolids();
-        currentShapeIndex = 3;
+        currentShapeIndex = findStartingShapeIndex();
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        if (demoSettings !is null)
+            setRenderMode(renderModeFromSetting(settingsDraft.gameplay.startupRenderMode, currentRenderMode));
         foreach (mesh; shapeMeshes)
         {
             if (mesh.vertices.length > maxShapeVertexCount)
@@ -266,6 +282,8 @@ class VulkanRenderer
     {
         if (device.handle != VK_NULL_HANDLE)
             vkDeviceWaitIdle(device.handle);
+
+        syncDemoSettings();
 
         destroySyncObjects();
         destroyDescriptors();
@@ -383,6 +401,9 @@ class VulkanRenderer
     /** Adjusts the camera opening angle when the wheel is used outside the HUD. */
     private bool handleMouseWheel(ref SDL_Event event)
     {
+        if (hudLayoutState.settingsVisible)
+            return false;
+
         const layout = buildHudLayout(
             cast(float)swapchain.extent.width,
             cast(float)swapchain.extent.height,
@@ -392,6 +413,7 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             hudLayoutState,
+            fontAtlases[],
             fontAtlases[0],
             fontAtlases[1],
             fontAtlases[2]);
@@ -400,8 +422,8 @@ class VulkanRenderer
         const mouseY = event.wheel.mouseY;
         if (hudPointInRect(layout.status, mouseX, mouseY)
             || hudPointInRect(layout.modes, mouseX, mouseY)
-            || hudPointInRect(layout.sample, mouseX, mouseY)
-            || hudPointInRect(layout.input, mouseX, mouseY)
+            || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
+            || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
             || hudPointInRect(layout.center, mouseX, mouseY))
         {
             return false;
@@ -665,10 +687,15 @@ class VulkanRenderer
     /// Creates the font atlases and Vulkan textures used by the overlay text layers.
     private void createFontResources()
     {
-        const fontPath = selectDefaultFontPath();
-        fontAtlases[0] = buildFontAtlas(fontPath, smallFontPixelHeight);
-        fontAtlases[1] = buildFontAtlas(fontPath, mediumFontPixelHeight);
-        fontAtlases[2] = buildFontAtlas(fontPath, largeFontPixelHeight);
+        const sansFontPath = selectDefaultFontPath();
+        const monospaceFontPath = selectDefaultMonospaceFontPath();
+        fontAtlases[0] = buildFontAtlas(sansFontPath, sample7FontPixelHeight);
+        fontAtlases[1] = buildFontAtlas(sansFontPath, sample8FontPixelHeight);
+        fontAtlases[2] = buildFontAtlas(sansFontPath, sample9FontPixelHeight);
+        fontAtlases[3] = buildFontAtlas(sansFontPath, sample10FontPixelHeight);
+        fontAtlases[4] = buildFontAtlas(sansFontPath, sample11FontPixelHeight);
+        fontAtlases[5] = buildFontAtlas(sansFontPath, sample12FontPixelHeight);
+        fontAtlases[6] = buildFontAtlas(monospaceFontPath, sampleMonoFontPixelHeight);
 
         foreach (index, atlas; fontAtlases)
             createTextureResource(fontTextures[index], atlas.pixels, atlas.width, atlas.height);
@@ -735,9 +762,8 @@ class VulkanRenderer
 
         createDescriptorSetsForScene();
         createDescriptorSetsForLayer(overlayPanels, sceneTexture);
-        createDescriptorSetsForLayer(overlayFonts[0], fontTextures[0]);
-        createDescriptorSetsForLayer(overlayFonts[1], fontTextures[1]);
-        createDescriptorSetsForLayer(overlayFonts[2], fontTextures[2]);
+        foreach (layerIndex; 0 .. fontTextures.length)
+            createDescriptorSetsForLayer(overlayFonts[layerIndex], fontTextures[layerIndex]);
     }
 
     /** Allocates the descriptor sets for the 3D scene pass. */
@@ -1106,29 +1132,37 @@ class VulkanRenderer
             pitchAngle,
             currentShapeName,
             currentRenderModeName,
+            buildVersion,
             hudLayoutState,
+            settingsDraft,
+            platformName,
+            VK_API_VERSION,
+            { setRenderMode(RenderMode.flatColor); },
+            { setRenderMode(RenderMode.litTextured); },
+            { setRenderMode(RenderMode.wireframe); },
+            { setRenderMode(RenderMode.hiddenLine); },
+            { advanceShape(-1); },
+            { advanceShape(1); },
+            &toggleSettingsDialog,
+            &applySettingsDialog,
+            fontAtlases[] ,
             fontAtlases[0],
             fontAtlases[1],
             fontAtlases[2]);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "HUD overlay panel vertex limit exceeded.");
-        enforce(overlayVertices.smallText.length <= maxOverlayVertices, "HUD overlay small-text vertex limit exceeded.");
-        enforce(overlayVertices.mediumText.length <= maxOverlayVertices, "HUD overlay medium-text vertex limit exceeded.");
-        enforce(overlayVertices.largeText.length <= maxOverlayVertices, "HUD overlay large-text vertex limit exceeded.");
+        foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
+            enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "HUD overlay text-layer vertex limit exceeded.");
 
         hudWindowRanges = overlayVertices.windows;
 
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
-
-        overlayFonts[0].vertexCounts[frameIndex] = cast(uint)overlayVertices.smallText.length;
-        memcpy(overlayFonts[0].vertexBuffers[frameIndex].mapped, overlayVertices.smallText.ptr, Vertex.sizeof * overlayVertices.smallText.length);
-
-        overlayFonts[1].vertexCounts[frameIndex] = cast(uint)overlayVertices.mediumText.length;
-        memcpy(overlayFonts[1].vertexBuffers[frameIndex].mapped, overlayVertices.mediumText.ptr, Vertex.sizeof * overlayVertices.mediumText.length);
-
-        overlayFonts[2].vertexCounts[frameIndex] = cast(uint)overlayVertices.largeText.length;
-        memcpy(overlayFonts[2].vertexBuffers[frameIndex].mapped, overlayVertices.largeText.ptr, Vertex.sizeof * overlayVertices.largeText.length);
+        foreach (layerIndex; 0 .. overlayFonts.length)
+        {
+            overlayFonts[layerIndex].vertexCounts[frameIndex] = cast(uint)overlayVertices.textLayers[layerIndex].length;
+            memcpy(overlayFonts[layerIndex].vertexBuffers[frameIndex].mapped, overlayVertices.textLayers[layerIndex].ptr, Vertex.sizeof * overlayVertices.textLayers[layerIndex].length);
+        }
     }
 
     /// Records the render pass commands for the current frame.
@@ -1145,7 +1179,8 @@ class VulkanRenderer
                     currentShapeName,
                     currentRenderModeName,
                     hudLayoutState,
-                    fontAtlases[0],
+                    fontAtlases[],
+                    fontAtlases[1],
                     fontAtlases[1],
                     fontAtlases[2]);
             }
@@ -1165,6 +1200,7 @@ class VulkanRenderer
                     currentShapeName,
                     currentRenderModeName,
                     hudLayoutState,
+                    fontAtlases[],
                     fontAtlases[0],
                     fontAtlases[1],
                     fontAtlases[2]);
@@ -1177,19 +1213,33 @@ class VulkanRenderer
                     layout.modes,
                     mouseX,
                     mouseY,
-                    fontAtlases[0],
+                    fontAtlases[1],
                     { setRenderMode(RenderMode.flatColor); },
                     { setRenderMode(RenderMode.litTextured); },
                     { setRenderMode(RenderMode.wireframe); },
-                    { setRenderMode(RenderMode.hiddenLine); }))
+                    { setRenderMode(RenderMode.hiddenLine); },
+                    { advanceShape(-1); },
+                    { advanceShape(1); },
+                    &toggleSettingsDialog,
+                    () { hudLayoutState.statusVisible = !hudLayoutState.statusVisible; },
+                    () { hudLayoutState.sampleVisible = !hudLayoutState.sampleVisible; },
+                    () { hudLayoutState.inputVisible = !hudLayoutState.inputVisible; },
+                    () { hudLayoutState.centerVisible = !hudLayoutState.centerVisible; }))
                 {
                     logLineVerbose("Mode button handled the press.");
                     return false;
                 }
 
-                if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, buildVersion, platformName, VK_API_VERSION, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
                 {
                     logLineVerbose("Status window handled the press.");
+                    sceneMouseDragging = false;
+                    return false;
+                }
+
+                if (hudLayoutState.settingsVisible && hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]))
+                {
+                    logLineVerbose("Settings window handled the press.");
                     sceneMouseDragging = false;
                     return false;
                 }
@@ -1202,9 +1252,10 @@ class VulkanRenderer
                 }
 
                 const hitHud = hudPointInRect(layout.modes, mouseX, mouseY)
-                    || hudPointInRect(layout.sample, mouseX, mouseY)
-                    || hudPointInRect(layout.input, mouseX, mouseY)
+                    || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
+                    || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
                     || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
+                    || (hudLayoutState.settingsVisible && hudPointInRect(buildSettingsRect(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, fontAtlases[1]), mouseX, mouseY))
                     || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
 
                 if (hudLayoutState.centerVisible && hudPointInHeader(layout.center, mouseX, mouseY))
@@ -1234,6 +1285,7 @@ class VulkanRenderer
                     currentShapeName,
                     currentRenderModeName,
                     hudLayoutState,
+                    fontAtlases[],
                     fontAtlases[0],
                     fontAtlases[1],
                     fontAtlases[2]);
@@ -1243,6 +1295,9 @@ class VulkanRenderer
                     logLineVerbose("Mouse up routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
                     hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
                 }
+
+                if (hudLayoutState.settingsVisible)
+                    hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]);
 
                 if (hudLayoutState.middleDragging)
                     hudEndDrag(hudLayoutState);
@@ -1267,6 +1322,7 @@ class VulkanRenderer
                         currentShapeName,
                         currentRenderModeName,
                         hudLayoutState,
+                        fontAtlases[],
                         fontAtlases[0],
                         fontAtlases[1],
                         fontAtlases[2]);
@@ -1275,6 +1331,26 @@ class VulkanRenderer
                     hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.motion.x, cast(float)event.motion.y, UiPointerEventKind.move, 0, fontAtlases[0], fontAtlases[1]);
                     return false;
                 }
+
+                if (hudLayoutState.settingsVisible && hudLayoutState.settingsDragging)
+                {
+                    hudDispatchSettingsWindowPointer(
+                        cast(float)swapchain.extent.width,
+                        cast(float)swapchain.extent.height,
+                        hudLayoutState,
+                        settingsDraft,
+                        cast(float)event.motion.x,
+                        cast(float)event.motion.y,
+                        UiPointerEventKind.move,
+                        0,
+                        &applySettingsDialog,
+                        fontAtlases[0],
+                        fontAtlases[1]);
+                    return false;
+                }
+
+                if (hudLayoutState.settingsVisible)
+                    return false;
 
                 if (sceneMouseDragging)
                 {
@@ -1360,28 +1436,16 @@ class VulkanRenderer
                 vkCmdDraw(commandBuffer, windowRange.panelsCount, 1, windowRange.panelsStart, 0);
             }
 
-            if (windowRange.smallTextCount > 0)
+            foreach (layerIndex; 0 .. overlayFonts.length)
             {
-                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[0].descriptorSets[currentFrame], 0, null);
-                VkBuffer[1] textVertexBuffers = [overlayFonts[0].vertexBuffers[currentFrame].buffer];
-                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
-                vkCmdDraw(commandBuffer, windowRange.smallTextCount, 1, windowRange.smallTextStart, 0);
-            }
+                const textCount = windowRange.textCounts[layerIndex];
+                if (textCount == 0)
+                    continue;
 
-            if (windowRange.mediumTextCount > 0)
-            {
-                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[1].descriptorSets[currentFrame], 0, null);
-                VkBuffer[1] textVertexBuffers = [overlayFonts[1].vertexBuffers[currentFrame].buffer];
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[layerIndex].descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] textVertexBuffers = [overlayFonts[layerIndex].vertexBuffers[currentFrame].buffer];
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
-                vkCmdDraw(commandBuffer, windowRange.mediumTextCount, 1, windowRange.mediumTextStart, 0);
-            }
-
-            if (windowRange.largeTextCount > 0)
-            {
-                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayFonts[2].descriptorSets[currentFrame], 0, null);
-                VkBuffer[1] textVertexBuffers = [overlayFonts[2].vertexBuffers[currentFrame].buffer];
-                vkCmdBindVertexBuffers(commandBuffer, 0, 1, textVertexBuffers.ptr, offsets.ptr);
-                vkCmdDraw(commandBuffer, windowRange.largeTextCount, 1, windowRange.largeTextStart, 0);
+                vkCmdDraw(commandBuffer, textCount, 1, windowRange.textStarts[layerIndex], 0);
             }
         }
 
@@ -1551,6 +1615,7 @@ class VulkanRenderer
 
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
+        syncDemoSettings();
         updateWindowTitle();
     }
 
@@ -1564,7 +1629,93 @@ class VulkanRenderer
     {
         currentRenderMode = mode;
         currentRenderModeName = renderModeLabel(mode);
+        syncDemoSettings();
         updateWindowTitle();
+    }
+
+    /** Opens the settings dialog with a fresh copy of the current live settings. */
+    private void openSettingsDialog()
+    {
+        if (demoSettings !is null)
+            settingsDraft = *demoSettings;
+
+        hudLayoutState.settingsVisible = true;
+    }
+
+    /** Toggles the settings dialog and refreshes the draft when opening. */
+    private void toggleSettingsDialog()
+    {
+        if (hudLayoutState.settingsVisible)
+        {
+            hudLayoutState.settingsVisible = false;
+            return;
+        }
+
+        openSettingsDialog();
+    }
+
+    /** Applies the settings draft to the live bundle and writes it to disk. */
+    private void applySettingsDialog()
+    {
+        if (demoSettings is null)
+            return;
+
+        *demoSettings = settingsDraft;
+        saveDemoSettings(*demoSettings);
+    }
+
+    /** Resolves the configured startup shape name to a mesh index. */
+    private size_t findStartingShapeIndex() const
+    {
+        if (demoSettings is null)
+            return 3;
+
+        foreach (index, mesh; shapeMeshes)
+        {
+            if (mesh.name == demoSettings.gameplay.startupShape)
+                return index;
+        }
+
+        return 3;
+    }
+
+    /** Converts the stored startup render mode setting to the internal enum. */
+    private static RenderMode renderModeFromSetting(string value, RenderMode fallback)
+    {
+        if (value == "flatColor")
+            return RenderMode.flatColor;
+        if (value == "litTextured")
+            return RenderMode.litTextured;
+        if (value == "wireframe")
+            return RenderMode.wireframe;
+        if (value == "hiddenLine")
+            return RenderMode.hiddenLine;
+
+        return fallback;
+    }
+
+    /** Stores the current runtime UI state back into the demo settings bundle. */
+    private void syncDemoSettings()
+    {
+        if (demoSettings is null)
+            return;
+
+        demoSettings.display.windowWidth = swapchain.extent.width;
+        demoSettings.display.windowHeight = swapchain.extent.height;
+        demoSettings.gameplay.startupShape = currentShapeName;
+        demoSettings.gameplay.startupRenderMode = renderModeSettingName(currentRenderMode);
+    }
+
+    /** Returns the stable config key for a render mode. */
+    private static string renderModeSettingName(RenderMode mode)
+    {
+        final switch (mode)
+        {
+            case RenderMode.flatColor: return "flatColor";
+            case RenderMode.litTextured: return "litTextured";
+            case RenderMode.wireframe: return "wireframe";
+            case RenderMode.hiddenLine: return "hiddenLine";
+        }
     }
 
     /** Returns the human-readable label for a render mode.

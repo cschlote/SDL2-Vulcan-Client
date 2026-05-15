@@ -11,7 +11,7 @@ module vulkan.ui.ui_widget_helpers;
 
 import std.math : isInfinity, isNaN;
 
-import vulkan.font : appendText;
+import vulkan.font.font_legacy : appendText;
 import vulkan.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 
@@ -91,12 +91,7 @@ void appendTextLine(ref UiRenderContext context, UiTextStyle style, string text,
 /** Returns the active vertex buffer for the requested text style. */
 Vertex[]* textVerticesFor(ref UiRenderContext context, UiTextStyle style)
 {
-    final switch (style)
-    {
-        case UiTextStyle.small: return context.smallText;
-        case UiTextStyle.medium: return context.mediumText;
-        case UiTextStyle.large: return context.largeText;
-    }
+    return context.textVerticesFor(style);
 }
 
 /** Appends a colored quad to the panel vertex buffer in normalized device space. */
