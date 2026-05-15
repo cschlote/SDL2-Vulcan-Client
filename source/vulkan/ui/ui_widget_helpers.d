@@ -11,7 +11,7 @@ module vulkan.ui.ui_widget_helpers;
 
 import std.math : isInfinity, isNaN;
 
-import vulkan.font : appendText;
+import vulkan.font.font_legacy : appendText;
 import vulkan.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 

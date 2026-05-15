@@ -8,7 +8,7 @@
  */
 module vulkan.ui.ui_label;
 
-import vulkan.font : appendText;
+import vulkan.font.font_legacy : appendText;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendTextLine;

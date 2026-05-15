@@ -26,7 +26,7 @@ import std.string : fromStringz;
 
 import demo_settings : DemoSettings, saveDemoSettings;
 import logging : logLine, logLineVerbose;
-import vulkan.font : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
+import vulkan.font.font_legacy : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
 import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
@@ -132,12 +132,12 @@ class VulkanRenderer
     private HudWindowDrawRange[] hudWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
-    private enum smallFontPixelHeight = 8;
-    private enum mediumFontPixelHeight = 10;
-    private enum largeFontPixelHeight = 12;
     private enum sample7FontPixelHeight = 7;
+    private enum sample8FontPixelHeight = 8;
     private enum sample9FontPixelHeight = 9;
+    private enum sample10FontPixelHeight = 10;
     private enum sample11FontPixelHeight = 11;
+    private enum sample12FontPixelHeight = 12;
     private enum sampleMonoFontPixelHeight = 10;
     private HudLayoutState hudLayoutState;
     private bool sceneMouseDragging;
@@ -689,12 +689,12 @@ class VulkanRenderer
     {
         const sansFontPath = selectDefaultFontPath();
         const monospaceFontPath = selectDefaultMonospaceFontPath();
-        fontAtlases[0] = buildFontAtlas(sansFontPath, smallFontPixelHeight);
-        fontAtlases[1] = buildFontAtlas(sansFontPath, mediumFontPixelHeight);
-        fontAtlases[2] = buildFontAtlas(sansFontPath, largeFontPixelHeight);
-        fontAtlases[3] = buildFontAtlas(sansFontPath, sample7FontPixelHeight);
-        fontAtlases[4] = buildFontAtlas(sansFontPath, sample9FontPixelHeight);
-        fontAtlases[5] = buildFontAtlas(sansFontPath, sample11FontPixelHeight);
+        fontAtlases[0] = buildFontAtlas(sansFontPath, sample7FontPixelHeight);
+        fontAtlases[1] = buildFontAtlas(sansFontPath, sample8FontPixelHeight);
+        fontAtlases[2] = buildFontAtlas(sansFontPath, sample9FontPixelHeight);
+        fontAtlases[3] = buildFontAtlas(sansFontPath, sample10FontPixelHeight);
+        fontAtlases[4] = buildFontAtlas(sansFontPath, sample11FontPixelHeight);
+        fontAtlases[5] = buildFontAtlas(sansFontPath, sample12FontPixelHeight);
         fontAtlases[6] = buildFontAtlas(monospaceFontPath, sampleMonoFontPixelHeight);
 
         foreach (index, atlas; fontAtlases)
@@ -1143,7 +1143,7 @@ class VulkanRenderer
             { setRenderMode(RenderMode.hiddenLine); },
             { advanceShape(-1); },
             { advanceShape(1); },
-            &openSettingsDialog,
+            &toggleSettingsDialog,
             &applySettingsDialog,
             fontAtlases[] ,
             fontAtlases[0],
@@ -1180,7 +1180,7 @@ class VulkanRenderer
                     currentRenderModeName,
                     hudLayoutState,
                     fontAtlases[],
-                    fontAtlases[0],
+                    fontAtlases[1],
                     fontAtlases[1],
                     fontAtlases[2]);
             }
@@ -1213,14 +1213,14 @@ class VulkanRenderer
                     layout.modes,
                     mouseX,
                     mouseY,
-                    fontAtlases[0],
+                    fontAtlases[1],
                     { setRenderMode(RenderMode.flatColor); },
                     { setRenderMode(RenderMode.litTextured); },
                     { setRenderMode(RenderMode.wireframe); },
                     { setRenderMode(RenderMode.hiddenLine); },
                     { advanceShape(-1); },
                     { advanceShape(1); },
-                    &openSettingsDialog,
+                    &toggleSettingsDialog,
                     () { hudLayoutState.statusVisible = !hudLayoutState.statusVisible; },
                     () { hudLayoutState.sampleVisible = !hudLayoutState.sampleVisible; },
                     () { hudLayoutState.inputVisible = !hudLayoutState.inputVisible; },
@@ -1255,7 +1255,7 @@ class VulkanRenderer
                     || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
                     || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
                     || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
-                    || (hudLayoutState.settingsVisible && hudPointInRect(buildSettingsRect(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState), mouseX, mouseY))
+                    || (hudLayoutState.settingsVisible && hudPointInRect(buildSettingsRect(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, fontAtlases[1]), mouseX, mouseY))
                     || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
 
                 if (hudLayoutState.centerVisible && hudPointInHeader(layout.center, mouseX, mouseY))
@@ -1640,6 +1640,18 @@ class VulkanRenderer
             settingsDraft = *demoSettings;
 
         hudLayoutState.settingsVisible = true;
+    }
+
+    /** Toggles the settings dialog and refreshes the draft when opening. */
+    private void toggleSettingsDialog()
+    {
+        if (hudLayoutState.settingsVisible)
+        {
+            hudLayoutState.settingsVisible = false;
+            return;
+        }
+
+        openSettingsDialog();
     }
 
     /** Applies the settings draft to the live bundle and writes it to disk. */

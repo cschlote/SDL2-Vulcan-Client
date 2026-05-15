@@ -8,8 +8,10 @@
 	"sourcePaths": [
 		"source"
 	],
+	"mainSourceFile": "source/main.d",
 	"description": "Minimal SDL and Vulkan 3D demo in D",
 	"dependencies": {
+		"silly": "~>1.2.0-dev.2",
 		"bindbc-freetype": "~>1.3.3",
 		"bindbc-vulkan": "~>0.0.1",
 		"va_toolbox": "~>0.4.0",

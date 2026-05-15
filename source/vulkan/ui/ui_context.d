@@ -9,26 +9,30 @@
  */
 module vulkan.ui.ui_context;
 
-import vulkan.font : FontAtlas;
+import vulkan.font.font_legacy : FontAtlas;
 import vulkan.pipeline : Vertex;
 
 /** Selects the font size used by a widget. */
 enum UiTextStyle
 {
-    /** Small body text. */
-    small,
-    /** Medium labels and titles. */
-    medium,
-    /** Large comparison text. */
-    large,
     /** 7 px sample text. */
     sample7,
+    /** Small body text. */
+    sample8,
     /** 9 px sample text. */
     sample9,
+    /** Medium labels and titles. */
+    sample10,
     /** 11 px sample text. */
     sample11,
+    /** Large comparison text. */
+    sample12,
     /** 8 px monospace sample text. */
     sampleMono,
+
+    small = sample9, // alias for legacy style name
+    medium = sample10, // alias for legacy style name
+    large = sample12 // alias for legacy style name
 }
 
 /** Collects the geometry targets and font atlases for a UI frame.

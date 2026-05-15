@@ -33,7 +33,7 @@ final class UiButton : UiWidget
      * box, where the default body-text padding would sit too far inside the
      * small frame.
      */
-    this(string caption, float x, float y, float width, float height, float[4] bodyColor, float[4] borderColor, float[4] textColor, UiTextStyle style = UiTextStyle.small, float textOffsetX = 10.0f, float textOffsetY = 5.0f)
+    this(string caption, float x, float y, float width, float height, float[4] bodyColor, float[4] borderColor, float[4] textColor, UiTextStyle style = UiTextStyle.medium, float textOffsetX = 10.0f, float textOffsetY = 5.0f)
     {
         super(x, y, width, height);
         this.caption = caption;

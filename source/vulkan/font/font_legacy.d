@@ -16,13 +16,14 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.font;
+module vulkan.font.font_legacy;
+import std.format;
 
 import bindbc.freetype;
 import std.algorithm : max;
 import std.exception : enforce;
 import std.file : exists;
-import std.math : ceil, isInfinity, isNaN, sqrt;
+import std.math : abs, ceil, isInfinity, isNaN, sqrt;
 import std.process : environment;
 import std.string : indexOf, toStringz;
 
@@ -75,7 +76,9 @@ struct FontAtlas
     /** Baseline-to-baseline distance in pixels. */
     float lineHeight;
     /** Rasterized glyph metrics and texture coordinates. */
-    FontGlyph[char] glyphs;
+    FontGlyph[dchar] glyphs;
+    /** Optional kerning adjustments indexed by left and right code point. */
+    float[dchar][dchar] kerning;
     /** RGBA atlas pixels in row-major order. */
     ubyte[] pixels;
 }
@@ -181,7 +184,7 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
     if (indexOf(uniqueGlyphSet, '?') < 0)
         uniqueGlyphSet ~= "?";
     if (indexOf(uniqueGlyphSet, ' ') < 0)
-        uniqueGlyphSet = " " ~ uniqueGlyphSet;
+        uniqueGlyphSet = ' ' ~ uniqueGlyphSet;
 
     uint maxGlyphWidth = 1;
     uint maxGlyphHeight = 1;
@@ -242,7 +245,161 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
         atlas.glyphs[ch] = glyph;
     }
 
+    foreach (leftChar; uniqueGlyphSet)
+    {
+        const leftGlyphIndex = FT_Get_Char_Index(face, leftChar);
+        foreach (rightChar; uniqueGlyphSet)
+        {
+            const rightGlyphIndex = FT_Get_Char_Index(face, rightChar);
+
+            FT_Vector kerningVector;
+            if (FT_Get_Kerning(face, leftGlyphIndex, rightGlyphIndex, 0, &kerningVector) == 0)
+            {
+                const kerningPixels = cast(float)kerningVector.x / 64.0f;
+                if (kerningPixels != 0.0f)
+                    atlas.kerning[leftChar][rightChar] = kerningPixels;
+            }
+        }
+    }
+
     return atlas;
+}
+
+/** Collects a Unicode code-point set from a corpus of strings.
+ *
+ * The helper preserves first-seen order, which makes it suitable as input for
+ * atlas generation when translation files are scanned into a glyph table.
+ * A space and the fallback glyph are appended if they were not already seen.
+ *
+ * Params:
+ *   texts = Source strings, usually gathered from translations or UI copy.
+ *
+ * Returns:
+ *   A UTF-8 string containing each unique code point once.
+ */
+string collectGlyphSet(const(string)[] texts)
+{
+    bool[dchar] seen;
+    string glyphSet;
+
+    foreach (text; texts)
+    {
+        foreach (ch; text)
+        {
+            if (ch == '\n' || ch == '\r' || ch in seen)
+                continue;
+
+            seen[ch] = true;
+            glyphSet ~= ch;
+        }
+    }
+
+    if (' ' !in seen)
+        glyphSet ~= ' ';
+    if ('?' !in seen)
+        glyphSet ~= '?';
+
+    return glyphSet;
+}
+
+/** Measures the rendered width of the supplied text using atlas glyph metrics. */
+float measureTextWidth(ref const(FontAtlas) atlas, string text)
+{
+    float widestWidth = 0.0f;
+    float cursorX = 0.0f;
+    float lineLeft = 0.0f;
+    float lineRight = 0.0f;
+    bool lineHasGlyph = false;
+    dchar previousChar = '\0';
+
+    void commitLine()
+    {
+        const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
+        const renderedRight = lineRight > cursorX ? lineRight : cursorX;
+        const lineWidth = renderedRight - renderedLeft;
+        widestWidth = lineWidth > widestWidth ? lineWidth : widestWidth;
+
+        cursorX = 0.0f;
+        lineLeft = 0.0f;
+        lineRight = 0.0f;
+        lineHasGlyph = false;
+        previousChar = '\0';
+    }
+
+    foreach (ch; text)
+    {
+        if (ch == '\n')
+        {
+            commitLine();
+            continue;
+        }
+
+        if (previousChar != '\0')
+        {
+            const leftKerningPtr = previousChar in atlas.kerning;
+            if (leftKerningPtr !is null)
+            {
+                const kerningPtr = ch in *leftKerningPtr;
+                if (kerningPtr !is null)
+                    cursorX += *kerningPtr;
+            }
+        }
+
+        const glyphPtr = ch in atlas.glyphs;
+        if (glyphPtr !is null)
+        {
+            const glyph = *glyphPtr;
+            const advance = glyph.advance > 0.0f ? glyph.advance : atlas.pixelHeight * 0.6f;
+            const left = cursorX + glyph.bearingX;
+            const right = left + glyph.width;
+
+            if (!lineHasGlyph)
+            {
+                lineLeft = left;
+                lineRight = right;
+                lineHasGlyph = true;
+            }
+            else
+            {
+                lineLeft = lineLeft < left ? lineLeft : left;
+                lineRight = lineRight > right ? lineRight : right;
+            }
+
+            cursorX += advance;
+        }
+        else if (auto fallbackPtr = '?' in atlas.glyphs)
+        {
+            const glyph = *fallbackPtr;
+            const advance = glyph.advance > 0.0f ? glyph.advance : atlas.pixelHeight * 0.6f;
+            const left = cursorX + glyph.bearingX;
+            const right = left + glyph.width;
+
+            if (!lineHasGlyph)
+            {
+                lineLeft = left;
+                lineRight = right;
+                lineHasGlyph = true;
+            }
+            else
+            {
+                lineLeft = lineLeft < left ? lineLeft : left;
+                lineRight = lineRight > right ? lineRight : right;
+            }
+
+            cursorX += advance;
+        }
+        else
+        {
+            cursorX += atlas.pixelHeight * 0.6f;
+        }
+
+        previousChar = ch;
+    }
+
+    const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
+    const renderedRight = lineRight > cursorX ? lineRight : cursorX;
+    const lineWidth = renderedRight - renderedLeft;
+    return lineWidth > widestWidth ? lineWidth : widestWidth;
 }
 
 /** Appends text quads using the texture coordinates stored in a font atlas.
@@ -266,6 +423,7 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     float cursorX = x;
     float cursorY = y;
     const baselineOffset = atlas.ascent;
+    dchar previousChar = '\0';
 
     foreach (ch; text)
     {
@@ -273,7 +431,19 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
         {
             cursorX = x;
             cursorY += atlas.lineHeight;
+            previousChar = '\0';
             continue;
+        }
+
+        if (previousChar != '\0')
+        {
+            const leftKerningPtr = previousChar in atlas.kerning;
+            if (leftKerningPtr !is null)
+            {
+                const kerningPtr = ch in *leftKerningPtr;
+                if (kerningPtr !is null)
+                    cursorX += *kerningPtr;
+            }
         }
 
         auto glyphPtr = ch in atlas.glyphs;
@@ -289,7 +459,60 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
         }
 
         cursorX += glyph.advance;
+        previousChar = ch;
     }
+}
+
+/** Describes the pixel-space bounds of rendered text geometry. */
+private struct RenderBounds
+{
+    float width;
+    float height;
+}
+
+/** Measures the pixel-space bounds of vertices emitted by appendText(). */
+private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float extentWidth, float extentHeight)
+{
+    RenderBounds bounds;
+
+    if (vertices.length == 0)
+        return bounds;
+
+    float left = 0.0f;
+    float right = 0.0f;
+    float top = 0.0f;
+    float bottom = 0.0f;
+    bool first = true;
+
+    foreach (vertex; vertices)
+    {
+        const pixelX = (vertex.position[0] + 1.0f) * 0.5f * extentWidth;
+        const pixelY = (vertex.position[1] + 1.0f) * 0.5f * extentHeight;
+
+        if (first)
+        {
+            left = pixelX;
+            right = pixelX;
+            top = pixelY;
+            bottom = pixelY;
+            first = false;
+        }
+        else
+        {
+            if (pixelX < left)
+                left = pixelX;
+            if (pixelX > right)
+                right = pixelX;
+            if (pixelY < top)
+                top = pixelY;
+            if (pixelY > bottom)
+                bottom = pixelY;
+        }
+    }
+
+    bounds.width = right - left;
+    bounds.height = bottom - top;
+    return bounds;
 }
 
 private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atlasHeight, uint atlasX, uint atlasY, ref const(FT_Bitmap) bitmap)
@@ -336,4 +559,66 @@ unittest
     assert(indexOf(defaultGlyphSet, '?') >= 0);
     assert(indexOf(defaultGlyphSet, ' ') >= 0);
     assert(selectDefaultFontPath().length > 0);
+}
+
+unittest
+{
+    // This is the first educational safety net: translate texts into a unique
+    // glyph corpus before asking FreeType to build any atlas.
+    auto glyphSet = collectGlyphSet(["Hello", "Häuser", "Grüße", "Γειά"]);
+    assert(indexOf(glyphSet, "H") >= 0);
+    assert(indexOf(glyphSet, "ä") >= 0);
+    assert(indexOf(glyphSet, "ü") >= 0);
+    assert(indexOf(glyphSet, "Γ") >= 0);
+    assert(indexOf(glyphSet, ' ') >= 0);
+    assert(indexOf(glyphSet, "?") >= 0);
+}
+
+unittest
+{
+    // The atlas must expose sane metrics for the renderer and the UI layout.
+    const fontPath = selectDefaultFontPath();
+    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["STATUS", "Render Modes", "ÄΩ"]));
+
+    assert(atlas.pixelHeight == 18);
+    assert(atlas.width > 0);
+    assert(atlas.height > 0);
+    assert(atlas.ascent > 0.0f);
+    assert(atlas.descent > 0.0f);
+    assert(atlas.lineHeight > 0.0f);
+    assert(('S' in atlas.glyphs) !is null);
+    assert((' ' in atlas.glyphs) !is null);
+    assert(('Ä' in atlas.glyphs) !is null);
+    assert(('Ω' in atlas.glyphs) !is null);
+}
+
+unittest
+{
+    // The width calculation must match the actual quads emitted by appendText().
+    const fontPath = selectDefaultFontPath();
+    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["AVATAR", "Hello", "To", "ÄΩ"]));
+
+    Vertex[] vertices;
+    appendText(vertices, atlas, "AVATAR", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
+
+    const measuredWidth = measureTextWidth(atlas, "AVATAR");
+    const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
+    assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
+    assert(renderedBounds.width > 0.0f);
+}
+
+unittest
+{
+    // Multi-line input must use the widest line for width and the line height for height.
+    const fontPath = selectDefaultFontPath();
+    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["Line one", "A much wider second line", "ÄΩ"]));
+
+    Vertex[] vertices;
+    appendText(vertices, atlas, "Hi\nThere", 15.0f, 30.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
+
+    const measuredWidth = measureTextWidth(atlas, "Hi\nThere");
+    const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
+    assert(measuredWidth >= measureTextWidth(atlas, "There"));
+    assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
+    assert(renderedBounds.height >= atlas.lineHeight, format("rendered multiline height %s should be at least one line height %s", renderedBounds.height, atlas.lineHeight));
 }
