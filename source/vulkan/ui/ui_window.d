@@ -19,9 +19,10 @@ import vulkan.ui.ui_widget_helpers : appendQuad, appendTextLine, appendTriangle,
 import logging : logLine;
 
 private immutable float[4] windowDebugBoundsColor = [1.00f, 0.20f, 0.05f, 0.70f];
-private enum float resizeGripHitSize = 14.0f;
-private enum float resizeGripMarkerSize = 7.0f;
-private enum float resizeGripLineInset = 3.0f;
+private enum float resizeGripHitSize = 10.0f;
+private enum float resizeGripMarkerSize = 10.0f;
+private enum float resizeGripLineInset = 6.0f;
+private enum float fallbackTitleTextHeight = 16.0f;
 private enum float windowContentMargin = 3.0f;
 private enum float chromeTopInset = 7.0f;
 
@@ -95,10 +96,7 @@ final class UiWindow : UiWidget
         headerExtras = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
 
         if (closable)
-        {
-            closeButton = new UiButton("X", 0.0f, 0.0f, 16.0f, 16.0f, [0.55f, 0.10f, 0.12f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f], UiTextStyle.small, 4.0f, 0.5f);
-            closeButton.onClick = &handleCloseButton;
-        }
+            ensureCloseButton();
 
         childOffsetX = 0.0f;
         childOffsetY = 0.0f;
@@ -121,6 +119,25 @@ final class UiWindow : UiWidget
     void addHeaderButton(UiWidget child)
     {
         addHeaderWidget(child);
+    }
+
+    /** Updates the interactive chrome flags at runtime.
+     *
+     * Params:
+     *   sizeable = Enables the resize ring and resize hit testing.
+     *   closable = Enables the close button in the header.
+     *   dragable = Enables drag hit testing and drag header styling.
+     * Returns:
+     *   Nothing.
+     */
+    void setChromeFlags(bool sizeable, bool closable, bool dragable)
+    {
+        this.sizeable = sizeable;
+        this.closable = closable;
+        this.dragable = dragable;
+        if (closable)
+            ensureCloseButton();
+        updateChromeLayout();
     }
 
     /** Lays out the window body before rendering or hit testing.
@@ -199,7 +216,7 @@ final class UiWindow : UiWidget
                 return true;
             }
 
-            if (closeButton !is null)
+            if (closable && closeButton !is null)
             {
                 auto closeEvent = event;
                 closeEvent.x -= x;
@@ -270,7 +287,7 @@ protected:
         if (headerExtras.children.length > 0)
             headerRightInset += headerExtrasWidth + headerExtras.spacing + 12.0f;
 
-        if (closeButton !is null)
+        if (closable && closeButton !is null)
             headerRightInset += closeButton.width + 8.0f;
 
         appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyFill, headerFill, context.depthBase, gripInset, headerRightInset);
@@ -279,14 +296,15 @@ protected:
             appendResizeGrips(context);
 
         const titleX = sizeable ? resizeGripHitSize + 6.0f : 10.0f;
-        appendTextLine(context, UiTextStyle.large, title, titleX, 1.0f, titleColor, context.depthBase - 0.001f);
+        const titleY = max(0.0f, (headerHeight - titleTextHeight(context)) * 0.5f);
+        appendTextLine(context, UiTextStyle.large, title, titleX, titleY, titleColor, context.depthBase - 0.001f);
 
         if (headerExtras.children.length > 0)
         {
             headerExtras.render(context);
         }
 
-        if (closeButton !is null)
+        if (closable && closeButton !is null)
         {
             closeButton.render(context);
         }
@@ -303,8 +321,8 @@ private:
     /** Positions the header controls so they stay clear of the resize grip. */
     void updateChromeLayout()
     {
-        const closeWidth = closeButton !is null ? closeButton.width : 0.0f;
-        const closeGap = closeButton !is null ? 4.0f : 0.0f;
+        const closeWidth = closable && closeButton !is null ? closeButton.width : 0.0f;
+        const closeGap = closable && closeButton !is null ? 4.0f : 0.0f;
         const gripReserve = sizeable ? resizeGripHitSize : 0.0f;
         const contentInset = sizeable ? resizeGripHitSize : windowContentMargin;
 
@@ -318,11 +336,28 @@ private:
         contentRoot.width = max(width - contentInset * 2.0f, 0.0f);
         contentRoot.height = max(height - headerHeight - windowContentMargin - contentInset, 0.0f);
 
-        if (closeButton !is null)
+        if (closable && closeButton !is null)
         {
             closeButton.x = width - gripReserve - closeWidth - 3.0f;
             closeButton.y = max(0.0f, (headerHeight - closeButton.height) * 0.5f);
         }
+    }
+
+    /** Creates the built-in close button on demand. */
+    void ensureCloseButton()
+    {
+        if (closeButton !is null)
+            return;
+
+        closeButton = new UiButton("X", 0.0f, 0.0f, 16.0f, 16.0f, [0.55f, 0.10f, 0.12f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f], UiTextStyle.small, 4.0f, 0.5f);
+        closeButton.onClick = &handleCloseButton;
+    }
+
+    /** Returns the draw-time title text height used for vertical centering. */
+    float titleTextHeight(ref UiRenderContext context) const
+    {
+        const atlas = context.atlasFor(UiTextStyle.large);
+        return atlas is null ? fallbackTitleTextHeight : max(atlas.lineHeight, atlas.ascent + atlas.descent);
     }
 
     /** Draws the visual resize ring and corner markers around the window. */
@@ -410,7 +445,7 @@ private:
                 return false;
         }
 
-        if (closeButton !is null)
+        if (closable && closeButton !is null)
         {
             if (localX >= x + closeButton.x && localX < x + closeButton.x + closeButton.width &&
                 localY >= y + closeButton.y && localY < y + closeButton.y + closeButton.height)

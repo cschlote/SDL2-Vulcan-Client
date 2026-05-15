@@ -164,6 +164,49 @@ final class LayoutDemoWindow
     }
 }
 
+/** Builds a retained window chrome demo with runtime flag toggles. */
+final class ChromeDemoWindow
+{
+    UiWindow window;
+    UiVBox content;
+    private UiLabel summaryLabel;
+    private UiToggle sizeableToggle;
+    private UiToggle closableToggle;
+    private UiToggle dragableToggle;
+
+    this(uint serial)
+    {
+        const windowTitle = format("Chrome Demo #%u", serial);
+        window = new UiWindow(windowTitle, 54.0f, 54.0f, 360.0f, 210.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        sizeableToggle = new UiToggle("Resize ring", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        closableToggle = new UiToggle("Close button", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        dragableToggle = new UiToggle("Drag header", true, 0.0f, 0.0f, 220.0f, 28.0f);
+
+        sizeableToggle.onChanged = (value) { updateWindowChrome(); };
+        closableToggle.onChanged = (value) { updateWindowChrome(); };
+        dragableToggle.onChanged = (value) { updateWindowChrome(); };
+
+        content.add(summaryLabel);
+        content.add(new UiSpacer(0.0f, sectionSpacing));
+        content.add(sizeableToggle);
+        content.add(closableToggle);
+        content.add(dragableToggle);
+        window.add(content);
+        window.visible = true;
+        updateWindowChrome();
+    }
+
+    void updateWindowChrome()
+    {
+        window.setChromeFlags(sizeableToggle.checked, closableToggle.checked, dragableToggle.checked);
+        summaryLabel.text = format("sizeable %s, closable %s, dragable %s", sizeableToggle.checked ? "on" : "off", closableToggle.checked ? "on" : "off", dragableToggle.checked ? "on" : "off");
+    }
+}
+
 /** Creates a new retained layout demo window. */
 LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
 {
@@ -173,7 +216,7 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
 
 private enum float windowMargin = 10.0f;
 private enum float initWidth = 160.0f;
-private enum float initHeight = 258.0f;
+private enum float initHeight = 304.0f;
 private enum float helpWidth = 388.0f;
 private enum float helpHeight = 214.0f;
 private enum float statusWidth = 348.0f;
@@ -236,6 +279,7 @@ final class DemoUiScreen : UiScreen
     private UiWindow statusWindow;
     private UiWindow settingsWindow;
     private LayoutDemoWindow[] testWindows;
+    private ChromeDemoWindow[] chromeWindows;
     private UiVBox initContent;
     private UiVBox helpContent;
     private UiVBox statusContent;
@@ -246,6 +290,7 @@ final class DemoUiScreen : UiScreen
     private UiButton initStatusButton;
     private UiButton initSettingsButton;
     private UiButton initTestButton;
+    private UiButton initChromeButton;
 
     private UiLabel helpTitleLabel;
     private UiLabel helpIntroLabel;
@@ -285,6 +330,7 @@ final class DemoUiScreen : UiScreen
     private bool settingsAnchored;
 
     private uint nextTestWindowSerial = 1;
+    private uint nextChromeWindowSerial = 1;
 
     bool quitRequested;
 
@@ -293,6 +339,7 @@ final class DemoUiScreen : UiScreen
         settingsDraft = DemoSettings.init;
         sceneMouseDragging = false;
         testWindows = [];
+        chromeWindows = [];
 
         buildInitWindow();
         buildHelpWindow();
@@ -426,6 +473,8 @@ final class DemoUiScreen : UiScreen
         initSettingsButton.onClick = () { toggleSettingsDialog(null); };
         initTestButton = new UiButton("Open Widget Demo", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         initTestButton.onClick = &spawnLayoutTestWindow;
+        initChromeButton = new UiButton("Open Chrome Demo", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+        initChromeButton.onClick = &spawnChromeDemoWindow;
 
         initContent.add(initHelpButton);
         initContent.add(new UiSpacer(0.0f, sectionSpacing));
@@ -434,6 +483,8 @@ final class DemoUiScreen : UiScreen
         initContent.add(initSettingsButton);
         initContent.add(new UiSpacer(0.0f, sectionSpacing));
         initContent.add(initTestButton);
+        initContent.add(new UiSpacer(0.0f, sectionSpacing));
+        initContent.add(initChromeButton);
         initWindow.add(initContent);
         initWindow.onClose = &requestQuit;
         registerWindowInteractionHandlers(initWindow);
@@ -657,7 +708,7 @@ final class DemoUiScreen : UiScreen
         statusSceneLabel.text = format("Szene: %s", currentShapeName);
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
-        helpIntroLabel.text = format("Open widget demos: %u", cast(uint)testWindows.length);
+        helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length));
         updateSettingsSummary();
     }
 
@@ -694,6 +745,16 @@ final class DemoUiScreen : UiScreen
         foreach (index, demoWindow; testWindows)
         {
             const offset = windowMargin + cast(float)index * 22.0f;
+            if (demoWindow.window.x <= 0.0f && demoWindow.window.y <= 0.0f)
+            {
+                demoWindow.window.x = max(windowMargin * 2.0f + offset, windowMargin);
+                demoWindow.window.y = max(windowMargin * 2.0f + offset, windowMargin);
+            }
+        }
+
+        foreach (index, demoWindow; chromeWindows)
+        {
+            const offset = windowMargin + cast(float)(testWindows.length + index) * 22.0f;
             if (demoWindow.window.x <= 0.0f && demoWindow.window.y <= 0.0f)
             {
                 demoWindow.window.x = max(windowMargin * 2.0f + offset, windowMargin);
@@ -742,6 +803,47 @@ final class DemoUiScreen : UiScreen
 
         removeWindow(demoWindow.window);
     }
+
+    void spawnChromeDemoWindow()
+    {
+        ChromeDemoWindow demoWindow = new ChromeDemoWindow(nextChromeWindowSerial++);
+        const cascadeIndex = cast(float)(nextChromeWindowSerial - 2);
+        demoWindow.window.x += cascadeIndex * 28.0f;
+        demoWindow.window.y += cascadeIndex * 24.0f;
+        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, 360.0f, 210.0f);
+        demoWindow.window.onClose = ()
+        {
+            demoWindow.window.visible = false;
+            removeChromeDemoWindow(demoWindow);
+            logLine("UiWindow close: ", demoWindow.window.title);
+        };
+        registerWindowInteractionHandlers(demoWindow.window);
+        chromeWindows ~= demoWindow;
+        addWindow(demoWindow.window);
+        if (viewportWidth > 0.0f && viewportHeight > 0.0f)
+        {
+            ensureWindowLayout();
+            placeWindowWithoutOverlap(demoWindow.window);
+        }
+        logLine("UiWindow spawn: ", demoWindow.window.title);
+    }
+
+    void removeChromeDemoWindow(ChromeDemoWindow demoWindow)
+    {
+        if (demoWindow is null)
+            return;
+
+        for (size_t index = 0; index < chromeWindows.length; ++index)
+        {
+            if (chromeWindows[index] is demoWindow)
+            {
+                chromeWindows = chromeWindows[0 .. index] ~ chromeWindows[index + 1 .. $];
+                break;
+            }
+        }
+
+        removeWindow(demoWindow.window);
+    }
 }
 
 @("DemoUiScreen spawns and toggles the rebuilt windows")
@@ -757,4 +859,6 @@ unittest
     assert(!screen.settingsWindow.visible);
     screen.spawnLayoutTestWindow();
     assert(screen.windowsInFrontToBack().length >= 5);
+    screen.spawnChromeDemoWindow();
+    assert(screen.windowsInFrontToBack().length >= 6);
 }

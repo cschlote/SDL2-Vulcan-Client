@@ -69,6 +69,7 @@ The demo should evolve from a test shell into a small application with clear win
 - Main/demo control window: opens tools, exits the app, and exposes common demo actions.
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
 - Widget demo window: interactive examples for buttons, toggles, sliders, dropdowns, and text fields.
+- Chrome demo window: runtime toggles for sizeable, closable, and dragable window chrome so content-root insets can be checked against active chrome elements.
 - Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
 - Settings window: display, controls, gameplay, audio, and UI options.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
