@@ -1,15 +1,21 @@
 # Documentation
 
-This folder collects the project-facing documentation for the codebase and its architecture.
+This folder collects the project-facing documentation for the engine prototype, the Vulkan demo, and the retained UI layer.
 
 ## Entry Points
 
-- [Vulkan Quickstart](vulkan-quickstart.md) gives a senior-level overview of the rendering stack, resource flow, and frame lifecycle.
+- [Vulkan Quickstart](vulkan-quickstart.md) explains the rendering stack, resource flow, and frame lifecycle.
+- [Rendering Architecture](rendering-architecture.md) describes the layered scene/UI composition and current renderer ownership.
+- [UI Architecture](ui-architecture.md) captures the retained UI engine model, `UiScreen` ownership, widget layout, and event routing.
+- [Demo UI Plan](demo-ui-plan.md) tracks the current demo UI migration and the plan for moving toward a reusable engine module.
 - [Shader Guide](shaders.md) explains the GLSL sources and how they map to the renderer.
-- [Rendering Architecture](rendering-architecture.md) describes the layered image composition and the placeholder geometry strategy.
-- [UI Architecture](ui-architecture.md) captures the current widget, input, layout, and chrome ideas for the retained UI layer.
-- [Demo UI Plan](demo-ui-plan.md) outlines the next widget, window, and settings steps before implementation.
 
-## Scope
+## Current Direction
 
-The repository is intentionally compact, so the docs focus on the parts that matter when you want to extend the code rather than on an exhaustive tutorial. The current overlay is a custom retained UI layer, but the frame lifecycle, descriptor flow, and per-frame resource separation are the same concepts you would apply to any future UI system.
+The repository is both a learning demo and the staging area for a reusable D game-engine module. The demo keeps the implementation visible and testable while the reusable parts settle:
+
+- `source/vulkan/engine/` contains the current Vulkan rendering spine.
+- `source/vulkan/ui/` contains the reusable retained UI widget engine.
+- `source/demo/` contains application-specific bootstrap, settings, and demo UI construction.
+
+The documentation should stay aligned with that split. Demo-specific behavior belongs in demo docs and plans; reusable UI and renderer concepts should be described as engine concepts.

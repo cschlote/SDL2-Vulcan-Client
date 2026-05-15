@@ -1,23 +1,24 @@
-# SDL2 Vulkan Quickstart
+# SDL2 Vulkan Engine Prototype
 
-This repository is a compact Vulkan codebase in D that is meant to be read, extended, and used as a senior-level quickstart for Vulkan frame integration. The current renderer uses a custom overlay, and the ownership model, per-frame resource split, and swapchain lifecycle are the core pieces you need for that architecture.
+This repository is a compact D codebase for building a small game-engine spine with SDL2, Vulkan, and a custom retained UI. It is still useful as a Vulkan learning demo, but the project direction is broader: implement the important engine building blocks first, then split the reusable engine pieces into a separate D module that can be published and used by a game.
 
 ## Fast Orientation
 
 - DUB drives the build.
-- SDL owns the window, event loop, and Vulkan surface integration.
-- Vulkan owns rendering, presentation, and synchronization.
-- The shader path is explicit: GLSL in [shaders/](shaders), SPIR-V in `build/shaders/`.
-- The docs folder now holds the short Vulkan overview, shader notes, and the rendering and UI architecture notes.
+- SDL owns the native window, event loop, and Vulkan surface integration.
+- Vulkan owns rendering, presentation, synchronization, textures, buffers, and shaders.
+- The UI is a custom retained widget system inspired by Qt-style ownership and Amiga Magic User Interface style font-sensitive layout.
+- Demo-specific UI lives in `source/demo/`; reusable UI widgets live in `source/vulkan/ui/`.
+- GLSL shader sources live in [shaders/](shaders); generated SPIR-V lives in `build/shaders/`.
 
 ## What To Read First
 
 - [docs/vulkan-quickstart.md](docs/vulkan-quickstart.md) for the frame lifecycle and Vulkan object model.
+- [docs/rendering-architecture.md](docs/rendering-architecture.md) for the renderer's layered frame composition.
+- [docs/ui-architecture.md](docs/ui-architecture.md) for the retained UI engine direction.
+- [docs/demo-ui-plan.md](docs/demo-ui-plan.md) for the current migration and planning notes.
 - [docs/shaders.md](docs/shaders.md) for the GLSL stage contract.
-- [docs/rendering-architecture.md](docs/rendering-architecture.md) for the layered frame composition.
-- [docs/ui-architecture.md](docs/ui-architecture.md) for the retained UI and window chrome model.
 - [docs/README.md](docs/README.md) for the documentation index.
-- [source/vulkan/renderer.d](source/vulkan/renderer.d) for the real frame orchestration and resource ownership.
 
 ## Build and Run
 
@@ -26,17 +27,20 @@ dub build
 ./build/bin/sdl2-vulcan-client
 ```
 
-The build runs the version helper and shader compiler before linking the executable. The binary expects `build/shaders/main.vert.spv` and `build/shaders/main.frag.spv` to exist relative to the repository root.
+The build runs the version helper and shader compiler before linking the executable. The binary expects `build/git-describe.txt`, `build/shaders/main.vert.spv`, and `build/shaders/main.frag.spv` to exist relative to the repository root.
 
 ## Repository Map
 
 - [source/main.d](source/main.d) is the executable entry point.
-- [source/app.d](source/app.d) handles bootstrap and shutdown.
-- [source/window.d](source/window.d) wraps SDL window ownership and Vulkan surface creation.
-- [source/math/matrix.d](source/math/matrix.d) contains the compact matrix and vector helpers.
-- [source/vulkan/](source/vulkan) contains the instance, device, swapchain, pipeline, renderer, overlay, font, and mesh code.
-- [shaders/](shaders) contains the GLSL shader sources.
-- [docs/](docs) contains the short-form technical documentation and skeletons for future DDox or ADRDox notes.
+- [source/demo/app.d](source/demo/app.d) handles bootstrap, settings load/save, and shutdown.
+- [source/demo/demo_ui.d](source/demo/demo_ui.d) builds the current demo UI.
+- [source/demo/demo_settings.d](source/demo/demo_settings.d) stores demo settings in a small INI format.
+- [source/sdl2/window.d](source/sdl2/window.d) wraps SDL window ownership and Vulkan surface creation.
+- [source/vulkan/engine/renderer.d](source/vulkan/engine/renderer.d) owns frame orchestration and Vulkan resources.
+- [source/vulkan/ui/](source/vulkan/ui) contains the retained UI widget engine.
+- [source/vulkan/models/polyhedra.d](source/vulkan/models/polyhedra.d) builds the placeholder scene meshes.
+- [source/math/matrix.d](source/math/matrix.d) contains compact math helpers.
+- [docs/](docs) contains architecture and planning notes.
 
 ## Controls
 
@@ -45,14 +49,15 @@ The build runs the version helper and shader compiler before linking the executa
 - `W` selects wireframe rendering.
 - `H` selects hidden-line rendering.
 - Arrow keys rotate the camera.
+- Hold `Shift` while rotating for faster camera movement.
+- Mouse drag outside UI windows rotates the scene.
+- Mouse wheel outside UI windows changes the camera field of view.
 - `+` and `-` switch the active Platonic solid, including keypad variants.
 - `Esc` closes the application.
 
-## Documentation Notes
+## Settings Policy
 
-- The overlay is rendered in native window pixels, not as a scaled texture, so it stays crisp.
-- The frame lifecycle is intentionally explicit so that the same swapchain and per-frame resource structure can support a custom overlay or another retained UI layer.
-- If you need deeper source documentation, start with [docs/rendering-architecture.md](docs/rendering-architecture.md), [docs/ui-architecture.md](docs/ui-architecture.md), and the module-level DDoc comments in [source/vulkan/ui/](source/vulkan/ui) and [source/vulkan/renderer.d](source/vulkan/renderer.d).
+Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes should stay local unless the user explicitly chooses an Apply or Save action. Apply may update the running app state; persistence to disk should be a deliberate Save operation.
 
 ## Release and Versioning
 

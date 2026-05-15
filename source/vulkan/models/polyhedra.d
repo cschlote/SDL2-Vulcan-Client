@@ -3,11 +3,11 @@
  * Reconstructs convex faces from the vertex sets, assigns per-face colors, and
  * emits triangulated mesh data that the renderer can upload directly. The mesh
  * builder feeds the scene path described in docs/vulkan-quickstart.md and the
- * object selection controls in source/vulkan/renderer.d.
+ * object selection controls in source/vulkan/engine/renderer.d.
  *
  * See_Also:
  *   docs/vulkan-quickstart.md
- *   source/vulkan/renderer.d
+ *   source/vulkan/engine/renderer.d
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
@@ -27,7 +27,7 @@ import vulkan.engine.pipeline : Vertex;
  */
 struct MeshData
 {
-    /** Human-readable mesh name shown in the HUD. */
+    /** Human-readable mesh name shown in the demo UI. */
     string name;
     /** Vertices consumed by the renderer's vertex buffer. */
     Vertex[] vertices;

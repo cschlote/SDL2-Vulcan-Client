@@ -1,19 +1,20 @@
-/** Builds the demo's HUD layout and overlay geometry.
+/** Builds the demo application's retained UI and overlay geometry.
  *
- * Organizes the window stack, drag state, and per-window draw ranges that keep
- * the overlay geometry grouped by window during rendering. The layout feeds
- * the retained widgets in source/vulkan/ui.d and the command-buffer
- * orchestration in source/vulkan/renderer.d.
+ * Organizes the demo window stack, drag state, and per-window draw ranges that
+ * keep the overlay geometry grouped by window during rendering. The concrete
+ * demo UI is built here; reusable widget behavior belongs in source/vulkan/ui/.
  *
  * See_Also:
- *   source/vulkan/ui.d
- *   source/vulkan/renderer.d
+ *   source/vulkan/ui/
+ *   source/vulkan/engine/renderer.d
+ *   docs/demo-ui-plan.md
  *
  * Authors: Carsten Schlote, schlote@vahanus.net
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  *
- * Legacy helper block below is kept only until the old HUD geometry path is fully removed.
+ * Legacy HUD helper functions below are kept only until the old geometry path
+ * is removed.
  */
 module demo.demo_ui;
 
@@ -38,7 +39,7 @@ import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import logging : logLine;
 
-/** Describes one HUD window rectangle in pixel coordinates.
+/** Describes one UI window rectangle in pixel coordinates.
  *
  * The renderer uses these rectangles to place the corner windows and the
  * draggable center window in native screen space.
@@ -122,7 +123,7 @@ struct HudLayoutState
     float dragOffsetY;
 }
 
-/** Pixel layout for all HUD windows.
+/** Pixel layout for the legacy demo windows.
  *
  * The renderer keeps the status, modes, sample, input, and center windows in
  * separate rectangles so hit testing and drawing can stay deterministic.
@@ -158,7 +159,7 @@ struct HudWindowDrawRange
     uint[7] textCounts;
 }
 
-/** Holds the panel and text geometry for the HUD overlay.
+/** Holds the panel and text geometry for the UI overlay.
  *
  * The renderer uploads each vertex list independently and uses the draw ranges
  * to emit one logical window at a time.
@@ -173,7 +174,7 @@ struct HudOverlayGeometry
     HudWindowDrawRange[] windows;
 }
 
-/** Builds the HUD overlay geometry for the current frame.
+/** Builds the legacy overlay geometry for the current frame.
  *
  * The output is the bridge between the retained widget tree and the renderer's
  * per-frame vertex buffers.
@@ -281,9 +282,9 @@ HudOverlayGeometry buildHudOverlayVertices(
     return geometry;
 }
 
-/** Builds the pixel layout for all HUD windows.
+/** Builds the pixel layout for all legacy demo windows.
  *
- * This layout is shared by hit testing, dragging, and rendering so the HUD
+ * This layout is shared by hit testing, dragging, and rendering so the UI
  * stays consistent across the input and draw paths.
  */
 HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref HudLayoutState layoutState, const(FontAtlas)[] fontAtlases, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
@@ -394,7 +395,7 @@ private UiLayoutContext buildLayoutContext(ref const(FontAtlas) fontSmall, ref c
     return layoutContext;
 }
 
-/** Builds the retained STATUS HUD window for the current frame. */
+/** Builds the retained status window for the current frame. */
 private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     const titleText = "Status";
@@ -1314,7 +1315,7 @@ private float textBlockHeight(ref const(FontAtlas) atlas)
     return max(atlas.lineHeight, atlas.ascent + atlas.descent);
 }
 
-/** Returns true when the pixel position lies within a HUD window rectangle. */
+/** Returns true when the pixel position lies within a UI window rectangle. */
 bool hudPointInRect(HudWindowRect rect, float x, float y)
 {
     return x >= rect.left && x <= rect.left + rect.width && y >= rect.top && y <= rect.top + rect.height;

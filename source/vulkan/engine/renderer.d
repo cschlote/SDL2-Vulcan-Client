@@ -396,7 +396,7 @@ class VulkanRenderer
 
     }
 
-    /** Adjusts the camera opening angle when the wheel is used outside the HUD. */
+    /** Adjusts the camera opening angle when the wheel is used outside the UI. */
     private bool handleMouseWheel(ref SDL_Event event)
     {
         const mouseX = cast(float)event.wheel.mouseX;
@@ -531,7 +531,7 @@ class VulkanRenderer
         createBuffer(meshIndexBuffer, maxShapeIndexCount * uint.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
-    /** Allocates the per-frame vertex buffers used by the HUD overlay. */
+    /** Allocates the per-frame vertex buffers used by the UI overlay. */
     private void createOverlayBuffers()
     {
         createFrameVertexBuffers(overlayPanels);
@@ -684,7 +684,7 @@ class VulkanRenderer
         destroyBuffer(meshIndexBuffer);
     }
 
-    /** Releases the HUD overlay buffers. */
+    /** Releases the UI overlay buffers. */
     private void destroyOverlayBuffers()
     {
         destroyFrameVertexBuffers(overlayPanels);
@@ -1022,7 +1022,7 @@ class VulkanRenderer
         }
     }
 
-    /// Updates the current mesh transform, uniform buffer, and HUD vertex data.
+    /// Updates the current mesh transform, uniform buffer, and UI vertex data.
     ///
     /// Params:
     ///   frameIndex = Index of the current in-flight frame.
@@ -1109,9 +1109,9 @@ class VulkanRenderer
             buildVersion,
             fontAtlases[]);
 
-        enforce(overlayVertices.panels.length <= maxOverlayVertices, "HUD overlay panel vertex limit exceeded.");
+        enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
-            enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "HUD overlay text-layer vertex limit exceeded.");
+            enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "UI overlay text-layer vertex limit exceeded.");
 
         hudWindowRanges = overlayVertices.windows;
 
@@ -1126,7 +1126,7 @@ class VulkanRenderer
 
     /// Records the render pass commands for the current frame.
 
-            /** Recomputes the draggable HUD window clamp state for the current swapchain size. */
+            /** Recomputes the draggable UI window clamp state for the current swapchain size. */
             private void syncHudLayoutState()
             {
                 uiScreen.syncViewport(
@@ -1139,7 +1139,7 @@ class VulkanRenderer
                 );
             }
 
-            /** Starts a scene drag when a mouse press does not hit the HUD. */
+            /** Starts a scene drag when a mouse press does not hit the UI. */
             private bool handleMouseButtonDown(ref SDL_Event event)
             {
                 if (event.button.button != 1)
