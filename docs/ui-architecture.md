@@ -29,6 +29,42 @@ The existing UI code already has the right building blocks:
 
 That means the project already thinks in terms of widgets and local coordinates. The remaining work is to keep event handling, geometry generation, and layout policy aligned as the UI grows.
 
+## UiScreen And Ownership
+
+The retained UI tree benefits from a single top-level owner that acts as the global entry point for a frame.
+
+That top-level object should be understood as a UiScreen-style coordinator:
+
+- it owns the root UI tree or the root windows
+- it stores screen-wide resources such as font atlases, theme data, and viewport-dependent state
+- it drives the explicit layout and render passes
+- it can also own global input routing, focus state, and animation timing
+
+This keeps the global responsibilities in one place instead of spreading them across individual widgets. Widgets should be able to focus on their own local geometry and interaction while the screen object provides the shared context they need.
+
+## UiWidget As Box Model
+
+UiWidget should be treated as the smallest reusable retained UI object: a rectangular box with layout hints and optional surface styling.
+
+In this model the widget owns:
+
+- its outer rectangle
+- minimum, preferred, and maximum sizing hints
+- optional margin and padding policy
+- optional background and frame/border drawing
+- child ownership for nested retained UI elements
+
+The important rule is that children only receive the inner content area. The outer frame belongs to the widget itself, while the inner rect is the space available for child layout.
+
+That means a widget can reserve chrome, borders, or gutters without forcing every child to understand those details. A button, panel, or container can therefore compute its own inner layout and still remain visually consistent with the rest of the UI.
+
+The practical consequences are straightforward:
+
+- layout computes outer size first and then derives the inner working area
+- render draws the widget's own surface before or around its children as needed
+- children never overlap the border unless the widget deliberately exposes that space
+- the layout tree stays readable because spacing policy lives at the widget boundary instead of being hand-coded into every child
+
 ## Input Ownership
 
 Input should be routed to the widget that owns the hit region.
