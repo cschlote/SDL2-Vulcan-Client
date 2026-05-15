@@ -364,9 +364,9 @@ private:
     void appendResizeGrips(ref UiRenderContext context) const
     {
         const z = context.depthBase - 0.0005f;
-        float[4] gripLine = [0.34f, 0.58f, 0.78f, 0.48f];
-        float[4] gripLight = [0.72f, 0.88f, 1.00f, 0.70f];
-        float[4] gripShadow = [0.04f, 0.06f, 0.08f, 0.48f];
+        float[4] gripLine = [0.34f, 0.58f, 0.78f, 0.28f];
+        float[4] gripLight = [0.72f, 0.88f, 1.00f, 0.46f];
+        float[4] gripShadow = [0.04f, 0.06f, 0.08f, 0.30f];
         const marker = resizeGripMarkerSize;
         const inset = resizeGripLineInset;
 
