@@ -15,7 +15,7 @@
  */
 module vulkan.engine.renderer;
 
-import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
+import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_StartTextInput, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
@@ -34,7 +34,7 @@ import vulkan.engine.pipeline;
 import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import sdl2.window;
 
 private enum maxFramesInFlight = 2;
@@ -227,6 +227,7 @@ class VulkanRenderer
         uiScreen.onSaveSettings = &saveSettingsDialog;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
+        SDL_StartTextInput(window.handle);
 
         instance = VulkanInstance(window.handle);
         enforce(window.createVulkanSurface(instance.handle, surface), "SDL_Vulkan_CreateSurface failed: " ~ fromStringz(SDL_GetError()).idup);
@@ -348,6 +349,8 @@ class VulkanRenderer
             case SDL_EventType.quit:
                 return true;
             case SDL_EventType.keyDown:
+                if (dispatchUiKeyEvent(event, UiKeyEventKind.keyDown))
+                    return false;
                 if (event.key.scancode == SDL_Scancode.escape)
                     return true;
                 if (!event.key.repeat && (event.key.scancode == SDL_Scancode.equals || event.key.scancode == SDL_Scancode.kpPlus))
@@ -373,6 +376,8 @@ class VulkanRenderer
                 else if (event.key.scancode == SDL_Scancode.down)
                     rotateDown = true;
                 return false;
+            case SDL_EventType.textInput:
+                return handleTextInput(event);
             case SDL_EventType.mouseButtonDown:
                 return handleMouseButtonDown(event);
             case SDL_EventType.mouseButtonUp:
@@ -382,6 +387,8 @@ class VulkanRenderer
             case SDL_EventType.mouseWheel:
                 return handleMouseWheel(event);
             case SDL_EventType.keyUp:
+                if (dispatchUiKeyEvent(event, UiKeyEventKind.keyUp))
+                    return false;
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -400,6 +407,59 @@ class VulkanRenderer
                 return false;
         }
 
+    }
+
+    /** Routes mapped SDL keyboard events to the retained UI focus owner. */
+    private bool dispatchUiKeyEvent(ref SDL_Event event, UiKeyEventKind kind)
+    {
+        UiKeyEvent uiEvent;
+        uiEvent.kind = kind;
+        uiEvent.key = mapUiKey(event.key.scancode);
+        uiEvent.repeat = event.key.repeat;
+        uiEvent.modifiers = cast(uint)event.key.mod;
+
+        if (uiScreen.dispatchKeyEvent(uiEvent))
+            return true;
+
+        return uiScreen.hasKeyboardFocus();
+    }
+
+    /** Routes SDL text input to the retained UI focus owner. */
+    private bool handleTextInput(ref SDL_Event event)
+    {
+        UiTextInputEvent uiEvent;
+        uiEvent.text = event.text.text is null ? "" : fromStringz(event.text.text).idup;
+        uiScreen.dispatchTextInputEvent(uiEvent);
+        return false;
+    }
+
+    /** Converts SDL scancodes to the generic UI key set. */
+    private static UiKeyCode mapUiKey(SDL_Scancode scancode)
+    {
+        switch (scancode)
+        {
+            case SDL_Scancode.backspace:
+                return UiKeyCode.backspace;
+            case SDL_Scancode.delete_:
+                return UiKeyCode.delete_;
+            case SDL_Scancode.left:
+                return UiKeyCode.left;
+            case SDL_Scancode.right:
+                return UiKeyCode.right;
+            case SDL_Scancode.home:
+                return UiKeyCode.home;
+            case SDL_Scancode.end:
+                return UiKeyCode.end;
+            case SDL_Scancode.return_:
+            case SDL_Scancode.kpEnter:
+                return UiKeyCode.enter;
+            case SDL_Scancode.escape:
+                return UiKeyCode.escape;
+            case SDL_Scancode.tab:
+                return UiKeyCode.tab;
+            default:
+                return UiKeyCode.unknown;
+        }
     }
 
     /** Adjusts the camera opening angle when the wheel is used outside the UI. */

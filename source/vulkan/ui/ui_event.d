@@ -1,4 +1,4 @@
-/** Lightweight pointer input events for retained UI widgets.
+/** Lightweight input events for retained UI widgets.
  *
  * The event model stays intentionally small so widgets can own their input
  * without forcing the renderer to translate every interaction manually.
@@ -47,4 +47,46 @@ struct UiPointerEvent
     float wheelX;
     /** Vertical wheel delta for wheel events. */
     float wheelY;
+}
+
+/** Keyboard event kinds routed to the focused widget. */
+enum UiKeyEventKind
+{
+    keyDown,
+    keyUp,
+}
+
+/** Small key vocabulary understood by generic widgets. */
+enum UiKeyCode
+{
+    unknown,
+    backspace,
+    delete_,
+    left,
+    right,
+    home,
+    end,
+    enter,
+    escape,
+    tab,
+}
+
+/** Describes one keyboard event routed through the UI focus owner. */
+struct UiKeyEvent
+{
+    /** Event kind. */
+    UiKeyEventKind kind;
+    /** Generic key identifier. */
+    UiKeyCode key;
+    /** True when the platform reports this as a repeated keydown. */
+    bool repeat;
+    /** Platform modifier bitmask for future shortcut handling. */
+    uint modifiers;
+}
+
+/** UTF-8 text input emitted by the platform text input layer. */
+struct UiTextInputEvent
+{
+    /** Insertable text payload in UTF-8. */
+    string text;
 }

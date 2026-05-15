@@ -14,10 +14,13 @@ module vulkan.ui.ui_screen;
 import std.algorithm : max;
 
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
+
+version (unittest)
+    import vulkan.ui.ui_controls : UiTextField;
 
 /** Screen-level coordinator for retained UI windows. */
 class UiScreen
@@ -37,6 +40,7 @@ class UiScreen
     private float resizeStartWidth;
     private float resizeStartHeight;
     private UiResizeHandle resizeStartHandle;
+    private UiWidget focusedWidget;
 
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
@@ -46,6 +50,7 @@ class UiScreen
         activeDragWindow = null;
         activeResizeWindow = null;
         resizeStartHandle = UiResizeHandle.none;
+        setFocusedWidget(null);
         onInitialize();
         ensureWindowLayout();
     }
@@ -61,6 +66,9 @@ class UiScreen
     /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
+            setFocusedWidget(focusTargetAt(event.x, event.y));
+
         if (activeResizeWindow !is null && activeResizeWindow.visible)
             return activeResizeWindow.dispatchPointerEvent(event);
 
@@ -77,6 +85,36 @@ class UiScreen
         }
 
         return false;
+    }
+
+    /** Routes a keyboard event to the focused widget. */
+    bool dispatchKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && focusedWidget !is null)
+        {
+            setFocusedWidget(null);
+            return true;
+        }
+
+        if (focusedWidget is null)
+            return false;
+
+        return focusedWidget.dispatchKeyEvent(event);
+    }
+
+    /** Routes UTF-8 text input to the focused widget. */
+    bool dispatchTextInputEvent(ref UiTextInputEvent event)
+    {
+        if (focusedWidget is null || event.text.length == 0)
+            return false;
+
+        return focusedWidget.dispatchTextInputEvent(event);
+    }
+
+    /** Returns true while a widget owns keyboard focus. */
+    bool hasKeyboardFocus() const
+    {
+        return focusedWidget !is null;
     }
 
     /** Returns true when the point is inside any visible window. */
@@ -169,6 +207,9 @@ protected:
 
         if (isInteractingWith(window))
             endWindowInteraction();
+
+        if (focusedWidget !is null && windowOwnsWidget(window, focusedWidget))
+            setFocusedWidget(null);
 
         for (size_t index = 0; index < windows_.length; ++index)
         {
@@ -291,6 +332,21 @@ protected:
         resizeStartHandle = UiResizeHandle.none;
     }
 
+    /** Sets the current keyboard focus owner. */
+    void setFocusedWidget(UiWidget widget)
+    {
+        if (focusedWidget is widget)
+            return;
+
+        if (focusedWidget !is null)
+            focusedWidget.setFocused(false);
+
+        focusedWidget = widget;
+
+        if (focusedWidget !is null)
+            focusedWidget.setFocused(true);
+    }
+
     /** Returns true when the window is currently dragged or resized. */
     bool isInteractingWith(UiWindow window) const
     {
@@ -349,6 +405,38 @@ protected:
     }
 
 private:
+    UiWidget focusTargetAt(float x, float y)
+    {
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            auto target = window.focusTargetAt(x, y);
+            if (target !is null)
+                return target;
+        }
+
+        return null;
+    }
+
+    static bool windowOwnsWidget(UiWidget root, UiWidget needle)
+    {
+        if (root is null || needle is null)
+            return false;
+
+        if (root is needle)
+            return true;
+
+        foreach (child; root.children)
+        {
+            if (windowOwnsWidget(child, needle))
+                return true;
+        }
+
+        return false;
+    }
+
     ptrdiff_t windowIndex(UiWindow window) const
     {
         foreach (index, candidate; windows_)
@@ -595,6 +683,33 @@ unittest
     event.kind = UiPointerEventKind.buttonUp;
     event.button = 3;
     assert(screen.dispatchPointerEvent(event));
+}
+
+@("UiScreen assigns and clears keyboard focus from pointer input")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("window", 0.0f, 0.0f, 180.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto field = new UiTextField("", "Name", 8.0f, 8.0f, 120.0f, 28.0f);
+    window.add(field);
+    screen.addWindow(window);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 14.0f;
+    event.y = window.headerHeight + 14.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(field.focused);
+    assert(screen.hasKeyboardFocus());
+
+    event.x = 170.0f;
+    event.y = 86.0f;
+    assert(!screen.dispatchPointerEvent(event));
+    assert(!field.focused);
+    assert(!screen.hasKeyboardFocus());
 }
 
 @("UiScreen can place a window away from existing visible windows")
