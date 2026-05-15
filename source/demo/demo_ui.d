@@ -24,7 +24,7 @@ import std.algorithm : max;
 import demo.demo_settings : DemoSettings;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.engine.pipeline : Vertex;
-import vulkan.ui.ui_event : UiPointerEvent, UiResizeHandle;
+import vulkan.ui.ui_event : UiResizeHandle;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_label : UiLabel;
@@ -222,11 +222,6 @@ final class DemoUiScreen : UiScreen
     DemoSettings settingsDraft;
     bool sceneMouseDragging;
 
-    private float viewportWidth;
-    private float viewportHeight;
-    private const(FontAtlas)[] fontAtlases;
-    private UiLayoutContext layoutContext;
-
     private UiWindow initWindow;
     private UiWindow helpWindow;
     private UiWindow statusWindow;
@@ -262,22 +257,12 @@ final class DemoUiScreen : UiScreen
     private bool statusAnchored;
     private bool settingsAnchored;
 
-    private UiWindow activeDragWindow;
-    private UiWindow activeResizeWindow;
-    private float dragOffsetX;
-    private float dragOffsetY;
-    private float resizeStartLeft;
-    private float resizeStartTop;
-    private float resizeStartWidth;
-    private float resizeStartHeight;
-    private UiResizeHandle resizeStartHandle;
     private uint nextTestWindowSerial = 1;
 
     bool quitRequested;
 
-    override void initialize(const(FontAtlas)[] liveFonts)
+    override void onInitialize()
     {
-        fontAtlases = liveFonts;
         settingsDraft = DemoSettings.init;
         sceneMouseDragging = false;
         testWindows = [];
@@ -291,50 +276,13 @@ final class DemoUiScreen : UiScreen
         autoSizeWindow(statusWindow, statusContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, statusWidth, statusHeight);
         autoSizeWindow(settingsWindow, settingsContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, settingsWidth, settingsHeight);
         updateWindowState();
-        ensureWindowLayout();
     }
 
     void syncViewport(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion)
     {
-        viewportWidth = extentWidth;
-        viewportHeight = extentHeight;
-
+        super.syncViewport(extentWidth, extentHeight);
         updateStatusText(fps, currentShapeName, currentRenderModeName, buildVersion);
         ensureWindowLayout();
-    }
-
-    override bool dispatchPointerEvent(ref UiPointerEvent event)
-    {
-        if (activeResizeWindow !is null && activeResizeWindow.visible)
-            return activeResizeWindow.dispatchPointerEvent(event);
-
-        if (activeDragWindow !is null && activeDragWindow.visible)
-            return activeDragWindow.dispatchPointerEvent(event);
-
-        foreach_reverse (window; windowsInFrontToBack())
-        {
-            if (!window.visible)
-                continue;
-
-            if (window.dispatchPointerEvent(event))
-                return true;
-        }
-
-        return false;
-    }
-
-    override bool containsPointer(float x, float y) const
-    {
-        foreach_reverse (window; windowsInFrontToBack())
-        {
-            if (!window.visible)
-                continue;
-
-            if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
-                return true;
-        }
-
-        return false;
     }
 
     UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts)
@@ -383,22 +331,6 @@ final class DemoUiScreen : UiScreen
         return geometry;
     }
 
-    override UiWindow[] windowsInFrontToBack()
-    {
-        UiWindow[] windows = [initWindow, helpWindow, statusWindow, settingsWindow];
-        foreach (demoWindow; testWindows)
-            windows ~= demoWindow.window;
-        return windows;
-    }
-
-    override const(UiWindow)[] windowsInFrontToBack() const
-    {
-        const(UiWindow)[] windows = [initWindow, helpWindow, statusWindow, settingsWindow];
-        foreach (demoWindow; testWindows)
-            windows ~= demoWindow.window;
-        return windows;
-    }
-
     void toggleHelpWindow()
     {
         toggleWindow(helpWindow);
@@ -419,13 +351,6 @@ final class DemoUiScreen : UiScreen
         quitRequested = true;
     }
 
-    override void endWindowInteraction()
-    {
-        activeDragWindow = null;
-        activeResizeWindow = null;
-        resizeStartHandle = UiResizeHandle.none;
-    }
-
     void openSettingsDialog(const(DemoSettings)* liveSettings)
     {
         if (liveSettings !is null)
@@ -440,160 +365,12 @@ final class DemoUiScreen : UiScreen
         toggleSettingsWindow();
     }
 
-    override void toggleWindow(UiWindow window)
-    {
-        if (window is null)
-            return;
-
-        window.visible = !window.visible;
-        logLine("UiWindow toggle: ", window.title, " -> ", window.visible ? "open" : "closed");
-
-        if (!window.visible && (window is activeDragWindow || window is activeResizeWindow))
-            endWindowInteraction();
-
-        ensureWindowLayout();
-    }
-
-    void beginWindowDrag(UiWindow window, float cursorX, float cursorY)
-    {
-        activeDragWindow = window;
-        activeResizeWindow = null;
-        dragOffsetX = cursorX - window.x;
-        dragOffsetY = cursorY - window.y;
-    }
-
-    void updateWindowDrag(float cursorX, float cursorY)
-    {
-        if (activeDragWindow is null)
-            return;
-
-        const newLeft = cursorX - dragOffsetX;
-        const newTop = cursorY - dragOffsetY;
-        const maximumLeft = viewportWidth > activeDragWindow.width ? viewportWidth - activeDragWindow.width : 0.0f;
-        const maximumTop = viewportHeight > activeDragWindow.height ? viewportHeight - activeDragWindow.height : 0.0f;
-        activeDragWindow.x = clampFloat(newLeft, 0.0f, maximumLeft);
-        activeDragWindow.y = clampFloat(newTop, 0.0f, maximumTop);
-    }
-
-    void beginWindowResize(UiWindow window, UiResizeHandle handle)
-    {
-        activeResizeWindow = window;
-        activeDragWindow = null;
-        resizeStartHandle = handle;
-        resizeStartLeft = window.x;
-        resizeStartTop = window.y;
-        resizeStartWidth = window.width;
-        resizeStartHeight = window.height;
-    }
-
-    void updateWindowResize(float cursorX, float cursorY)
-    {
-        if (activeResizeWindow is null)
-            return;
-
-        const minimumWidth = activeResizeWindow.minimumWidth > 0.0f ? activeResizeWindow.minimumWidth : 240.0f;
-        const minimumHeight = activeResizeWindow.minimumHeight > 0.0f ? activeResizeWindow.minimumHeight : 160.0f;
-        const startRight = resizeStartLeft + resizeStartWidth;
-        const startBottom = resizeStartTop + resizeStartHeight;
-
-        final switch (resizeStartHandle)
-        {
-            case UiResizeHandle.topLeft:
-            {
-                const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
-                const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
-                activeResizeWindow.x = newLeft;
-                activeResizeWindow.y = newTop;
-                activeResizeWindow.width = startRight - newLeft;
-                activeResizeWindow.height = startBottom - newTop;
-                break;
-            }
-            case UiResizeHandle.topRight:
-            {
-                const availableRight = viewportWidth > resizeStartLeft ? viewportWidth - resizeStartLeft : minimumWidth;
-                const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
-                activeResizeWindow.y = newTop;
-                activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableRight);
-                activeResizeWindow.height = startBottom - newTop;
-                break;
-            }
-            case UiResizeHandle.bottomLeft:
-            {
-                const availableBottom = viewportHeight > resizeStartTop ? viewportHeight - resizeStartTop : minimumHeight;
-                const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
-                activeResizeWindow.x = newLeft;
-                activeResizeWindow.width = startRight - newLeft;
-                activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableBottom);
-                break;
-            }
-            case UiResizeHandle.bottomRight:
-            {
-                const availableWidth = viewportWidth > resizeStartLeft ? viewportWidth - resizeStartLeft : minimumWidth;
-                const availableHeight = viewportHeight > resizeStartTop ? viewportHeight - resizeStartTop : minimumHeight;
-                activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableWidth);
-                activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableHeight);
-                break;
-            }
-            case UiResizeHandle.none:
-                break;
-        }
-
-        clampWindowToViewport(activeResizeWindow);
-    }
-
     void updateWindowState()
     {
         initWindow.visible = true;
         helpWindow.visible = false;
         statusWindow.visible = false;
         settingsWindow.visible = false;
-    }
-
-    override UiLayoutContext buildLayoutContext(const(FontAtlas)[] liveFonts) const
-    {
-        UiLayoutContext context;
-        foreach (index; 0 .. context.fonts.length)
-            context.fonts[index] = index < liveFonts.length ? &liveFonts[index] : null;
-        return context;
-    }
-
-    static float clampFloat(float value, float minimum, float maximum)
-    {
-        return value < minimum ? minimum : (value > maximum ? maximum : value);
-    }
-
-    override void autoSizeWindow(UiWindow window, UiWidget content, float paddingLeft, float paddingTop, float paddingRight, float paddingBottom, float minimumWidth, float minimumHeight)
-    {
-        if (window is null || content is null || fontAtlases.length == 0)
-            return;
-
-        auto sizeContext = buildLayoutContext(fontAtlases);
-        const contentSize = content.measure(sizeContext);
-        const desiredWidth = contentSize.width + paddingLeft + paddingRight;
-        const desiredHeight = contentSize.height + paddingTop + paddingBottom + window.headerHeight;
-        const effectiveMinimumWidth = max(minimumWidth, window.minimumWidth);
-        const effectiveMinimumHeight = max(minimumHeight, window.minimumHeight);
-        const minimumWindowWidth = max(effectiveMinimumWidth, desiredWidth);
-        const minimumWindowHeight = max(effectiveMinimumHeight, desiredHeight);
-
-        window.minimumWidth = minimumWindowWidth;
-        window.minimumHeight = minimumWindowHeight;
-
-        if (window.width < minimumWindowWidth)
-            window.width = minimumWindowWidth;
-        if (window.height < minimumWindowHeight)
-            window.height = minimumWindowHeight;
-    }
-
-    bool hasVisibleTestWindow() const
-    {
-        foreach (demoWindow; testWindows)
-        {
-            if (demoWindow.window.visible)
-                return true;
-        }
-
-        return false;
     }
 
     void buildInitWindow()
@@ -619,12 +396,8 @@ final class DemoUiScreen : UiScreen
         initContent.add(initTestButton);
         initWindow.add(initContent);
         initWindow.onClose = &requestQuit;
-        initWindow.onHeaderDragStart = (cursorX, cursorY) { beginWindowDrag(initWindow, cursorX, cursorY); };
-        initWindow.onHeaderDragMove = (cursorX, cursorY) { updateWindowDrag(cursorX, cursorY); };
-        initWindow.onHeaderDragEnd = () { endWindowInteraction(); };
-        initWindow.onResizeStart = (handle) { beginWindowResize(initWindow, handle); };
-        initWindow.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
-        initWindow.onResizeEnd = (handle) { endWindowInteraction(); };
+        registerWindowInteractionHandlers(initWindow);
+        addWindow(initWindow);
     }
 
     void buildHelpWindow()
@@ -648,12 +421,8 @@ final class DemoUiScreen : UiScreen
             helpWindow.visible = false;
             logLine("UiWindow close: Hilfe");
         };
-        helpWindow.onHeaderDragStart = (cursorX, cursorY) { beginWindowDrag(helpWindow, cursorX, cursorY); };
-        helpWindow.onHeaderDragMove = (cursorX, cursorY) { updateWindowDrag(cursorX, cursorY); };
-        helpWindow.onHeaderDragEnd = () { endWindowInteraction(); };
-        helpWindow.onResizeStart = (handle) { beginWindowResize(helpWindow, handle); };
-        helpWindow.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
-        helpWindow.onResizeEnd = (handle) { endWindowInteraction(); };
+        registerWindowInteractionHandlers(helpWindow);
+        addWindow(helpWindow);
     }
 
     void buildStatusWindow()
@@ -679,12 +448,8 @@ final class DemoUiScreen : UiScreen
             statusWindow.visible = false;
             logLine("UiWindow close: Status");
         };
-        statusWindow.onHeaderDragStart = (cursorX, cursorY) { beginWindowDrag(statusWindow, cursorX, cursorY); };
-        statusWindow.onHeaderDragMove = (cursorX, cursorY) { updateWindowDrag(cursorX, cursorY); };
-        statusWindow.onHeaderDragEnd = () { endWindowInteraction(); };
-        statusWindow.onResizeStart = (handle) { beginWindowResize(statusWindow, handle); };
-        statusWindow.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
-        statusWindow.onResizeEnd = (handle) { endWindowInteraction(); };
+        registerWindowInteractionHandlers(statusWindow);
+        addWindow(statusWindow);
     }
 
     void buildSettingsWindow()
@@ -708,12 +473,8 @@ final class DemoUiScreen : UiScreen
             settingsWindow.visible = false;
             logLine("UiWindow close: Einstellungen");
         };
-        settingsWindow.onHeaderDragStart = (cursorX, cursorY) { beginWindowDrag(settingsWindow, cursorX, cursorY); };
-        settingsWindow.onHeaderDragMove = (cursorX, cursorY) { updateWindowDrag(cursorX, cursorY); };
-        settingsWindow.onHeaderDragEnd = () { endWindowInteraction(); };
-        settingsWindow.onResizeStart = (handle) { beginWindowResize(settingsWindow, handle); };
-        settingsWindow.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
-        settingsWindow.onResizeEnd = (handle) { endWindowInteraction(); };
+        registerWindowInteractionHandlers(settingsWindow);
+        addWindow(settingsWindow);
     }
 
     void updateStatusText(float fps, string currentShapeName, string currentRenderModeName, string buildVersion)
@@ -725,30 +486,6 @@ final class DemoUiScreen : UiScreen
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
         helpIntroLabel.text = format("Geöffnete Fenster: %u", cast(uint)testWindows.length);
         settingsProfileLabel.text = format("Aktuelles Profil: %s", settingsDraft.display.windowMode);
-    }
-
-    override void ensureWindowLayout()
-    {
-        if (viewportWidth <= 0.0f || viewportHeight <= 0.0f)
-            return;
-
-        layoutAllWindows();
-        anchorWindows();
-        clampWindowsToViewport();
-    }
-
-    void layoutAllWindows()
-    {
-        if (fontAtlases.length == 0)
-            return;
-
-        layoutContext = buildLayoutContext(fontAtlases);
-        initWindow.layoutWindow(layoutContext);
-        helpWindow.layoutWindow(layoutContext);
-        statusWindow.layoutWindow(layoutContext);
-        settingsWindow.layoutWindow(layoutContext);
-        foreach (demoWindow; testWindows)
-            demoWindow.layout(layoutContext);
     }
 
     override void anchorWindows()
@@ -792,27 +529,6 @@ final class DemoUiScreen : UiScreen
         }
     }
 
-    void clampWindowsToViewport()
-    {
-        clampWindowToViewport(initWindow);
-        clampWindowToViewport(helpWindow);
-        clampWindowToViewport(statusWindow);
-        clampWindowToViewport(settingsWindow);
-        foreach (demoWindow; testWindows)
-            clampWindowToViewport(demoWindow.window);
-    }
-
-    override void clampWindowToViewport(UiWindow window)
-    {
-        if (window is null)
-            return;
-
-        const maximumLeft = viewportWidth > window.width ? viewportWidth - window.width : 0.0f;
-        const maximumTop = viewportHeight > window.height ? viewportHeight - window.height : 0.0f;
-        window.x = clampFloat(window.x, 0.0f, maximumLeft);
-        window.y = clampFloat(window.y, 0.0f, maximumTop);
-    }
-
     void spawnLayoutTestWindow()
     {
         LayoutDemoWindow demoWindow = buildLayoutDemoWindow(nextTestWindowSerial++);
@@ -826,13 +542,9 @@ final class DemoUiScreen : UiScreen
             removeLayoutDemoWindow(demoWindow);
             logLine("UiWindow close: ", demoWindow.window.title);
         };
-        demoWindow.window.onHeaderDragStart = (cursorX, cursorY) { beginWindowDrag(demoWindow.window, cursorX, cursorY); };
-        demoWindow.window.onHeaderDragMove = (cursorX, cursorY) { updateWindowDrag(cursorX, cursorY); };
-        demoWindow.window.onHeaderDragEnd = () { endWindowInteraction(); };
-        demoWindow.window.onResizeStart = (handle) { beginWindowResize(demoWindow.window, handle); };
-        demoWindow.window.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
-        demoWindow.window.onResizeEnd = (handle) { endWindowInteraction(); };
+        registerWindowInteractionHandlers(demoWindow.window);
         testWindows ~= demoWindow;
+        addWindow(demoWindow.window);
         if (viewportWidth > 0.0f && viewportHeight > 0.0f)
             ensureWindowLayout();
         logLine("UiWindow spawn: ", demoWindow.window.title);
@@ -843,9 +555,6 @@ final class DemoUiScreen : UiScreen
         if (demoWindow is null)
             return;
 
-        if (activeDragWindow is demoWindow.window || activeResizeWindow is demoWindow.window)
-            endWindowInteraction();
-
         for (size_t index = 0; index < testWindows.length; ++index)
         {
             if (testWindows[index] is demoWindow)
@@ -854,6 +563,8 @@ final class DemoUiScreen : UiScreen
                 break;
             }
         }
+
+        removeWindow(demoWindow.window);
     }
 }
 

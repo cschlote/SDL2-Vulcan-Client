@@ -4,6 +4,7 @@
 
 - Updated the engine and UI planning documentation.
 - Removed the legacy stateless HUD construction path from the retained demo UI.
+- Refactored `DemoUiScreen` to use generic `UiScreen` window registration, iteration, hit testing, layout, and interaction helpers.
 - Improved font test coverage and documentation for release checks.
 
 ## Release 26.20.6619

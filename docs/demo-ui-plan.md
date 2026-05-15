@@ -105,17 +105,17 @@ Completed legacy cleanup:
 
 Use `UiScreen` properly:
 
-- register demo windows through generic `UiScreen` helpers
-- use `registerWindowInteractionHandlers` instead of duplicating drag/resize wiring
-- let `UiScreen` own generic window iteration and hit testing
-- keep demo-specific window creation, text, and callbacks in `DemoUiScreen`
+- demo windows are registered through generic `UiScreen` helpers
+- `registerWindowInteractionHandlers` owns common drag/resize wiring
+- `UiScreen` owns generic window iteration, hit testing, layout, and viewport clamping
+- demo-specific window creation, text, and callbacks stay in `DemoUiScreen`
 
 ## Implementation Order
 
 1. Update documentation and plans to reflect the engine-first direction. Done.
 2. Rename renderer-facing HUD data types to generic UI names. Done.
 3. Remove the old stateless HUD helper block from `demo_ui.d`. Done.
-4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently.
+4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently. Done.
 5. Fix settings persistence so only explicit Save writes to disk.
 6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field.
 7. Rebuild the settings window around Apply and Save.
