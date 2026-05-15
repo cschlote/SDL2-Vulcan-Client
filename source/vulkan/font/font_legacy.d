@@ -159,6 +159,14 @@ string selectDefaultMonospaceFontPath()
     return "/usr/share/fonts/noto/NotoSansMono-Regular.ttf".idup;
 }
 
+/** Normalizes a glyph set so atlas generation always keeps fallback entries.
+ *
+ * Params:
+ *   glyphSet = Input glyph set to normalize.
+ *
+ * Returns:
+ *   The glyph set with mandatory fallback characters added when needed.
+ */
 private string normalizeGlyphSetForAtlas(string glyphSet)
 {
     string normalized = glyphSet;
@@ -170,6 +178,19 @@ private string normalizeGlyphSetForAtlas(string glyphSet)
     return normalized;
 }
 
+/** Measures the rendered bounds of text using FreeType as the reference.
+ *
+ * This helper mirrors the font atlas layout path closely enough for tests to
+ * compare the CPU-side metrics against the atlas-driven rendering path.
+ *
+ * Params:
+ *   fontPath = Path to the font file.
+ *   pixelHeight = Requested pixel height.
+ *   text = UTF-8 text to measure.
+ *
+ * Returns:
+ *   Pixel-space width and height of the rendered text bounds.
+ */
 private RenderBounds freeTypeMeasureTextBounds(string fontPath, uint pixelHeight, string text)
 {
     auto loadResult = loadFreeType();
@@ -271,6 +292,16 @@ private RenderBounds freeTypeMeasureTextBounds(string fontPath, uint pixelHeight
     return bounds;
 }
 
+/** Measures the rendered width of text using FreeType as the reference.
+ *
+ * Params:
+ *   fontPath = Path to the font file.
+ *   pixelHeight = Requested pixel height.
+ *   text = UTF-8 text to measure.
+ *
+ * Returns:
+ *   The width in pixels of the widest rendered line.
+ */
 private float freeTypeMeasureTextWidth(string fontPath, uint pixelHeight, string text)
 {
     auto loadResult = loadFreeType();
@@ -367,6 +398,14 @@ private float freeTypeMeasureTextWidth(string fontPath, uint pixelHeight, string
     return lineWidth > widestWidth ? lineWidth : widestWidth;
 }
 
+/** Collects system font files that can be used by the font tests.
+ *
+ * The scan is intentionally broad so the unit tests can exercise ligatures,
+ * special symbols, and fallback behavior on real installed fonts.
+ *
+ * Returns:
+ *   A list of font file paths discovered on the local system.
+ */
 private string[] collectSystemFontPaths()
 {
     string[] fontPaths;
@@ -407,6 +446,16 @@ private string[] collectSystemFontPaths()
     return fontPaths;
 }
 
+/** Checks whether a font file can render all code points in a glyph set.
+ *
+ * Params:
+ *   fontPath = Path to the font file.
+ *   glyphSet = Code points that must be available in the font.
+ *   pixelHeight = Requested pixel height.
+ *
+ * Returns:
+ *   `true` when every code point resolves to a glyph index, `false` otherwise.
+ */
 private bool fontSupportsGlyphSet(string fontPath, string glyphSet, uint pixelHeight)
 {
     auto loadResult = loadFreeType();
@@ -440,11 +489,35 @@ private bool fontSupportsGlyphSet(string fontPath, string glyphSet, uint pixelHe
     return true;
 }
 
+/** Checks whether a font file can render all code points in a text sample.
+ *
+ * Params:
+ *   fontPath = Path to the font file.
+ *   text = UTF-8 text sample to validate.
+ *   pixelHeight = Requested pixel height.
+ *
+ * Returns:
+ *   `true` when the text sample is fully supported by the font.
+ */
 private bool fontSupportsText(string fontPath, string text, uint pixelHeight)
 {
     return fontSupportsGlyphSet(fontPath, collectGlyphSet([text]), pixelHeight);
 }
 
+/** Verifies the generated atlas pixels and kerning against FreeType output.
+ *
+ * This is the CPU-side bitmap check used by the unit tests to make sure the
+ * atlas content stays aligned with the values returned by libfreetype.
+ *
+ * Params:
+ *   fontPath = Path to the font file.
+ *   pixelHeight = Requested pixel height.
+ *   glyphSet = Code points that were used to build the atlas.
+ *   atlas = Generated font atlas to verify.
+ *
+ * Returns:
+ *   Nothing.
+ */
 private void verifyAtlasBitmapMatchesFreeType(string fontPath, uint pixelHeight, string glyphSet, ref const(FontAtlas) atlas)
 {
     auto loadResult = loadFreeType();
