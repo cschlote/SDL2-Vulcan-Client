@@ -71,7 +71,11 @@ struct FontAtlas
 }
 
 /** Default glyph coverage when no custom glyph set is supplied. */
-private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?/\\+-()[]%";
+private enum defaultGlyphSet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 " ~
+    ".,:;!?/\\+-()[]%<>_=@#&*^|~`'\"$€£¥§°±µ×÷·…–—«»‚„‘’“”" ~
+    "ÄÖÜäöüßÀÁÂÃÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕØÙÚÛÜÝÞàáâãåæçèéêëìíîïðñòóôõøùúûüýÿ" ~
+    "ĀāĂăĄąĆćĈĉČčĎďĐđĒēĖėĘęĚěĞğĢģĤĥĦħıİĮįĲĳĶķŁłŃńŅņŇňŒœŔŕŘřŚśŞşŠšŢţŤťŪūŮůŰűŲųŹźŻżŽž";
 
 /** Chooses a reasonable system font path for the current platform.
  *

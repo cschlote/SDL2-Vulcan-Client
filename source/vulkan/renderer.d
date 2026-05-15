@@ -165,46 +165,46 @@ class VulkanRenderer
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
-    private enum Vertex[] cubeVertices = [
-        Vertex([-1, -1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([ 1, -1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([ 1,  1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([-1,  1,  1], [0.95f, 0.25f, 0.25f]),
+    // private enum Vertex[] cubeVertices = [
+    //     Vertex([-1, -1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([ 1, -1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([ 1,  1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([-1,  1,  1], [0.95f, 0.25f, 0.25f]),
 
-        Vertex([ 1, -1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([-1, -1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([-1,  1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([ 1,  1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([ 1, -1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([-1, -1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([-1,  1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([ 1,  1, -1], [0.25f, 0.85f, 0.35f]),
 
-        Vertex([-1, -1, -1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1, -1,  1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1,  1,  1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1,  1, -1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1, -1, -1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1, -1,  1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1,  1,  1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1,  1, -1], [0.25f, 0.45f, 0.95f]),
 
-        Vertex([ 1, -1,  1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1, -1, -1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1,  1, -1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1,  1,  1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1, -1,  1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1, -1, -1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1,  1, -1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1,  1,  1], [0.95f, 0.85f, 0.25f]),
 
-        Vertex([-1,  1,  1], [0.80f, 0.35f, 0.95f]),
-        Vertex([ 1,  1,  1], [0.80f, 0.35f, 0.95f]),
-        Vertex([ 1,  1, -1], [0.80f, 0.35f, 0.95f]),
-        Vertex([-1,  1, -1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([-1,  1,  1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([ 1,  1,  1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([ 1,  1, -1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([-1,  1, -1], [0.80f, 0.35f, 0.95f]),
 
-        Vertex([-1, -1, -1], [0.25f, 0.90f, 0.90f]),
-        Vertex([ 1, -1, -1], [0.25f, 0.90f, 0.90f]),
-        Vertex([ 1, -1,  1], [0.25f, 0.90f, 0.90f]),
-        Vertex([-1, -1,  1], [0.25f, 0.90f, 0.90f]),
-    ];
+    //     Vertex([-1, -1, -1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([ 1, -1, -1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([ 1, -1,  1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([-1, -1,  1], [0.25f, 0.90f, 0.90f]),
+    // ];
 
-    private enum uint[] cubeIndices = [
-        0, 1, 2, 0, 2, 3,
-        4, 5, 6, 4, 6, 7,
-        8, 9, 10, 8, 10, 11,
-        12, 13, 14, 12, 14, 15,
-        16, 17, 18, 16, 18, 19,
-        20, 21, 22, 20, 22, 23,
-    ];
+    // private enum uint[] cubeIndices = [
+    //     0, 1, 2, 0, 2, 3,
+    //     4, 5, 6, 4, 6, 7,
+    //     8, 9, 10, 8, 10, 11,
+    //     12, 13, 14, 12, 14, 15,
+    //     16, 17, 18, 16, 18, 19,
+    //     20, 21, 22, 20, 22, 23,
+    // ];
 
     /** Creates the full renderer stack for the current SDL window and build version.
      *
@@ -1489,13 +1489,13 @@ class VulkanRenderer
     /** Opens the settings dialog with a fresh copy of the current live settings. */
     private void openSettingsDialog()
     {
-        uiScreen.toggleDemoWindow();
+        uiScreen.toggleSettingsWindow();
     }
 
     /** Toggles the settings dialog and refreshes the draft when opening. */
     private void toggleSettingsDialog()
     {
-        uiScreen.toggleDemoWindow();
+        uiScreen.toggleSettingsWindow();
     }
 
     /** Applies the settings draft to the live bundle and writes it to disk. */
