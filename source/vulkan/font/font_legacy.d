@@ -464,14 +464,27 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     }
 }
 
-/** Describes the pixel-space bounds of rendered text geometry. */
+/** Describes the pixel-space bounds of rendered text geometry.
+ *
+ * Returns:
+ *   Width and height in pixel space.
+ */
 private struct RenderBounds
 {
     float width;
     float height;
 }
 
-/** Measures the pixel-space bounds of vertices emitted by appendText(). */
+/** Measures the pixel-space bounds of vertices emitted by appendText().
+ *
+ * Params:
+ *   vertices = Text geometry to inspect.
+ *   extentWidth = Swapchain width used to convert NDC back to pixels.
+ *   extentHeight = Swapchain height used to convert NDC back to pixels.
+ *
+ * Returns:
+ *   The measured bounds of the emitted quad vertices.
+ */
 private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float extentWidth, float extentHeight)
 {
     RenderBounds bounds;
@@ -516,7 +529,15 @@ private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float exten
     return bounds;
 }
 
-/** Returns true when the supplied UTF-8 string contains the requested code point. */
+/** Returns true when the supplied UTF-8 string contains the requested code point.
+ *
+ * Params:
+ *   text = UTF-8 text to scan.
+ *   needle = Code point to look for.
+ *
+ * Returns:
+ *   `true` if `needle` appears in `text`, otherwise `false`.
+ */
 private bool containsCodePoint(string text, dchar needle)
 {
     foreach (ch; text)
@@ -528,7 +549,19 @@ private bool containsCodePoint(string text, dchar needle)
     return false;
 }
 
-/** Copies one FreeType bitmap into the atlas pixel buffer. */
+/** Copies one FreeType bitmap into the atlas pixel buffer.
+ *
+ * Params:
+ *   atlasPixels = RGBA destination pixels for the atlas.
+ *   atlasWidth = Atlas width in pixels.
+ *   atlasHeight = Atlas height in pixels.
+ *   atlasX = Left edge of the glyph cell in pixels.
+ *   atlasY = Top edge of the glyph cell in pixels.
+ *   bitmap = FreeType bitmap to copy.
+ *
+ * Returns:
+ *   Nothing.
+ */
 private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atlasHeight, uint atlasX, uint atlasY, ref const(FT_Bitmap) bitmap)
 {
     const pitch = bitmap.pitch;
@@ -550,7 +583,26 @@ private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atla
     }
 }
 
-/** Appends a textured quad in normalized device coordinates. */
+/** Appends a textured quad in normalized device coordinates.
+ *
+ * Params:
+ *   vertices = Destination vertex list.
+ *   left = Left edge in pixel space.
+ *   top = Top edge in pixel space.
+ *   right = Right edge in pixel space.
+ *   bottom = Bottom edge in pixel space.
+ *   z = Depth value for the quad.
+ *   u0 = Minimum texture U coordinate.
+ *   v0 = Minimum texture V coordinate.
+ *   u1 = Maximum texture U coordinate.
+ *   v1 = Maximum texture V coordinate.
+ *   color = Vertex color in RGBA format.
+ *   extentWidth = Swapchain width used for NDC conversion.
+ *   extentHeight = Swapchain height used for NDC conversion.
+ *
+ * Returns:
+ *   Nothing.
+ */
 private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
 {
     const safeExtentWidth = extentWidth > 0.0f && !isNaN(extentWidth) && !isInfinity(extentWidth) ? extentWidth : 1.0f;
