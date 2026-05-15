@@ -117,7 +117,7 @@ Use `UiScreen` properly:
 3. Remove the old stateless HUD helper block from `demo_ui.d`. Done.
 4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently. Done.
 5. Fix settings persistence so only explicit Save writes to disk. Done.
-6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field.
+6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field. Done.
 7. Rebuild the settings window around Apply and Save.
 8. Rework demo windows into clear app roles.
 9. Review which modules are reusable enough for the first Engine-only package boundary.
