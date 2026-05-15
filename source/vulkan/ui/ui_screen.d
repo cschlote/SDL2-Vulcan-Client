@@ -175,6 +175,7 @@ protected:
         window.onResizeStart = (handle) { beginWindowResize(window, handle); };
         window.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
         window.onResizeEnd = (handle) { endWindowInteraction(); };
+        window.onHeaderMiddleClick = () { toggleWindowStackPosition(window); };
     }
 
     void toggleWindow(UiWindow window)
@@ -186,8 +187,77 @@ protected:
 
         if (!window.visible && isInteractingWith(window))
             endWindowInteraction();
+        else if (window.visible)
+            bringWindowToFront(window);
 
         ensureWindowLayout();
+        if (window.visible)
+            placeWindowWithoutOverlap(window);
+    }
+
+    void bringWindowToFront(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index < 0 || cast(size_t)index + 1 == windows_.length)
+            return;
+
+        windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
+    }
+
+    void sendWindowToBack(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index <= 0)
+            return;
+
+        windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
+    }
+
+    void toggleWindowStackPosition(UiWindow window)
+    {
+        if (window is null)
+            return;
+
+        if (isFrontWindow(window))
+            sendWindowToBack(window);
+        else
+            bringWindowToFront(window);
+    }
+
+    bool isFrontWindow(UiWindow window) const
+    {
+        return window !is null && windows_.length > 0 && windows_[$ - 1] is window;
+    }
+
+    void placeWindowWithoutOverlap(UiWindow window, float inset = 10.0f, float step = 24.0f)
+    {
+        if (window is null || viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
+            return;
+
+        clampWindowToViewport(window);
+        if (!overlapsVisibleWindow(window, window.x, window.y))
+            return;
+
+        const maximumLeft = viewportWidth_ > window.width ? viewportWidth_ - window.width : 0.0f;
+        const maximumTop = viewportHeight_ > window.height ? viewportHeight_ - window.height : 0.0f;
+        const startX = clampFloat(inset, 0.0f, maximumLeft);
+        const startY = clampFloat(inset, 0.0f, maximumTop);
+        const effectiveStep = step > 0.0f ? step : 24.0f;
+
+        for (float y = startY; y <= maximumTop; y += effectiveStep)
+        {
+            for (float x = startX; x <= maximumLeft; x += effectiveStep)
+            {
+                if (!overlapsVisibleWindow(window, x, y))
+                {
+                    window.x = x;
+                    window.y = y;
+                    return;
+                }
+            }
+        }
+
+        clampWindowToViewport(window);
     }
 
     void endWindowInteraction()
@@ -250,6 +320,39 @@ protected:
     }
 
 private:
+    ptrdiff_t windowIndex(UiWindow window) const
+    {
+        foreach (index, candidate; windows_)
+        {
+            if (candidate is window)
+                return cast(ptrdiff_t)index;
+        }
+
+        return -1;
+    }
+
+    bool overlapsVisibleWindow(UiWindow window, float candidateX, float candidateY) const
+    {
+        foreach (other; windows_)
+        {
+            if (other is window || other is null || !other.visible)
+                continue;
+
+            if (rectsOverlap(candidateX, candidateY, window.width, window.height, other.x, other.y, other.width, other.height))
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool rectsOverlap(float leftA, float topA, float widthA, float heightA, float leftB, float topB, float widthB, float heightB)
+    {
+        return leftA < leftB + widthB &&
+            leftA + widthA > leftB &&
+            topA < topB + heightB &&
+            topA + heightA > topB;
+    }
+
     void beginWindowDrag(UiWindow window, float cursorX, float cursorY)
     {
         activeDragWindow = window;
@@ -352,4 +455,38 @@ private:
         foreach (window; windows_)
             clampWindowToViewport(window);
     }
+}
+
+@("UiScreen reorders windows without z values")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto first = new UiWindow("first", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto second = new UiWindow("second", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(first);
+    screen.addWindow(second);
+
+    assert(screen.isFrontWindow(second));
+    screen.bringWindowToFront(first);
+    assert(screen.isFrontWindow(first));
+    screen.toggleWindowStackPosition(first);
+    assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen can place a window away from existing visible windows")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(260.0f, 160.0f);
+
+    auto occupied = new UiWindow("occupied", 10.0f, 10.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto target = new UiWindow("target", 10.0f, 10.0f, 60.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(occupied);
+    screen.addWindow(target);
+
+    screen.placeWindowWithoutOverlap(target, 10.0f, 24.0f);
+    assert(!UiScreen.rectsOverlap(target.x, target.y, target.width, target.height, occupied.x, occupied.y, occupied.width, occupied.height));
 }

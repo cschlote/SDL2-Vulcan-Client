@@ -171,7 +171,7 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
 }
 
 
-private enum float windowMargin = 18.0f;
+private enum float windowMargin = 10.0f;
 private enum float initWidth = 160.0f;
 private enum float initHeight = 258.0f;
 private enum float helpWidth = 388.0f;
@@ -694,7 +694,10 @@ final class DemoUiScreen : UiScreen
         testWindows ~= demoWindow;
         addWindow(demoWindow.window);
         if (viewportWidth > 0.0f && viewportHeight > 0.0f)
+        {
             ensureWindowLayout();
+            placeWindowWithoutOverlap(demoWindow.window);
+        }
         logLine("UiWindow spawn: ", demoWindow.window.title);
     }
 

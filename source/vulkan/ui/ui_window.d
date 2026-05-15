@@ -47,6 +47,7 @@ final class UiWindow : UiWidget
     void delegate(UiResizeHandle) onResizeStart;                ///< Notified when a resize gesture starts.
     void delegate(UiResizeHandle, float, float) onResizeMove;   ///< Notified while a resize gesture is running.
     void delegate(UiResizeHandle) onResizeEnd;                  ///< Notified when a resize gesture ends.
+    void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks the header.
     void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
 
     /**
@@ -170,6 +171,13 @@ final class UiWindow : UiWidget
                 resizeHandle = UiResizeHandle.none;
                 return true;
             }
+        }
+
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 2 && dragable && isInDragHeader(event.x, event.y))
+        {
+            if (onHeaderMiddleClick !is null)
+                onHeaderMiddleClick();
+            return true;
         }
 
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)

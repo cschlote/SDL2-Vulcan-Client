@@ -52,6 +52,7 @@ The build runs the version helper and shader compiler before linking the executa
 - Arrow keys rotate the camera.
 - Hold `Shift` while rotating for faster camera movement.
 - Mouse drag outside UI windows rotates the scene.
+- Middle-click a UI window header to toggle that window between front and back.
 - Mouse wheel outside UI windows changes the camera field of view.
 - `+` and `-` switch the active Platonic solid, including keypad variants.
 - `Esc` closes the application.

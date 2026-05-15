@@ -87,6 +87,8 @@ Interactive controls that drag, such as sliders, need local pointer capture afte
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
 
+`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Header middle-click toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position.
+
 ## Settings Policy
 
 Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.

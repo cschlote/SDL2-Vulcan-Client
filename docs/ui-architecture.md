@@ -44,10 +44,12 @@ Generic responsibilities belong in `UiScreen`:
 - store screen-wide font atlas references
 - own the ordered list of `UiWindow` objects
 - iterate windows from back to front or front to back
+- move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
+- place windows in free screen space when possible
 - provide shared helpers for window dragging, resizing, toggling, registration, and removal
 
 Responsibilities that do not belong in `UiScreen`:
