@@ -863,6 +863,10 @@ private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) mediu
  */
 private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
+    const buttonHeight = max(cast(float)mediumFont.lineHeight + 10.0f, 24.0f);
+    const smallTextHeight = textBlockHeight(smallFont);
+    const mediumTextHeight = textBlockHeight(mediumFont);
+
     auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true);
     window.visible = layoutState.centerVisible;
     window.onClose = ()
@@ -873,12 +877,61 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
         layoutState.middleResizing = false;
         layoutState.middleResizeHandle = UiResizeHandle.none;
     };
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 4.0f);
-    content.add(new UiTextBlock("- USE THE BLUE HEADER BAR TO DRAG\n- RESIZE FROM THE CORNERS\n- THIS WINDOW IS THE RELAYOUT TEST BED\n- GOOD PLACE TO CHECK VBOX/HBOX BEHAVIOR", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumFont.lineHeight * 4.0f));
-    auto footerRow = new UiHBox(0.0f, 0.0f, 0.0f, mediumFont.lineHeight, 6.0f);
-    footerRow.add(new UiLabel("HEADER = DRAG", 0.0f, 0.0f, UiTextStyle.medium, [0.90f, 0.95f, 1.00f, 1.00f], mediumFont.lineHeight));
-    footerRow.add(new UiLabel("CORNERS = RESIZE", 0.0f, 0.0f, UiTextStyle.medium, [0.90f, 0.95f, 1.00f, 1.00f], mediumFont.lineHeight));
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 8.0f);
+
+    auto headerRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+    auto titleColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 2.0f);
+    titleColumn.add(new UiLabel("CENTER WINDOW", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 0.98f, 0.82f, 1.00f]));
+    titleColumn.add(new UiLabel("RESIZE TO WATCH THE LAYOUT", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
+    headerRow.add(titleColumn);
+
+    auto headerSpacer = new UiSpacer(16.0f, 0.0f);
+    headerSpacer.setLayoutHint(16.0f, 0.0f, 16.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
+    headerRow.add(headerSpacer);
+
+    auto badgeColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 2.0f);
+    badgeColumn.add(new UiLabel("LIVE RELAYOUT", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f]));
+    badgeColumn.add(new UiLabel("RECOMPUTE ON RESIZE", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
+    headerRow.add(badgeColumn);
+    content.add(headerRow);
+
+    auto panelRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+
+    auto leftPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    leftPanel.add(new UiLabel("LEFT PANEL", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f]));
+    leftPanel.add(new UiLabel("HEADER DRAG", 0.0f, 0.0f, UiTextStyle.small, [1.00f, 1.00f, 1.00f, 1.00f], smallTextHeight));
+    leftPanel.add(new UiButton("CHECK", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    panelRow.add(leftPanel);
+
+    auto centerPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    centerPanel.add(new UiLabel("CENTER PANEL", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f]));
+    centerPanel.add(new UiTextBlock("THIS COLUMN EXPANDS WITH THE WINDOW.\nTHE TEXT STAYS RETAINED.", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight * 2.0f));
+    centerPanel.add(new UiLabel("VERTICAL STACK", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
+    panelRow.add(centerPanel);
+
+    auto rightPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    rightPanel.add(new UiLabel("RIGHT PANEL", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f]));
+    rightPanel.add(new UiButton("LAYOUT", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    rightPanel.add(new UiButton("TEST", 0.0f, 0.0f, 0.0f, 0.0f, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    panelRow.add(rightPanel);
+    content.add(panelRow);
+
+    auto controlRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 6.0f);
+    controlRow.add(new UiButton("HEADER = DRAG", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    auto controlSpacer = new UiSpacer(12.0f, 0.0f);
+    controlSpacer.setLayoutHint(12.0f, 0.0f, 12.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
+    controlRow.add(controlSpacer);
+    controlRow.add(new UiButton("CORNERS = RESIZE", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
+    content.add(controlRow);
+
+    auto footerRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 6.0f);
+    footerRow.add(new UiLabel("WATCH THE HBOXES SPREAD", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
+    auto footerSpacer = new UiSpacer(12.0f, 0.0f);
+    footerSpacer.setLayoutHint(12.0f, 0.0f, 12.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
+    footerRow.add(footerSpacer);
+    footerRow.add(new UiLabel("RELAYOUT TEST", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
     content.add(footerRow);
+
     UiLayoutContext layoutContext = buildLayoutContext(smallFont, mediumFont);
     content.layout(layoutContext);
     window.add(content);
@@ -1017,15 +1070,28 @@ private HudWindowRect buildInputRect(float extentWidth, float extentHeight, ref 
 
 private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref HudLayoutState layoutState, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
-    const titleWidth = textBlockWidth(mediumFont, "DRAG ME");
-    const lineOne = measuredTextWidth(mediumFont, "USE THE BLUE HEADER BAR TO DRAG.");
-    const lineTwo = measuredTextWidth(mediumFont, "RESIZE FROM THE CORNERS.");
-    const lineThree = measuredTextWidth(mediumFont, "THIS WINDOW IS THE RELAYOUT TEST BED.");
-    const lineFour = measuredTextWidth(mediumFont, "GOOD FOR CHECKING VBOX / HBOX REFLOW.");
-    const contentWidth = max(max(lineOne, lineTwo), max(lineThree, lineFour));
-    const measuredWidth = max(titleWidth + 24.0f, contentWidth + 36.0f);
+    const titleWidth = textBlockWidth(mediumFont, "CENTER WINDOW");
+    const titleSubWidth = textBlockWidth(smallFont, "RESIZE TO WATCH THE LAYOUT");
+    const badgeWidth = max(textBlockWidth(mediumFont, "LIVE RELAYOUT"), textBlockWidth(smallFont, "RECOMPUTE ON RESIZE"));
+    const headerWidth = max(titleWidth, titleSubWidth) + 16.0f + badgeWidth;
+    const centerButtonHeight = max(cast(float)mediumFont.lineHeight + 10.0f, 24.0f);
+
+    const leftPanelWidth = max(max(textBlockWidth(mediumFont, "LEFT PANEL"), textBlockWidth(smallFont, "HEADER DRAG")), measuredButtonWidth(mediumFont, "CHECK", 20.0f));
+    const centerPanelWidth = max(max(textBlockWidth(mediumFont, "CENTER PANEL"), textBlockWidth(mediumFont, "THIS COLUMN EXPANDS WITH THE WINDOW.")), textBlockWidth(smallFont, "VERTICAL STACK"));
+    const rightPanelWidth = max(max(textBlockWidth(mediumFont, "RIGHT PANEL"), measuredButtonWidth(mediumFont, "LAYOUT", 20.0f)), measuredButtonWidth(mediumFont, "TEST", 20.0f));
+    const panelWidth = leftPanelWidth + 20.0f + centerPanelWidth + 20.0f + rightPanelWidth;
+
+    const controlWidth = measuredButtonWidth(mediumFont, "HEADER = DRAG", 20.0f) + 12.0f + measuredButtonWidth(mediumFont, "CORNERS = RESIZE", 20.0f);
+    const footerWidth = max(textBlockWidth(smallFont, "WATCH THE HBOXES SPREAD"), textBlockWidth(smallFont, "RELAYOUT TEST"));
+
+    const contentWidth = max(max(headerWidth, panelWidth), max(controlWidth, footerWidth));
+    const measuredWidth = contentWidth + 40.0f;
     const mediumTextHeight = measuredTextHeight(mediumFont);
-    const measuredHeight = 36.0f + max(max(max(0.0f + mediumTextHeight, mediumTextHeight * 2.0f + 12.0f), mediumTextHeight * 5.0f + 20.0f), mediumTextHeight * 5.0f + 40.0f) + 20.0f;
+    const smallTextHeight = measuredTextHeight(smallFont);
+    const headerHeight = max(mediumTextHeight * 2.0f, smallTextHeight * 2.0f);
+    const panelHeight = max(centerButtonHeight * 2.0f, mediumTextHeight * 4.0f + 12.0f);
+    const footerHeight = max(smallTextHeight, mediumTextHeight);
+    const measuredHeight = 32.0f + headerHeight + 12.0f + panelHeight + 12.0f + centerButtonHeight + 12.0f + footerHeight + 16.0f;
 
     layoutState.middleMinimumWidth = measuredWidth;
     layoutState.middleMinimumHeight = measuredHeight;
