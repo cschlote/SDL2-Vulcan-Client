@@ -10,6 +10,7 @@ module vulkan.ui.ui_button;
 
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine;
 import logging : logLine;
@@ -46,6 +47,16 @@ final class UiButton : UiWidget
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        const textWidth = context.textWidth(style, caption);
+        const textHeight = context.textHeight(style);
+        const measuredWidth = width > 0.0f ? width : textWidth + textOffsetX * 2.0f;
+        const measuredHeight = height > 0.0f ? height : textHeight + textOffsetY * 2.0f;
+        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight, 0.0f, 0.0f);
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
         appendButtonFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor, context.depthBase);

@@ -13,6 +13,7 @@ module vulkan.ui.ui_layout;
 import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
@@ -25,6 +26,11 @@ final class UiSpacer : UiWidget
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        return UiLayoutSize(width, height);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
     }
@@ -183,6 +189,25 @@ final class UiSurfaceBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float tallest = 0.0f;
+
+        foreach (child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > widest)
+                widest = childSize.width;
+            if (childSize.height > tallest)
+                tallest = childSize.height;
+        }
+
+        const measuredWidth = width > 0.0f ? width : widest + paddingLeft + paddingRight;
+        const measuredHeight = height > 0.0f ? height : tallest + paddingTop + paddingBottom;
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, backgroundColor, borderColor, context.depthBase, drawBackground, drawBorder);
@@ -191,6 +216,18 @@ protected:
 
     override void layoutChildren()
     {
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = innerWidth();
+            child.height = innerHeight();
+            child.layout(context);
+        }
     }
 }
 
@@ -206,6 +243,24 @@ final class UiVBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float totalHeight = 0.0f;
+
+        foreach (index, child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > widest)
+                widest = childSize.width;
+            totalHeight += childSize.height;
+            if (index + 1 < children.length)
+                totalHeight += spacing;
+        }
+
+        return UiLayoutSize(width > 0.0f ? width : widest + paddingLeft + paddingRight, height > 0.0f ? height : totalHeight + paddingTop + paddingBottom);
+    }
+
     override void layoutChildren()
     {
         float cursorY = paddingTop;
@@ -226,6 +281,28 @@ protected:
             cursorY += spacing;
         }
     }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float cursorY = paddingTop;
+        const availableWidth = innerWidth();
+        const childCount = children.length;
+        const availableHeight = max(innerHeight() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childHeights = resolveSizes(children, availableHeight, false);
+
+        foreach (index, child; children)
+        {
+            const hint = horizontalHint(child);
+            const childWidth = hint.grow > 0.0f ? clampFloat(availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+            child.x = paddingLeft;
+            child.y = cursorY;
+            child.width = childWidth;
+            child.height = childHeights[index];
+            child.layout(context);
+            cursorY += child.height;
+            cursorY += spacing;
+        }
+    }
 }
 
 /** Horizontal row container. */
@@ -240,6 +317,24 @@ final class UiHBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float totalWidth = 0.0f;
+
+        foreach (index, child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.height > widest)
+                widest = childSize.height;
+            totalWidth += childSize.width;
+            if (index + 1 < children.length)
+                totalWidth += spacing;
+        }
+
+        return UiLayoutSize(width > 0.0f ? width : totalWidth + paddingLeft + paddingRight, height > 0.0f ? height : widest + paddingTop + paddingBottom);
+    }
+
     override void layoutChildren()
     {
         float cursorX = paddingLeft;
@@ -256,6 +351,28 @@ protected:
             child.y = paddingTop;
             child.width = childWidths[index];
             child.height = childHeight;
+            cursorX += child.width;
+            cursorX += spacing;
+        }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float cursorX = paddingLeft;
+        const availableHeight = innerHeight();
+        const childCount = children.length;
+        const availableWidth = max(innerWidth() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childWidths = resolveSizes(children, availableWidth, true);
+
+        foreach (index, child; children)
+        {
+            const hint = verticalHint(child);
+            const childHeight = hint.grow > 0.0f ? clampFloat(availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+            child.x = cursorX;
+            child.y = paddingTop;
+            child.width = childWidths[index];
+            child.height = childHeight;
+            child.layout(context);
             cursorX += child.width;
             cursorX += spacing;
         }

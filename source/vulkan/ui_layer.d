@@ -30,6 +30,7 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_container : UiContainer;
 import vulkan.ui.ui_label : UiLabel, UiTextBlock;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import logging : logLine;
 
@@ -394,15 +395,22 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - statusWindowInnerWidthPadding, 0.0f), max(rect.height - statusWindowInnerHeightPadding, 0.0f), metrics.rowSpacing);
     content.setLayoutHint(0.0f, metrics.contentHeight, metrics.contentWidth, metrics.contentHeight, float.max, metrics.contentHeight, 1.0f, 0.0f);
 
+    UiLayoutContext layoutContext;
+    layoutContext.fonts[cast(size_t)UiTextStyle.small] = &smallFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.medium] = &mediumFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.large] = &mediumFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.sample7] = &smallFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.sample8] = &smallFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.sample9] = &smallFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.sample11] = &mediumFont;
+    layoutContext.fonts[cast(size_t)UiTextStyle.sampleMono] = &smallFont;
+
     foreach (index; 0 .. rowLabels.length)
     {
         auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, 0.0f);
         row.setLayoutHint(0.0f, metrics.rowHeight, metrics.contentWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
 
-        auto label = new UiLabel(cast(string)rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusWindowPlatformColor, metrics.rowHeight);
-        label.width = metrics.labelWidth;
-        label.height = metrics.rowHeight;
-        label.setLayoutHint(metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, 0.0f, 0.0f);
+        auto label = new UiLabel(cast(string)rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusWindowPlatformColor);
         row.add(label);
 
         row.add(new UiSpacer(statusWindowColumnGap, metrics.rowHeight));
@@ -421,14 +429,12 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
             default: valueColor = cast(float[4])statusWindowBodyTextColor; break;
         }
 
-        auto value = new UiLabel(cast(string)rowValues[index], 0.0f, 0.0f, UiTextStyle.medium, valueColor, metrics.rowHeight);
-        value.width = metrics.valueWidth;
-        value.height = metrics.rowHeight;
-        value.setLayoutHint(metrics.valueWidth, metrics.rowHeight, metrics.valueWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
+        auto value = new UiLabel(cast(string)rowValues[index], 0.0f, 0.0f, UiTextStyle.medium, valueColor);
         row.add(value);
         content.add(row);
     }
 
+    content.layout(layoutContext);
     window.add(content);
     return window;
 }

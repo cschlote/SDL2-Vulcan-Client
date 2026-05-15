@@ -11,6 +11,7 @@ module vulkan.ui.ui_widget;
 
 import vulkan.ui.ui_event : UiPointerEvent;
 import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 
 /** Base class for all retained UI widgets. */
 abstract class UiWidget
@@ -69,6 +70,31 @@ abstract class UiWidget
         this.flexGrowY = flexGrowY;
     }
 
+    /** Measures the widget's intrinsic size for a layout pass. */
+    final UiLayoutSize measure(ref UiLayoutContext context)
+    {
+        const measured = measureSelf(context);
+        preferredWidth = measured.width;
+        preferredHeight = measured.height;
+        if (minimumWidth <= 0.0f)
+            minimumWidth = measured.width;
+        if (minimumHeight <= 0.0f)
+            minimumHeight = measured.height;
+        return measured;
+    }
+
+    /** Runs an explicit layout pass for the widget subtree. */
+    final void layout(ref UiLayoutContext context)
+    {
+        const measured = measure(context);
+        if (width <= 0.0f)
+            width = measured.width;
+        if (height <= 0.0f)
+            height = measured.height;
+
+        layoutSelf(context);
+    }
+
     /** Routes a pointer event through the widget tree. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
@@ -109,6 +135,17 @@ abstract class UiWidget
     }
 
 protected:
+    /** Returns the widget's intrinsic size before a layout pass positions it. */
+    UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : width, preferredHeight > 0.0f ? preferredHeight : height);
+    }
+
+    /** Positions the widget's children during an explicit layout pass. */
+    void layoutSelf(ref UiLayoutContext context)
+    {
+    }
+
     abstract void renderSelf(ref UiRenderContext context);
 
     /** Handles a pointer event after children had a chance to consume it. */
