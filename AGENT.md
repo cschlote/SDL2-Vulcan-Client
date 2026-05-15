@@ -21,7 +21,7 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - Use DDoc tags for modules and other documentable language elements.
 - For structs and classes, an end-of-line DDoc comment is preferred for structure or class member variable when the description is short; use `/** ... */` just before the structure/class member when the documentation becomes long or multi-line.
 - For every documented function, method, or helper, include a `Params:` section for arguments and a `Returns:` section for the result, even when the return value is `void`.
-- Document private types, methods, functions, and other meaningful helpers with DDoc when they are part of the implementation contract or maintenance surface.
+- Document private types, methods, functions, and other meaningful helpers with DDoc.
 
 ## Resource management
 
