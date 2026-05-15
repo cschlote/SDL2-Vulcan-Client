@@ -83,7 +83,6 @@ struct FontAtlas
     ubyte[] pixels;
 }
 
-/** Default glyph coverage used when no custom glyph set is supplied. */
 private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?/\\+-()[]%";
 
 /** Chooses a reasonable system font path for the current platform.
@@ -92,8 +91,7 @@ private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv
  * which keeps the sample runnable on a fresh system.
  *
  *
- * Returns:
- *   A usable font file path.
+ * @returns A usable font file path.
  */
 string selectDefaultFontPath()
 {
@@ -123,11 +121,7 @@ string selectDefaultFontPath()
     return "/usr/share/fonts/TTF/DejaVuSans.ttf".idup;
 }
 
-/** Chooses a reasonable system monospace font path for the current platform.
- *
- * Returns:
- *   A usable monospace font file path.
- */
+/** Chooses a reasonable system monospace font path for the current platform. */
 string selectDefaultMonospaceFontPath()
 {
     const overrideFontPath = environment.get("SDL2_VULCAN_CLIENT_MONO_FONT_PATH", "");
@@ -162,13 +156,10 @@ string selectDefaultMonospaceFontPath()
  * text by appending textured quads into the shared vertex buffers.
  *
  *
- * Params:
- *   fontPath = Path to the font file.
- *   pixelHeight = Requested pixel height.
- *   glyphSet = Characters to include in the atlas.
- *
- * Returns:
- *   A populated atlas with bitmap pixels and glyph metrics.
+ * @param fontPath = Path to the font file.
+ * @param pixelHeight = Requested pixel height.
+ * @param glyphSet = Characters to include in the atlas.
+ * @returns A populated atlas with bitmap pixels and glyph metrics.
  */
 FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = defaultGlyphSet)
 {
@@ -417,18 +408,15 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
  * layered with the rest of the retained widgets and the HUD overlay.
  *
  *
- * Params:
- *   vertices = Destination vertex list.
- *   atlas = Font atlas used for the text.
- *   text = Text to append.
- *   x = Starting x position in pixels.
- *   y = Starting y position in pixels.
- *   color = Text color in RGBA format.
- *   extentWidth = Swapchain width in pixels.
- *   extentHeight = Swapchain height in pixels.
- *
- * Returns:
- *   Nothing.
+ * @param vertices = Destination vertex list.
+ * @param atlas = Font atlas used for the text.
+ * @param text = Text to append.
+ * @param x = Starting x position in pixels.
+ * @param y = Starting y position in pixels.
+ * @param color = Text color in RGBA format.
+ * @param extentWidth = Swapchain width in pixels.
+ * @param extentHeight = Swapchain height in pixels.
+ * @returns Nothing.
  */
 void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, float x, float y, float z, float[4] color, float extentWidth, float extentHeight)
 {
@@ -475,27 +463,14 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     }
 }
 
-/** Describes the pixel-space bounds of rendered text geometry.
- *
- * Returns:
- *   Width and height in pixel space.
- */
+/** Describes the pixel-space bounds of rendered text geometry. */
 private struct RenderBounds
 {
     float width;
     float height;
 }
 
-/** Measures the pixel-space bounds of vertices emitted by appendText().
- *
- * Params:
- *   vertices = Text geometry to inspect.
- *   extentWidth = Swapchain width used to convert NDC back to pixels.
- *   extentHeight = Swapchain height used to convert NDC back to pixels.
- *
- * Returns:
- *   The measured bounds of the emitted quad vertices.
- */
+/** Measures the pixel-space bounds of vertices emitted by appendText(). */
 private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float extentWidth, float extentHeight)
 {
     RenderBounds bounds;
@@ -540,39 +515,6 @@ private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float exten
     return bounds;
 }
 
-/** Returns true when the supplied UTF-8 string contains the requested code point.
- *
- * Params:
- *   text = UTF-8 text to scan.
- *   needle = Code point to look for.
- *
- * Returns:
- *   `true` if `needle` appears in `text`, otherwise `false`.
- */
-private bool containsCodePoint(string text, dchar needle)
-{
-    foreach (ch; text)
-    {
-        if (ch == needle)
-            return true;
-    }
-
-    return false;
-}
-
-/** Copies one FreeType bitmap into the atlas pixel buffer.
- *
- * Params:
- *   atlasPixels = RGBA destination pixels for the atlas.
- *   atlasWidth = Atlas width in pixels.
- *   atlasHeight = Atlas height in pixels.
- *   atlasX = Left edge of the glyph cell in pixels.
- *   atlasY = Top edge of the glyph cell in pixels.
- *   bitmap = FreeType bitmap to copy.
- *
- * Returns:
- *   Nothing.
- */
 private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atlasHeight, uint atlasX, uint atlasY, ref const(FT_Bitmap) bitmap)
 {
     const pitch = bitmap.pitch;
@@ -594,26 +536,6 @@ private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atla
     }
 }
 
-/** Appends a textured quad in normalized device coordinates.
- *
- * Params:
- *   vertices = Destination vertex list.
- *   left = Left edge in pixel space.
- *   top = Top edge in pixel space.
- *   right = Right edge in pixel space.
- *   bottom = Bottom edge in pixel space.
- *   z = Depth value for the quad.
- *   u0 = Minimum texture U coordinate.
- *   v0 = Minimum texture V coordinate.
- *   u1 = Maximum texture U coordinate.
- *   v1 = Maximum texture V coordinate.
- *   color = Vertex color in RGBA format.
- *   extentWidth = Swapchain width used for NDC conversion.
- *   extentHeight = Swapchain height used for NDC conversion.
- *
- * Returns:
- *   Nothing.
- */
 private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
 {
     const safeExtentWidth = extentWidth > 0.0f && !isNaN(extentWidth) && !isInfinity(extentWidth) ? extentWidth : 1.0f;
@@ -632,7 +554,6 @@ private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, fl
     vertices ~= Vertex([x0, y1, z], color, [0.0f, 0.0f, 1.0f], [u0, v1]);
 }
 
-@("default glyph set includes fallback characters")
 unittest
 {
     assert(indexOf(defaultGlyphSet, '?') >= 0);
@@ -640,25 +561,24 @@ unittest
     assert(selectDefaultFontPath().length > 0);
 }
 
-@("collect glyph set keeps first-seen order")
 unittest
 {
     // This is the first educational safety net: translate texts into a unique
     // glyph corpus before asking FreeType to build any atlas.
-    auto glyphSet = collectGlyphSet(["Hello", "World", "Glyphs"]);
-    assert(containsCodePoint(glyphSet, 'H'));
-    assert(containsCodePoint(glyphSet, 'W'));
-    assert(containsCodePoint(glyphSet, 'l'));
-    assert(containsCodePoint(glyphSet, ' '));
-    assert(containsCodePoint(glyphSet, '?'));
+    auto glyphSet = collectGlyphSet(["Hello", "Häuser", "Grüße", "Γειά"]);
+    assert(indexOf(glyphSet, "H") >= 0);
+    assert(indexOf(glyphSet, "ä") >= 0);
+    assert(indexOf(glyphSet, "ü") >= 0);
+    assert(indexOf(glyphSet, "Γ") >= 0);
+    assert(indexOf(glyphSet, ' ') >= 0);
+    assert(indexOf(glyphSet, "?") >= 0);
 }
 
-@("font atlas exposes usable metrics")
 unittest
 {
     // The atlas must expose sane metrics for the renderer and the UI layout.
     const fontPath = selectDefaultFontPath();
-    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["STATUS", "Render Modes"]));
+    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["STATUS", "Render Modes", "ÄΩ"]));
 
     assert(atlas.pixelHeight == 18);
     assert(atlas.width > 0);
@@ -668,15 +588,15 @@ unittest
     assert(atlas.lineHeight > 0.0f);
     assert(('S' in atlas.glyphs) !is null);
     assert((' ' in atlas.glyphs) !is null);
-    assert(('?' in atlas.glyphs) !is null);
+    assert(('Ä' in atlas.glyphs) !is null);
+    assert(('Ω' in atlas.glyphs) !is null);
 }
 
-@("text width matches emitted quads")
 unittest
 {
     // The width calculation must match the actual quads emitted by appendText().
     const fontPath = selectDefaultFontPath();
-    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["AVATAR", "Hello", "To"]));
+    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["AVATAR", "Hello", "To", "ÄΩ"]));
 
     Vertex[] vertices;
     appendText(vertices, atlas, "AVATAR", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
@@ -687,12 +607,11 @@ unittest
     assert(renderedBounds.width > 0.0f);
 }
 
-@("multiline text uses widest line")
 unittest
 {
     // Multi-line input must use the widest line for width and the line height for height.
     const fontPath = selectDefaultFontPath();
-    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["Line one", "A much wider second line"]));
+    auto atlas = buildFontAtlas(fontPath, 18, collectGlyphSet(["Line one", "A much wider second line", "ÄΩ"]));
 
     Vertex[] vertices;
     appendText(vertices, atlas, "Hi\nThere", 15.0f, 30.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
