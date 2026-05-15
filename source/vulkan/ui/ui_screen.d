@@ -12,7 +12,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.ui_screen;
+module vulkan.ui.ui_screen;
 
 import demo_settings : DemoSettings;
 import vulkan.font.font_legacy : FontAtlas;

@@ -29,7 +29,7 @@ import logging : logLine, logLineVerbose;
 import vulkan.font.font_legacy : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.ui.ui_event : UiPointerEventKind;
 import vulkan.ui_layer : HudWindowDrawRange, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
-import vulkan.ui_screen : UiScreen;
+import vulkan.ui.ui_screen : UiScreen;
 import math.matrix;
 import window;
 import vulkan.device;
