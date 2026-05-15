@@ -64,6 +64,7 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - For release commits, update `CHANGELOG.md`, generate the release timetag with `scripts/release_timetag.d`, and tag the commit with a leading `v`.
 - Do not commit generated build artifacts such as compiled helper binaries.
 - Before releasing or merging a feature branch, work through a checklist and confirm the change is ready for integration.
+- Before merging a feature branch into `main`, make sure the branch has a focused `CHANGELOG.md` note under `Unreleased`, documentation is consistent with the code, and the relevant validation commands for the touched area have passed.
 - The checklist must include documentation and unit test completeness and consistency against the project rules, plus the relevant validation commands for the touched area.
 - Do not tag or merge until the checklist is satisfied and any gaps are either fixed or explicitly accepted.
 
