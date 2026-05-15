@@ -177,7 +177,7 @@ final class UiWindow : UiWidget
             }
         }
 
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 2 && dragable && isInDragHeader(event.x, event.y))
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 2 && dragable && isInWindowChrome(event.x, event.y))
         {
             if (onHeaderMiddleClick !is null)
                 onHeaderMiddleClick();
@@ -356,8 +356,23 @@ private:
     /** Returns whether the pointer lies in the active header band. */
     bool isInDragHeader(float localX, float localY) const
     {
-        if (localX < x || localX >= x + width || localY < y || localY >= y + headerHeight)
+        if (!isInWindowChrome(localX, localY) || localY >= y + headerHeight)
             return false;
+
+        return true;
+    }
+
+    /** Returns whether the pointer lies in window chrome outside the content root. */
+    bool isInWindowChrome(float localX, float localY) const
+    {
+        if (localX < x || localX >= x + width || localY < y || localY >= y + height)
+            return false;
+
+        if (localX >= x + contentRoot.x && localX < x + contentRoot.x + contentRoot.width &&
+            localY >= y + contentRoot.y && localY < y + contentRoot.y + contentRoot.height)
+        {
+            return false;
+        }
 
         if (sizeable)
         {
@@ -365,6 +380,12 @@ private:
                 return false;
 
             if (localX >= x + width - 16.0f && localY < y + 16.0f)
+                return false;
+
+            if (localX < x + 16.0f && localY >= y + height - 16.0f)
+                return false;
+
+            if (localX >= x + width - 16.0f && localY >= y + height - 16.0f)
                 return false;
         }
 

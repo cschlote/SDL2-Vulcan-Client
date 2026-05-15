@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-No unreleased changes yet.
+- Fixed middle-click window chrome stacking so retained UI windows can be brought to the front or sent to the back outside their content area.
 
 ## Release 26.20.7022
 

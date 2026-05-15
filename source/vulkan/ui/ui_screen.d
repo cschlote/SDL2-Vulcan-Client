@@ -14,7 +14,7 @@ module vulkan.ui.ui_screen;
 import std.algorithm : max;
 
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.ui.ui_event : UiPointerEvent, UiResizeHandle;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
@@ -501,6 +501,37 @@ unittest
     screen.bringWindowToFront(first);
     assert(screen.isFrontWindow(first));
     screen.toggleWindowStackPosition(first);
+    assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen toggles window stacking from a middle chrome click")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto first = new UiWindow("first", 0.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, true);
+    auto second = new UiWindow("second", 100.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, true);
+    screen.registerWindowInteractionHandlers(first);
+    screen.registerWindowInteractionHandlers(second);
+    screen.addWindow(first);
+    screen.addWindow(second);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 2;
+    event.x = 10.0f;
+    event.y = 10.0f;
+
+    assert(screen.dispatchPointerEvent(event));
+    assert(screen.isFrontWindow(first));
+
+    event.y = 35.0f;
+    assert(!screen.dispatchPointerEvent(event));
+    assert(screen.isFrontWindow(first));
+
+    event.y = 78.0f;
+    assert(screen.dispatchPointerEvent(event));
     assert(screen.windowsInFrontToBack()[0] is first);
 }
 

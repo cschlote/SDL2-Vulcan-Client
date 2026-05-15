@@ -1146,12 +1146,9 @@ class VulkanRenderer
                 );
             }
 
-            /** Starts a scene drag when a mouse press does not hit the UI. */
+            /** Starts a scene drag when a primary mouse press does not hit the UI. */
             private bool handleMouseButtonDown(ref SDL_Event event)
             {
-                if (event.button.button != 1)
-                    return false;
-
                 UiPointerEvent pointerEvent;
                 pointerEvent.kind = UiPointerEventKind.buttonDown;
                 pointerEvent.x = cast(float)event.button.x;
@@ -1168,6 +1165,9 @@ class VulkanRenderer
                     return false;
                 }
 
+                if (event.button.button != 1)
+                    return false;
+
                 if (uiScreen.containsPointer(pointerEvent.x, pointerEvent.y))
                 {
                     uiScreen.sceneMouseDragging = false;
@@ -1179,12 +1179,9 @@ class VulkanRenderer
                 return false;
             }
 
-            /** Ends any active mouse drag when the button is released. */
+            /** Ends any active mouse drag when the primary mouse button is released. */
             private bool handleMouseButtonUp(ref SDL_Event event)
             {
-                if (event.button.button != 1)
-                    return false;
-
                 UiPointerEvent pointerEvent;
                 pointerEvent.kind = UiPointerEventKind.buttonUp;
                 pointerEvent.x = cast(float)event.button.x;
@@ -1195,6 +1192,9 @@ class VulkanRenderer
 
                 if (uiScreen.quitRequested)
                     return true;
+
+                if (event.button.button != 1)
+                    return false;
 
                 uiScreen.sceneMouseDragging = false;
                 return false;
