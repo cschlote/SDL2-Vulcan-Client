@@ -308,10 +308,9 @@ private enum float statusWindowContentPaddingX = 32.0f;
 private enum float statusWindowTitleHeight = 32.0f;
 private enum float statusWindowFooterPadding = 16.0f;
 private enum float statusWindowRowGap = 4.0f;
-private enum float statusWindowColumnGap = 10.0f;
+private enum float statusWindowColumnGap = 16.0f;
 private enum float statusWindowInnerWidthPadding = 28.0f;
 private enum float statusWindowInnerHeightPadding = 28.0f;
-private enum float statusWindowRowExtraGap = 8.0f;
 private enum float statusWindowTitleTextPadding = 2.0f;
 private enum float statusWindowHeaderTextPadding = 0.72f; // Default accent for platform/version labels.
 private enum float statusWindowLabelWidthFallback = 0.0f;
@@ -397,7 +396,7 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
 
     foreach (index; 0 .. rowLabels.length)
     {
-        auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, statusWindowRowExtraGap);
+        auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, 0.0f);
         row.setLayoutHint(0.0f, metrics.rowHeight, metrics.contentWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
 
         auto label = new UiLabel(cast(string)rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusWindowPlatformColor, metrics.rowHeight);
@@ -405,6 +404,8 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         label.height = metrics.rowHeight;
         label.setLayoutHint(metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, 0.0f, 0.0f);
         row.add(label);
+
+        row.add(new UiSpacer(statusWindowColumnGap, metrics.rowHeight));
 
         float[4] valueColor;
         switch (index)
