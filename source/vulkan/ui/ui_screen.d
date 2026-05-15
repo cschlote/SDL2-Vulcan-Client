@@ -19,6 +19,7 @@ import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
 
+/** Screen-level coordinator for retained UI windows. */
 class UiScreen
 {
     private float viewportWidth_;
@@ -37,6 +38,7 @@ class UiScreen
     private float resizeStartHeight;
     private UiResizeHandle resizeStartHandle;
 
+    /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
     {
         fontAtlases_ = liveFonts;
@@ -48,6 +50,7 @@ class UiScreen
         ensureWindowLayout();
     }
 
+    /** Updates the screen viewport in native window pixels and relayouts windows. */
     void syncViewport(float extentWidth, float extentHeight)
     {
         viewportWidth_ = extentWidth;
@@ -55,6 +58,7 @@ class UiScreen
         ensureWindowLayout();
     }
 
+    /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         if (activeResizeWindow !is null && activeResizeWindow.visible)
@@ -75,6 +79,7 @@ class UiScreen
         return false;
     }
 
+    /** Returns true when the point is inside any visible window. */
     bool containsPointer(float x, float y) const
     {
         foreach_reverse (window; windowsInFrontToBack())
@@ -89,16 +94,19 @@ class UiScreen
         return false;
     }
 
+    /** Returns the windows in draw order from back to front. */
     UiWindow[] windowsInFrontToBack()
     {
         return windows_;
     }
 
+    /** Returns the windows in draw order from back to front. */
     const(UiWindow)[] windowsInFrontToBack() const
     {
         return windows_;
     }
 
+    /** Recomputes layout and keeps windows inside the viewport. */
     void ensureWindowLayout()
     {
         if (viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
@@ -110,34 +118,41 @@ class UiScreen
     }
 
 protected:
+    /** Hook for subclasses to build and register their windows. */
     void onInitialize()
     {
     }
 
+    /** Hook for subclasses to place initial windows after layout. */
     void anchorWindows()
     {
     }
 
+    /** Current viewport width in native window pixels. */
     @property float viewportWidth() const
     {
         return viewportWidth_;
     }
 
+    /** Current viewport height in native window pixels. */
     @property float viewportHeight() const
     {
         return viewportHeight_;
     }
 
+    /** Font atlases used by the screen layout context. */
     @property const(FontAtlas)[] fontAtlases() const
     {
         return fontAtlases_;
     }
 
+    /** Last layout context built by `ensureWindowLayout`. */
     @property ref UiLayoutContext layoutContext()
     {
         return layoutContext_;
     }
 
+    /** Registers a window at the front of the draw order. */
     void addWindow(UiWindow window)
     {
         if (window is null)
@@ -146,6 +161,7 @@ protected:
         windows_ ~= window;
     }
 
+    /** Removes a registered window and cancels active interactions for it. */
     void removeWindow(UiWindow window)
     {
         if (window is null)
@@ -164,6 +180,7 @@ protected:
         }
     }
 
+    /** Connects a window's generic drag, resize, and stack callbacks. */
     void registerWindowInteractionHandlers(UiWindow window)
     {
         if (window is null)
@@ -178,6 +195,7 @@ protected:
         window.onHeaderMiddleClick = () { toggleWindowStackPosition(window); };
     }
 
+    /** Toggles visibility and places a shown window in usable screen space. */
     void toggleWindow(UiWindow window)
     {
         if (window is null)
@@ -195,6 +213,7 @@ protected:
             placeWindowWithoutOverlap(window);
     }
 
+    /** Moves a registered window to the front of the draw order. */
     void bringWindowToFront(UiWindow window)
     {
         const index = windowIndex(window);
@@ -204,6 +223,7 @@ protected:
         windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
     }
 
+    /** Moves a registered window to the back of the draw order. */
     void sendWindowToBack(UiWindow window)
     {
         const index = windowIndex(window);
@@ -213,6 +233,7 @@ protected:
         windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
     }
 
+    /** Brings a window forward, or sends it back when it is already front-most. */
     void toggleWindowStackPosition(UiWindow window)
     {
         if (window is null)
@@ -224,11 +245,13 @@ protected:
             bringWindowToFront(window);
     }
 
+    /** Returns true when `window` is the front-most registered window. */
     bool isFrontWindow(UiWindow window) const
     {
         return window !is null && windows_.length > 0 && windows_[$ - 1] is window;
     }
 
+    /** Attempts to move `window` to the first free non-overlapping viewport slot. */
     void placeWindowWithoutOverlap(UiWindow window, float inset = 10.0f, float step = 24.0f)
     {
         if (window is null || viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
@@ -260,6 +283,7 @@ protected:
         clampWindowToViewport(window);
     }
 
+    /** Cancels active window dragging or resizing. */
     void endWindowInteraction()
     {
         activeDragWindow = null;
@@ -267,16 +291,19 @@ protected:
         resizeStartHandle = UiResizeHandle.none;
     }
 
+    /** Returns true when the window is currently dragged or resized. */
     bool isInteractingWith(UiWindow window) const
     {
         return window !is null && (activeDragWindow is window || activeResizeWindow is window);
     }
 
+    /** Clamps a scalar value into a closed range. */
     static float clampFloat(float value, float minimum, float maximum)
     {
         return value < minimum ? minimum : (value > maximum ? maximum : value);
     }
 
+    /** Builds a layout context from the provided font atlases. */
     UiLayoutContext buildLayoutContext(const(FontAtlas)[] liveFonts) const
     {
         UiLayoutContext context;
@@ -285,6 +312,7 @@ protected:
         return context;
     }
 
+    /** Measures content and applies effective minimum window size. */
     void autoSizeWindow(UiWindow window, UiWidget content, float paddingLeft, float paddingTop, float paddingRight, float paddingBottom, float minimumWidth, float minimumHeight)
     {
         if (window is null || content is null || fontAtlases_.length == 0)
@@ -308,6 +336,7 @@ protected:
             window.height = minimumWindowHeight;
     }
 
+    /** Keeps a window fully inside the current viewport when possible. */
     void clampWindowToViewport(UiWindow window)
     {
         if (window is null)

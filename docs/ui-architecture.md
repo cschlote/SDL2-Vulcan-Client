@@ -79,6 +79,27 @@ Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific s
 
 Window content should be ordinary widgets. Application code should build a window body with layout containers and controls, then hand it to `UiWindow`.
 
+## Current Widget Set
+
+The reusable UI package currently provides these retained widgets:
+
+- `UiWindow`: framed, draggable, resizeable top-level window with an internal content root
+- `UiLabel`: single-line text label
+- `UiTextBlock`: text block placeholder for multi-line text rendering
+- `UiButton`: framed button with optional icon and label content row
+- `UiImage`: compact framed image/icon placeholder
+- `UiSpacer`: invisible layout spacer
+- `UiSurfaceBox`: optional background/border surface that assigns its child the full padded content area
+- `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
+- `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
+- `UiGrid`: weighted grid with explicit cell placement
+- `UiToggle`: boolean checkbox-style setting control
+- `UiSlider`: horizontal floating-point value control with pointer dragging
+- `UiDropdown`: compact option selector that cycles values until popup menus exist
+- `UiTextField`: single-line text value field with focus state; keyboard editing is still planned
+
+The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
+
 ## UiWidget Box Model
 
 `UiWidget` is the smallest retained UI object: a rectangular box with local coordinates, layout hints, children, and optional input handling.
@@ -146,7 +167,7 @@ Target direction:
 - keep renderer-facing UI geometry named generically
 - keep demo-specific screen construction in `source/demo/`
 - keep reusable widget and screen code in `source/vulkan/ui/`
-- remove stateless legacy HUD builder functions after the retained screen path fully replaces them
+- move renderer-facing UI geometry types into `vulkan.ui` once `UiScreen` owns enough generic render traversal
 
 ## Persistence Policy
 

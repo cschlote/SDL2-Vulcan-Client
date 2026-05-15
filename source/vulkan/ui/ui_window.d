@@ -65,6 +65,10 @@ final class UiWindow : UiWidget
      *   sizeable = Enables the four resize corner grips.
      *   closable = Shows a close button in the header.
      *   dragable = Makes the header visually distinct and accepts drag gestures.
+     *   contentPaddingLeft = Left inset for the internal content root.
+     *   contentPaddingTop = Top inset for the internal content root.
+     *   contentPaddingRight = Right inset for the internal content root.
+     *   contentPaddingBottom = Bottom inset for the internal content root.
      */
     this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false, float contentPaddingLeft = 18.0f, float contentPaddingTop = 10.0f, float contentPaddingRight = 18.0f, float contentPaddingBottom = 10.0f)
     {

@@ -52,18 +52,41 @@ private float centeredTextY(float height, float textHeight)
     return height > textHeight ? (height - textHeight) * 0.5f : 0.0f;
 }
 
-/** Two-state checkbox style control with an optional label. */
+/** Two-state checkbox style control with an optional label.
+ *
+ * `UiToggle` is a retained control for boolean settings. A primary-button
+ * click flips `checked` and emits `onChanged` with the new value.
+ */
 final class UiToggle : UiWidget
 {
+    /** Text rendered next to the toggle box. */
     string label;
+    /** Current boolean state. */
     bool checked;
+    /** Font style used for the optional label. */
     UiTextStyle style;
+    /** Toggle box fill color. */
     float[4] fillColor;
+    /** Toggle box border color. */
     float[4] borderColor;
+    /** Color used for the checked indicator. */
     float[4] accentColor;
+    /** Label text color. */
     float[4] textColor;
+    /** Called after user interaction changes `checked`. */
     void delegate(bool) onChanged;
 
+    /** Creates a retained two-state toggle.
+     *
+     * Params:
+     *   label = Text rendered next to the toggle box.
+     *   checked = Initial boolean state.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   style = Font style used for the label.
+     */
     this(string label, bool checked = false, float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
     {
         super(x, y, width, height);
@@ -113,21 +136,49 @@ protected:
     }
 }
 
-/** Horizontal numeric value selector. */
+/** Horizontal numeric value selector.
+ *
+ * `UiSlider` maps pointer position to a floating-point value in the configured
+ * range. After button-down it keeps local pointer capture until button-up so
+ * dragging remains stable even when the cursor leaves the original handle box.
+ */
 final class UiSlider : UiWidget
 {
+    /** Label prefix rendered with the current numeric value. */
     string label;
+    /** Smallest selectable value. */
     float minimum;
+    /** Largest selectable value. */
     float maximum;
+    /** Current selected value. */
     float value;
+    /** Font style used for the label and value. */
     UiTextStyle style;
+    /** Track fill color. */
     float[4] fillColor;
+    /** Track border color. */
     float[4] borderColor;
+    /** Filled-track and handle color. */
     float[4] accentColor;
+    /** Label text color. */
     float[4] textColor;
+    /** Called after user interaction or `setValue` changes `value`. */
     void delegate(float) onChanged;
     private bool dragging;
 
+    /** Creates a retained horizontal slider.
+     *
+     * Params:
+     *   label = Label prefix rendered before the numeric value.
+     *   minimum = Smallest selectable value.
+     *   maximum = Largest selectable value; adjusted above `minimum` if needed.
+     *   value = Initial value, clamped to the configured range.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   style = Font style used for the label and value.
+     */
     this(string label, float minimum, float maximum, float value, float x = 0.0f, float y = 0.0f, float width = 220.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
     {
         super(x, y, width, height);
@@ -142,6 +193,7 @@ final class UiSlider : UiWidget
         textColor = cast(float[4])defaultTextColor;
     }
 
+    /** Sets the slider value and emits `onChanged`. */
     void setValue(float newValue)
     {
         value = clampFloat(newValue, minimum, maximum);
@@ -213,18 +265,42 @@ protected:
     }
 }
 
-/** Compact option selector that cycles through available values on click. */
+/** Compact option selector that cycles through available values on click.
+ *
+ * This is an intentionally small combo-box placeholder. It keeps the retained
+ * control API generic while the UI engine does not yet have popups or menus.
+ */
 final class UiDropdown : UiWidget
 {
+    /** Logical label for the option group. */
     string label;
+    /** Available selectable values. */
     string[] options;
+    /** Index into `options` for the currently selected value. */
     size_t selectedIndex;
+    /** Font style used for the selected value. */
     UiTextStyle style;
+    /** Control fill color. */
     float[4] fillColor;
+    /** Control border color. */
     float[4] borderColor;
+    /** Selected value text color. */
     float[4] textColor;
+    /** Called after user interaction selects a new value. */
     void delegate(size_t, string) onChanged;
 
+    /** Creates a retained dropdown-style option selector.
+     *
+     * Params:
+     *   label = Logical label for the option group.
+     *   options = Available selectable values.
+     *   selectedIndex = Initially selected option index.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   style = Font style used for the selected value.
+     */
     this(string label, string[] options, size_t selectedIndex = 0, float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
     {
         super(x, y, width, height);
@@ -237,6 +313,7 @@ final class UiDropdown : UiWidget
         textColor = cast(float[4])defaultTextColor;
     }
 
+    /** Returns the selected option text, or an empty string without options. */
     string selectedText() const
     {
         return options.length == 0 ? "" : options[selectedIndex];
@@ -274,19 +351,44 @@ protected:
     }
 }
 
-/** Single-line text value field with focus state. */
+/** Single-line text value field with focus state.
+ *
+ * `UiTextField` currently stores and renders a single text value and can be
+ * focused by pointer input. Keyboard editing is still an application/UI-engine
+ * follow-up; programmatic updates use `setText`.
+ */
 final class UiTextField : UiWidget
 {
+    /** Current text value. */
     string text;
+    /** Placeholder rendered when `text` is empty. */
     string placeholder;
+    /** True after the field receives a primary-button click. */
     bool focused;
+    /** Font style used for text and placeholder rendering. */
     UiTextStyle style;
+    /** Field fill color. */
     float[4] fillColor;
+    /** Field border color when not focused. */
     float[4] borderColor;
+    /** Field border color when focused. */
     float[4] focusedBorderColor;
+    /** Text color for non-placeholder content. */
     float[4] textColor;
+    /** Called after `setText` changes `text`. */
     void delegate(string) onChanged;
 
+    /** Creates a retained single-line text field.
+     *
+     * Params:
+     *   text = Initial text value.
+     *   placeholder = Text shown when the value is empty.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   style = Font style used for rendering.
+     */
     this(string text = "", string placeholder = "", float x = 0.0f, float y = 0.0f, float width = 180.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
     {
         super(x, y, width, height);
@@ -299,6 +401,7 @@ final class UiTextField : UiWidget
         textColor = cast(float[4])defaultTextColor;
     }
 
+    /** Sets the field text and emits `onChanged`. */
     void setText(string newText)
     {
         text = newText;

@@ -18,22 +18,22 @@ import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
 enum float defaultImageSize = 12.0f;
 
-/** Small retained image placeholder rendered as a framed square.
- *
- * Params:
- *   width = Optional explicit width in pixels.
- *   height = Optional explicit height in pixels.
- *   fillColor = Interior fill color.
- *   borderColor = Border color around the image surface.
- *
- * Returns:
- *   A retained widget that measures and renders as a compact image surface.
- */
+/** Small retained image placeholder rendered as a framed square. */
 final class UiImage : UiWidget
 {
+    /** Interior fill color. */
     float[4] fillColor;
+    /** Border color around the image surface. */
     float[4] borderColor;
 
+    /** Creates a retained compact image surface.
+     *
+     * Params:
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   fillColor = Interior fill color.
+     *   borderColor = Border color around the image surface.
+     */
     this(float width = defaultImageSize, float height = defaultImageSize, float[4] fillColor = [0.22f, 0.26f, 0.34f, 1.0f], float[4] borderColor = [0.64f, 0.72f, 0.88f, 1.0f])
     {
         super(0.0f, 0.0f, width, height);

@@ -20,17 +20,19 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, buttons, image placeholders, spacers, surface boxes, HBox/VBox layout
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
+- D-key debug bounds overlay with color-coded widget and layout outlines
 
-Known migration debt:
+Remaining migration debt:
 
-- `source/demo/demo_ui.d` still contains an old stateless HUD construction and dispatch block.
-- `DemoUiScreen` duplicates logic that should move into or use `UiScreen`.
-- settings are currently too close to automatic persistence in some paths.
+- `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the type names are generic.
+- keyboard focus and text editing are not yet implemented for retained controls.
+- popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
+- settings tabs and broader settings categories are still planned demo work.
 
 ## UI Design Direction
 
@@ -48,14 +50,10 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, buttons, image placeholders, spacers, surface boxes, and row/column containers.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
 
 Next widgets:
 
-- checkbox / toggle
-- slider
-- text field
-- combo box / dropdown
 - tab bar
 - progress bar
 - list box or selection list
@@ -133,6 +131,8 @@ Use `UiScreen` properly:
 7. Rebuild the settings window around Apply and Save. Done.
 8. Rework demo windows into clear app roles. Done.
 9. Review which modules are reusable enough for the first Engine-only package boundary. Done.
+10. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
+11. Add keyboard focus, text editing, and popup/menu infrastructure for retained controls.
 
 ## Public Package Preparation
 

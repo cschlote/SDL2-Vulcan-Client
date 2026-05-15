@@ -18,6 +18,7 @@
 - Anchored the settings Apply and Save buttons in a fixed bottom action row below the growable settings body.
 - Added UiScreen window stacking and non-overlap placement helpers; middle-clicking a window header toggles that window between front and back.
 - Added the UI debug bounds color legend to the Controls / Log window.
+- Removed stale layout-demo color literals, expanded DDoc for the retained controls and `UiScreen`, and refreshed the UI plan to match the current widget set.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 

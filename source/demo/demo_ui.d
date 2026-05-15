@@ -109,24 +109,24 @@ final class LayoutDemoWindow
         content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         auto topRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         topRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        topRow.add(new LayoutDemoProbeBox(88.0f, 42.0f, [0.17f, 0.20f, 0.28f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f]));
-        topRow.add(new LayoutDemoProbeBox(120.0f, 58.0f, [0.14f, 0.24f, 0.20f, 0.96f], [0.34f, 0.82f, 0.46f, 1.00f]));
-        topRow.add(new LayoutDemoProbeBox(66.0f, 74.0f, [0.24f, 0.16f, 0.20f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f]));
+        topRow.add(new LayoutDemoProbeBox(88.0f, 42.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
+        topRow.add(new LayoutDemoProbeBox(120.0f, 58.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB));
+        topRow.add(new LayoutDemoProbeBox(66.0f, 74.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC));
 
         auto middleRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         middleRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
         auto middleColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         middleColumn.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 30.0f, [0.18f, 0.18f, 0.18f, 0.96f], [0.82f, 0.72f, 0.28f, 1.00f]));
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 52.0f, [0.17f, 0.20f, 0.28f, 0.96f], [0.34f, 0.82f, 0.46f, 1.00f]));
+        middleColumn.add(new LayoutDemoProbeBox(152.0f, 30.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        middleColumn.add(new LayoutDemoProbeBox(152.0f, 52.0f, cast(float[4])probeFillA, cast(float[4])probeBorderB));
         middleRow.add(middleColumn);
-        middleRow.add(new LayoutDemoProbeBox(126.0f, 92.0f, [0.14f, 0.24f, 0.20f, 0.96f], [0.92f, 0.46f, 0.46f, 1.00f]));
+        middleRow.add(new LayoutDemoProbeBox(126.0f, 92.0f, cast(float[4])probeFillB, cast(float[4])probeBorderC));
 
         auto bottomRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         bottomRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        bottomRow.add(new LayoutDemoProbeBox(72.0f, 40.0f, [0.24f, 0.16f, 0.20f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f]));
-        bottomRow.add(new LayoutDemoProbeBox(164.0f, 40.0f, [0.18f, 0.18f, 0.18f, 0.96f], [0.34f, 0.82f, 0.46f, 1.00f]));
-        bottomRow.add(new LayoutDemoProbeBox(92.0f, 40.0f, [0.17f, 0.20f, 0.28f, 0.96f], [0.82f, 0.72f, 0.28f, 1.00f]));
+        bottomRow.add(new LayoutDemoProbeBox(72.0f, 40.0f, cast(float[4])probeFillC, cast(float[4])probeBorderA));
+        bottomRow.add(new LayoutDemoProbeBox(164.0f, 40.0f, cast(float[4])probeFillD, cast(float[4])probeBorderB));
+        bottomRow.add(new LayoutDemoProbeBox(92.0f, 40.0f, cast(float[4])probeFillA, cast(float[4])probeBorderD));
 
         content.add(new UiSpacer(12.0f, 6.0f));
         content.add(topRow);
