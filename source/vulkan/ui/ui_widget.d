@@ -14,7 +14,7 @@ import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
-private immutable float[4] debugBoundsColor = [1.00f, 0.05f, 0.05f, 0.55f];
+private immutable float[4] widgetDebugBoundsColor = [1.00f, 0.05f, 0.05f, 0.55f];
 
 /** Base class for all retained UI widgets. */
 abstract class UiWidget
@@ -137,7 +137,10 @@ abstract class UiWidget
         }
 
         if (context.debugWidgetBounds && width > 0.0f && height > 0.0f)
-            appendSurfaceFrame(localContext, 0.0f, 0.0f, width, height, debugBoundsColor, debugBoundsColor, localContext.depthBase - 0.0005f, false, true);
+        {
+            const color = debugBoundsColor();
+            appendSurfaceFrame(localContext, 0.0f, 0.0f, width, height, color, color, localContext.depthBase - 0.0005f, false, true);
+        }
     }
 
 protected:
@@ -153,6 +156,12 @@ protected:
     }
 
     abstract void renderSelf(ref UiRenderContext context);
+
+    /** Returns the debug bounds color for this widget type. */
+    float[4] debugBoundsColor() const
+    {
+        return cast(float[4])widgetDebugBoundsColor;
+    }
 
     /** Handles a pointer event after children had a chance to consume it. */
     bool handlePointerEvent(ref UiPointerEvent event)

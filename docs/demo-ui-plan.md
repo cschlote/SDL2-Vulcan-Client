@@ -77,7 +77,7 @@ The demo should evolve from a test shell into a small application with clear win
 
 The four corner windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
 
-The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent red outline after its normal render pass so layout and nesting are inspectable at runtime.
+The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
 
 ## Settings Policy
 

@@ -17,6 +17,12 @@ import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
+private immutable float[4] surfaceDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
+private immutable float[4] verticalLayoutDebugBoundsColor = [0.20f, 1.00f, 0.35f, 0.65f];
+private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.00f, 0.65f];
+private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
+private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f];
+
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
 {
@@ -38,6 +44,11 @@ protected:
     override bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         return false;
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])spacerDebugBoundsColor;
     }
 }
 
@@ -229,6 +240,11 @@ protected:
             child.layout(context);
         }
     }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])surfaceDebugBoundsColor;
+    }
 }
 
 /** Vertical stack container. */
@@ -303,6 +319,11 @@ protected:
             cursorY += spacing;
         }
     }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])verticalLayoutDebugBoundsColor;
+    }
 }
 
 /** Horizontal row container. */
@@ -376,6 +397,11 @@ protected:
             cursorX += child.width;
             cursorX += spacing;
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])horizontalLayoutDebugBoundsColor;
     }
 }
 
@@ -482,5 +508,10 @@ protected:
             if (child.height <= 0.0f)
                 child.height = childHeight;
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])gridLayoutDebugBoundsColor;
     }
 }

@@ -18,6 +18,8 @@ import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
 import logging : logLine, logLineVerbose;
 
+private immutable float[4] windowDebugBoundsColor = [1.00f, 0.20f, 0.05f, 0.70f];
+
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
 {
@@ -279,6 +281,11 @@ protected:
         }
 
         appendWindowBorder(context, 0.0f, 0.0f, width, height, context.depthBase - 0.003f);
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])windowDebugBoundsColor;
     }
 
 private:
