@@ -154,7 +154,7 @@ For the demo application:
 - loading settings at startup is fine
 - Apply updates the running state only
 - Save writes settings to disk
-- closing the app should not silently persist changed UI settings unless the user explicitly saved
+- closing the app must not silently persist changed UI settings unless the user explicitly saved
 
 This policy keeps runtime experimentation separate from permanent configuration.
 

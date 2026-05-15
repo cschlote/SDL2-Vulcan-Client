@@ -24,7 +24,7 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
-import demo.demo_settings : DemoSettings, saveDemoSettings;
+import demo.demo_settings : DemoSettings;
 import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
 import logging : logLine, logLineVerbose;
 import math.matrix;
@@ -1497,14 +1497,13 @@ class VulkanRenderer
         uiScreen.toggleSettingsWindow();
     }
 
-    /** Applies the settings draft to the live bundle and writes it to disk. */
+    /** Applies the settings draft to the live bundle without persisting it. */
     private void applySettingsDialog()
     {
         if (demoSettings is null)
             return;
 
         *demoSettings = uiScreen.settingsDraft;
-        saveDemoSettings(*demoSettings);
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

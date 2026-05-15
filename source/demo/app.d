@@ -17,7 +17,7 @@ module demo.app;
 import bindbc.loader : LoadMsg;
 import bindbc.sdl : loadSDL, SDL_GetError, SDL_Init, SDL_InitFlags, SDL_Quit;
 import bindbc.vulkan : loadVulkan, VulkanSupport;
-import demo.demo_settings : DemoSettings, loadDemoSettings, saveDemoSettings;
+import demo.demo_settings : DemoSettings, loadDemoSettings;
 import logging : logLine, logLineVerbose, setVerboseOutputs;
 import sdl2.window;
 import std.stdio : stderr;
@@ -96,8 +96,6 @@ int runApplication(string[] args)
         logLineVerbose("SDL and Vulkan bindings loaded successfully.");
 
         DemoSettings demoSettings = loadDemoSettings();
-        scope (exit)
-            saveDemoSettings(demoSettings);
 
         auto window = SdlWindow("SDL2 Vulkan Demo " ~ buildVersion, demoSettings.display.windowWidth, demoSettings.display.windowHeight);
         scope (exit)

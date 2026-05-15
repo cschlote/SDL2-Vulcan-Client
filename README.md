@@ -57,7 +57,7 @@ The build runs the version helper and shader compiler before linking the executa
 
 ## Settings Policy
 
-Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes should stay local unless the user explicitly chooses an Apply or Save action. Apply may update the running app state; persistence to disk should be a deliberate Save operation.
+Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes stay local. Apply updates the running app state only; persistence to disk is reserved for an explicit Save operation.
 
 ## Release and Versioning
 
