@@ -931,6 +931,11 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     headerRow.add(badgeColumn);
     content.add(headerRow);
 
+    auto bodySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+    auto topStretch = new UiSpacer(0.0f, 0.0f);
+    topStretch.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
+    bodySection.add(topStretch);
+
     auto panelRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
 
     auto leftPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
@@ -951,7 +956,7 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     rightPanel.add(new UiButton("LAYOUT", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
     rightPanel.add(new UiButton("TEST", 0.0f, 0.0f, 0.0f, 0.0f, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
     panelRow.add(rightPanel);
-    content.add(panelRow);
+    bodySection.add(panelRow);
 
     auto controlRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 6.0f);
     controlRow.add(new UiButton("HEADER = DRAG", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
@@ -959,7 +964,7 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     controlSpacer.setLayoutHint(12.0f, 0.0f, 12.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
     controlRow.add(controlSpacer);
     controlRow.add(new UiButton("CORNERS = RESIZE", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
-    content.add(controlRow);
+    bodySection.add(controlRow);
 
     auto footerRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 6.0f);
     footerRow.add(new UiLabel("WATCH THE HBOXES SPREAD", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
@@ -967,7 +972,13 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     footerSpacer.setLayoutHint(12.0f, 0.0f, 12.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
     footerRow.add(footerSpacer);
     footerRow.add(new UiLabel("RELAYOUT TEST", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
-    content.add(footerRow);
+    bodySection.add(footerRow);
+
+    auto bottomStretch = new UiSpacer(0.0f, 0.0f);
+    bottomStretch.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
+    bodySection.add(bottomStretch);
+
+    content.add(bodySection);
 
     UiLayoutContext layoutContext = buildLayoutContext(smallFont, mediumFont);
     content.layout(layoutContext);
