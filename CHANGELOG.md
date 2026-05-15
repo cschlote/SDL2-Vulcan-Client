@@ -4,6 +4,10 @@
 
 - Improved font test coverage and documentation for release checks.
 
+## Release 26.20.6619
+
+- Improved the retained UI layout and clarified how screens own widgets.
+
 ## Release 26.20.5344
 
 - Centered the close button in the window header.

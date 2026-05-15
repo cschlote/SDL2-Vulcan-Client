@@ -10,6 +10,7 @@ module vulkan.ui.ui_label;
 
 import vulkan.font.font_legacy : appendText;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendTextLine;
 
@@ -20,15 +21,28 @@ final class UiLabel : UiWidget
     UiTextStyle style;
     float[4] color;
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
-        super(x, y, 0, height);
-        this.text = text;
+        this(text, x, y, style, color, 0.0f, height);
+    }
+
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    {
+        super(x, y, width, height);
+        this.text = cast(string)text;
         this.style = style;
         this.color = color;
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        const measuredWidth = width > 0.0f ? width : context.textWidth(style, text);
+        const measuredHeight = height > 0.0f ? height : context.textHeight(style);
+        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight, 0.0f, 0.0f);
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
         appendTextLine(context, style, text, 0.0f, 0.0f, color, context.depthBase - 0.001f);
@@ -42,15 +56,28 @@ final class UiTextBlock : UiWidget
     UiTextStyle style;
     float[4] color;
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
-        super(x, y, 0, height);
-        this.text = text;
+        this(text, x, y, style, color, 0.0f, height);
+    }
+
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    {
+        super(x, y, width, height);
+        this.text = cast(string)text;
         this.style = style;
         this.color = color;
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        const measuredWidth = width > 0.0f ? width : context.textWidth(style, text);
+        const measuredHeight = height > 0.0f ? height : context.textHeight(style);
+        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight, 0.0f, 0.0f);
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
         const atlas = context.atlasFor(style);

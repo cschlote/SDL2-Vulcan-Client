@@ -10,8 +10,10 @@
  */
 module vulkan.ui.ui_layout;
 
+import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
@@ -24,6 +26,11 @@ final class UiSpacer : UiWidget
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        return UiLayoutSize(width, height);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
     }
@@ -32,6 +39,94 @@ protected:
     {
         return false;
     }
+}
+
+private float clampFloat(float value, float minimum, float maximum)
+{
+    return value < minimum ? minimum : (value > maximum ? maximum : value);
+}
+
+private struct AxisHint
+{
+    float minimum;
+    float preferred;
+    float maximum;
+    float grow;
+}
+
+private AxisHint horizontalHint(UiWidget child)
+{
+    AxisHint hint;
+    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.maximum = child.maximumWidth > 0.0f ? child.maximumWidth : float.max;
+    hint.grow = child.flexGrowX;
+    return hint;
+}
+
+private AxisHint verticalHint(UiWidget child)
+{
+    AxisHint hint;
+    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.maximum = child.maximumHeight > 0.0f ? child.maximumHeight : float.max;
+    hint.grow = child.flexGrowY;
+    return hint;
+}
+
+private float[] resolveSizes(UiWidget[] children, float availableSpace, bool horizontal)
+{
+    float[] sizes;
+    sizes.length = children.length;
+
+    float preferredTotal = 0.0f;
+    float minimumTotal = 0.0f;
+    float growTotal = 0.0f;
+
+    foreach (index, child; children)
+    {
+        const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+        const minimum = hint.minimum > 0.0f ? hint.minimum : 0.0f;
+        const preferred = hint.preferred > 0.0f ? hint.preferred : minimum;
+        sizes[index] = clampFloat(preferred, minimum, hint.maximum);
+        preferredTotal += sizes[index];
+        minimumTotal += minimum;
+        if (hint.grow > 0.0f)
+            growTotal += hint.grow;
+    }
+
+    if (availableSpace > preferredTotal && growTotal > 0.0f)
+    {
+        const extraSpace = availableSpace - preferredTotal;
+        foreach (index, child; children)
+        {
+            const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+            if (hint.grow <= 0.0f)
+                continue;
+
+            const grown = sizes[index] + extraSpace * (hint.grow / growTotal);
+            sizes[index] = clampFloat(grown, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+        }
+    }
+    else if (availableSpace < preferredTotal && preferredTotal > minimumTotal)
+    {
+        const shortage = preferredTotal - availableSpace;
+        const shrinkableTotal = preferredTotal - minimumTotal;
+
+        foreach (index, child; children)
+        {
+            const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+            const minimum = hint.minimum > 0.0f ? hint.minimum : 0.0f;
+            const shrinkable = sizes[index] - minimum;
+            if (shrinkable <= 0.0f)
+                continue;
+
+            const shrunken = sizes[index] - shortage * (shrinkable / shrinkableTotal);
+            sizes[index] = clampFloat(shrunken, minimum, hint.maximum);
+        }
+    }
+
+    return sizes;
 }
 
 /** Shared base for retained layout containers. */
@@ -45,6 +140,8 @@ abstract class UiLayoutContainer : UiWidget
     this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
     {
         super(x, y, width, height);
+        flexGrowX = 1.0f;
+        flexGrowY = 0.0f;
         this.paddingLeft = paddingLeft;
         this.paddingTop = paddingTop;
         this.paddingRight = paddingRight;
@@ -92,6 +189,25 @@ final class UiSurfaceBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float tallest = 0.0f;
+
+        foreach (child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > widest)
+                widest = childSize.width;
+            if (childSize.height > tallest)
+                tallest = childSize.height;
+        }
+
+        const measuredWidth = width > 0.0f ? width : widest + paddingLeft + paddingRight;
+        const measuredHeight = height > 0.0f ? height : tallest + paddingTop + paddingBottom;
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
     override void renderSelf(ref UiRenderContext context)
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, backgroundColor, borderColor, context.depthBase, drawBackground, drawBorder);
@@ -100,6 +216,18 @@ protected:
 
     override void layoutChildren()
     {
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = innerWidth();
+            child.height = innerHeight();
+            child.layout(context);
+        }
     }
 }
 
@@ -115,17 +243,62 @@ final class UiVBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float totalHeight = 0.0f;
+
+        foreach (index, child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > widest)
+                widest = childSize.width;
+            totalHeight += childSize.height;
+            if (index + 1 < children.length)
+                totalHeight += spacing;
+        }
+
+        return UiLayoutSize(width > 0.0f ? width : widest + paddingLeft + paddingRight, height > 0.0f ? height : totalHeight + paddingTop + paddingBottom);
+    }
+
     override void layoutChildren()
     {
         float cursorY = paddingTop;
         const availableWidth = innerWidth();
+        const childCount = children.length;
+        const availableHeight = max(innerHeight() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childHeights = resolveSizes(children, availableHeight, false);
 
-        foreach (child; children)
+        foreach (index, child; children)
         {
-            if (child.width <= 0.0f)
-                child.width = availableWidth;
+            const hint = horizontalHint(child);
+            const childWidth = hint.grow > 0.0f ? clampFloat(availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
             child.x = paddingLeft;
             child.y = cursorY;
+            child.width = childWidth;
+            child.height = childHeights[index];
+            cursorY += child.height;
+            cursorY += spacing;
+        }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float cursorY = paddingTop;
+        const availableWidth = innerWidth();
+        const childCount = children.length;
+        const availableHeight = max(innerHeight() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childHeights = resolveSizes(children, availableHeight, false);
+
+        foreach (index, child; children)
+        {
+            const hint = horizontalHint(child);
+            const childWidth = hint.grow > 0.0f ? clampFloat(availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+            child.x = paddingLeft;
+            child.y = cursorY;
+            child.width = childWidth;
+            child.height = childHeights[index];
+            child.layout(context);
             cursorY += child.height;
             cursorY += spacing;
         }
@@ -144,17 +317,62 @@ final class UiHBox : UiLayoutContainer
     }
 
 protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        float totalWidth = 0.0f;
+
+        foreach (index, child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.height > widest)
+                widest = childSize.height;
+            totalWidth += childSize.width;
+            if (index + 1 < children.length)
+                totalWidth += spacing;
+        }
+
+        return UiLayoutSize(width > 0.0f ? width : totalWidth + paddingLeft + paddingRight, height > 0.0f ? height : widest + paddingTop + paddingBottom);
+    }
+
     override void layoutChildren()
     {
         float cursorX = paddingLeft;
         const availableHeight = innerHeight();
+        const childCount = children.length;
+        const availableWidth = max(innerWidth() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childWidths = resolveSizes(children, availableWidth, true);
 
-        foreach (child; children)
+        foreach (index, child; children)
         {
-            if (child.height <= 0.0f)
-                child.height = availableHeight;
+            const hint = verticalHint(child);
+            const childHeight = hint.grow > 0.0f ? clampFloat(availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
             child.x = cursorX;
             child.y = paddingTop;
+            child.width = childWidths[index];
+            child.height = childHeight;
+            cursorX += child.width;
+            cursorX += spacing;
+        }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float cursorX = paddingLeft;
+        const availableHeight = innerHeight();
+        const childCount = children.length;
+        const availableWidth = max(innerWidth() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childWidths = resolveSizes(children, availableWidth, true);
+
+        foreach (index, child; children)
+        {
+            const hint = verticalHint(child);
+            const childHeight = hint.grow > 0.0f ? clampFloat(availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+            child.x = cursorX;
+            child.y = paddingTop;
+            child.width = childWidths[index];
+            child.height = childHeight;
+            child.layout(context);
             cursorX += child.width;
             cursorX += spacing;
         }

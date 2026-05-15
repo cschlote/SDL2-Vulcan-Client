@@ -20,54 +20,31 @@ import logging : logLine, logLineVerbose;
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
 {
-    /** Window caption shown in the highlighted title badge. */
-    string title;
-    /** Fill color for the window body. */
-    float[4] bodyColor;
-    /** Base header color used when the window is not dragable. */
-    float[4] headerColor;
-    /** Text color for the highlighted title badge. */
-    float[4] titleColor;
-    /** True when the window can be resized from its corners. */
-    bool sizeable;
-    /** True when the window exposes a close button in the header. */
-    bool closable;
-    /** True when the header indicates drag support and accepts drag gestures. */
-    bool dragable;
-    /** True while a drag gesture is active. */
-    bool dragTracking;
-    /** True while a resize gesture is active. */
-    bool resizeTracking;
-    /** Active resize corner while a resize gesture is running. */
-    UiResizeHandle resizeHandle = UiResizeHandle.none;
-    /** Height of the decorative header bar. */
-    float headerHeight = 26.0f;
+    string title;                                   ///< Window caption shown in the highlighted title badge.
+    float[4] bodyColor;                             ///< Fill color for the window body.
+    float[4] headerColor;                           ///< Base header color used when the window is not dragable.
+    float[4] titleColor;                            ///< Text color for the highlighted title badge.
+    bool sizeable;                                  ///< True when the window can be resized from its corners.
+    bool closable;                                  ///< True when the window exposes a close button in the header.
+    bool dragable;                                  ///< True when the header indicates drag support and accepts drag gestures.
+    bool dragTracking;                              ///< True while a drag gesture is active.
+    bool resizeTracking;                            ///< True while a resize gesture is active.
+    UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
+    float headerHeight = 26.0f;                     ///< Height of the decorative header bar.
 
-    /** Body widgets are kept in a separate root so chrome stays explicit. */
-    private UiSurfaceBox contentRoot;
-    /** Optional extra header widgets placed to the left of the close button. */
-    private UiHBox headerExtras;
-    /** Optional close button rendered in the header. */
-    private UiButton closeButton;
-    /** Cached width of all extra header widgets. */
-    private float headerExtrasWidth;
-    /** Cached height of all extra header widgets. */
-    private float headerExtrasHeight;
+    private UiSurfaceBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
+    private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
+    private UiButton closeButton;                   ///< Optional close button rendered in the header.
+    private float headerExtrasWidth;                ///< Cached width of all extra header widgets.
+    private float headerExtrasHeight;               ///< Cached height of all extra header widgets.
 
-    /** Notified when a header drag starts. */
-    void delegate(float, float) onHeaderDragStart;
-    /** Notified while a header drag is running. */
-    void delegate(float, float) onHeaderDragMove;
-    /** Notified when a header drag ends. */
-    void delegate() onHeaderDragEnd;
-    /** Notified when a resize gesture starts. */
-    void delegate(UiResizeHandle) onResizeStart;
-    /** Notified while a resize gesture is running. */
-    void delegate(UiResizeHandle, float, float) onResizeMove;
-    /** Notified when a resize gesture ends. */
-    void delegate(UiResizeHandle) onResizeEnd;
-    /** Notified when the built-in close button is activated. */
-    void delegate() onClose;
+    void delegate(float, float) onHeaderDragStart;              ///< Notified when a header drag starts.
+    void delegate(float, float) onHeaderDragMove;               ///< Notified while a header drag is running.
+    void delegate() onHeaderDragEnd;                            ///< Notified when a header drag ends.
+    void delegate(UiResizeHandle) onResizeStart;                ///< Notified when a resize gesture starts.
+    void delegate(UiResizeHandle, float, float) onResizeMove;   ///< Notified while a resize gesture is running.
+    void delegate(UiResizeHandle) onResizeEnd;                  ///< Notified when a resize gesture ends.
+    void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
 
     /**
      * Creates a retained window with explicit chrome flags.
