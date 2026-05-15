@@ -635,20 +635,48 @@ unittest
     assert(('?' in atlas.glyphs) !is null);
 }
 
-@("text width matches emitted quads")
+@("single glyph width matches emitted quad")
 unittest
 {
     // The width calculation must match the actual quads emitted by appendText().
     const fontPath = selectDefaultFontPath();
-    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["AVATAR", "Hello", "To"]));
+    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["A", "V", "Hello", "To"]));
 
     Vertex[] vertices;
-    appendText(vertices, atlas, "AVATAR", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
+    appendText(vertices, atlas, "A", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
 
-    const measuredWidth = measureTextWidth(atlas, "AVATAR");
+    const measuredWidth = measureTextWidth(atlas, "A");
     const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
     assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
     assert(renderedBounds.width > 0.0f);
+}
+
+@("kerning affects paired width")
+unittest
+{
+    // The pair width must include the atlas kerning adjustment, not just the
+    // sum of the two isolated glyph advances.
+    const fontPath = selectDefaultFontPath();
+    auto atlas = buildFontAtlas(fontPath, 20, collectGlyphSet(["AV", "To", "Hello"]));
+
+    const singleAWidth = measureTextWidth(atlas, "A");
+    const singleVWidth = measureTextWidth(atlas, "V");
+    const pairWidth = measureTextWidth(atlas, "AV");
+
+    Vertex[] vertices;
+    appendText(vertices, atlas, "AV", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
+
+    const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
+    assert(abs(pairWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", pairWidth, renderedBounds.width));
+    assert(pairWidth <= singleAWidth + singleVWidth + 0.75f, format("kerning pair width %s should not exceed isolated widths %s + %s", pairWidth, singleAWidth, singleVWidth));
+
+    const leftKerningPtr = 'A' in atlas.kerning;
+    if (leftKerningPtr !is null)
+    {
+        const kerningPtr = 'V' in *leftKerningPtr;
+        if (kerningPtr !is null)
+            assert(pairWidth < singleAWidth + singleVWidth, format("kerning should reduce the pair width: %s < %s + %s", pairWidth, singleAWidth, singleVWidth));
+    }
 }
 
 @("multiline text uses widest line")
@@ -662,8 +690,11 @@ unittest
     appendText(vertices, atlas, "Hi\nThere", 15.0f, 30.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
 
     const measuredWidth = measureTextWidth(atlas, "Hi\nThere");
+    const firstLineWidth = measureTextWidth(atlas, "Hi");
+    const secondLineWidth = measureTextWidth(atlas, "There");
     const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
-    assert(measuredWidth >= measureTextWidth(atlas, "There"));
+    assert(measuredWidth >= firstLineWidth);
+    assert(measuredWidth >= secondLineWidth);
     assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
     assert(renderedBounds.height >= atlas.lineHeight, format("rendered multiline height %s should be at least one line height %s", renderedBounds.height, atlas.lineHeight));
 }
