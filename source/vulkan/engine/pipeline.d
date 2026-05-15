@@ -11,7 +11,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.pipeline;
+module vulkan.engine.pipeline;
 
 import bindbc.vulkan;
 import std.exception : enforce;
@@ -78,14 +78,14 @@ struct PipelineResources
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     /** Main filled 3D scene pipeline. */
     VkPipeline graphicsPipeline = VK_NULL_HANDLE;
-    /** Alpha-blended overlay pipeline used for HUD rendering. */
+    /** Alpha-blended overlay pipeline used for UI rendering. */
     VkPipeline overlayPipeline = VK_NULL_HANDLE;
     /** Wireframe pipeline used for diagnostic rendering. */
     VkPipeline wireframePipeline = VK_NULL_HANDLE;
 
     /** Creates the descriptor set layout, render pass, and graphics pipelines.
      *
-     * The same pipeline bundle is reused by the main 3D mesh path and the HUD
+     * The same pipeline bundle is reused by the main 3D mesh path and the UI
      * overlay path, which is why the vertex layout and descriptor layout are
      * intentionally shared.
      *

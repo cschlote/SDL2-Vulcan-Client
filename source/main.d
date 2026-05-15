@@ -14,7 +14,7 @@
  */
 module main;
 
-import app;
+import demo.app;
 
 /** Starts the application by forwarding the command-line arguments to the app module.
  *

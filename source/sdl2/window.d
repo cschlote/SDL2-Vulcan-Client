@@ -7,7 +7,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module window;
+module sdl2.window;
 
 import bindbc.sdl : SDL_CreateWindow, SDL_DestroyWindow, SDL_GetError, SDL_GetWindowSize, SDL_SetWindowMinimumSize, SDL_SetWindowTitle, SDL_Vulkan_CreateSurface, SDL_Window, SDL_WindowFlags;
 import bindbc.vulkan;

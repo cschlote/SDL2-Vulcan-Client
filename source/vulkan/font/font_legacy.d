@@ -1,14 +1,14 @@
 /** Builds font atlases and emits textured text geometry.
  *
  * Loads fonts through FreeType, caches glyph metrics in a per-size atlas, and
- * appends screen-space text quads for the UI and overlay layers. The atlas
- * output is used by source/vulkan/ui.d and source/vulkan/ui_layer.d, while the
- * wider build pipeline is described in docs/vulkan-quickstart.md and
- * docs/shaders.md.
+ * appends screen-space text quads for the retained UI and overlay layers. The
+ * atlas output is used by the widgets in source/vulkan/ui/ and uploaded by
+ * source/vulkan/engine/renderer.d, while the wider build pipeline is described
+ * in docs/vulkan-quickstart.md and docs/shaders.md.
  *
  * See_Also:
- *   source/vulkan/ui.d
- *   source/vulkan/ui_layer.d
+ *   source/vulkan/ui/
+ *   source/vulkan/engine/renderer.d
  *   docs/vulkan-quickstart.md
  *   docs/shaders.md
  *
@@ -28,7 +28,7 @@ import std.process : environment;
 import std.string : endsWith, indexOf, toLower, toStringz;
 
 import logging : logLine, logLineVerbose;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 
 /** Glyph metrics and atlas coordinates for one code point.
  *
@@ -71,7 +71,11 @@ struct FontAtlas
 }
 
 /** Default glyph coverage when no custom glyph set is supplied. */
-private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?/\\+-()[]%";
+private enum defaultGlyphSet =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 " ~
+    ".,:;!?/\\+-()[]%<>_=@#&*^|~`'\"$€£¥§°±µ×÷·…–—«»‚„‘’“”" ~
+    "ÄÖÜäöüßÀÁÂÃÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕØÙÚÛÜÝÞàáâãåæçèéêëìíîïðñòóôõøùúûüýÿ" ~
+    "ĀāĂăĄąĆćĈĉČčĎďĐđĒēĖėĘęĚěĞğĢģĤĥĦħıİĮįĲĳĶķŁłŃńŅņŇňŒœŔŕŘřŚśŞşŠšŢţŤťŪūŮůŰűŲųŹźŻżŽž";
 
 /** Chooses a reasonable system font path for the current platform.
  *
@@ -897,7 +901,7 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
 /** Appends text quads using the texture coordinates stored in a font atlas.
  *
  * The UI layer passes the current vertex list and a depth value so text can be
- * layered with the rest of the retained widgets and the HUD overlay.
+ * layered with the rest of the retained widgets and the UI overlay.
  *
  * Params:
  *   vertices = Destination vertex list.

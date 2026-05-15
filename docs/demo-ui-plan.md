@@ -1,17 +1,56 @@
-# Demo UI Plan
+# Demo UI And Engine Plan
 
-This document describes the next UI steps for the demo application before the implementation grows further.
+This document tracks the current plan for the demo UI and the reusable engine UI layer.
 
-## Goals
+## Product Direction
 
-- Keep the retained UI small, explicit, and readable.
-- Expand the current test screen into a more useful demo application.
-- Add a real settings dialog with persistent INI-based storage.
-- Keep planning separate from implementation so each technical step can be reviewed independently.
+The repository serves two purposes:
+
+1. Build a small D game-engine foundation with SDL2, Vulkan, font rendering, retained UI, settings, input, and basic scene rendering.
+2. Keep a learning/demo application around that exercises the engine pieces until the reusable code is ready to split into an Engine-only D module.
+
+After the engine shape is stable, the demo-specific parts should stay in the executable project while the reusable parts can be published as a package.
+
+## Current Status
+
+Implemented or partially implemented:
+
+- SDL2 bootstrap and window wrapper
+- Vulkan instance, device, swapchain, render pass, pipelines, buffers, descriptors, and synchronization
+- selectable placeholder 3D meshes
+- filled, textured, wireframe, and hidden-line render modes
+- FreeType-backed bitmap font atlases
+- retained UI widgets: windows, labels, buttons, image placeholders, spacers, surface boxes, HBox/VBox layout
+- `UiScreen` as experimental generic screen/window owner
+- `DemoUiScreen` as the current demo-specific UI screen
+- INI settings load/save model
+
+Known migration debt:
+
+- `source/demo/demo_ui.d` still contains an old stateless HUD construction and dispatch block.
+- renderer-facing UI data still uses HUD-specific names.
+- `DemoUiScreen` duplicates logic that should move into or use `UiScreen`.
+- settings are currently too close to automatic persistence in some paths.
+
+## UI Design Direction
+
+The UI should evolve toward a small retained framework inspired by Qt and Amiga Magic User Interface:
+
+- font-sensitive sizing
+- automatic layout
+- reusable widgets
+- local event ownership
+- signal/callback style communication
+- generic screen/window management
+- app-specific screens built outside the UI engine
+
+Hard-coded rectangles can exist temporarily in the demo, but final windows should derive their minimum and preferred sizes from fonts, content, and layout hints.
 
 ## Planned Widget Set
 
-The current retained UI already has windows, labels, buttons, spacers, surface boxes, and row or column layout containers. The next layer should add the usual interactive widgets that make the settings dialog and demo windows practical:
+The retained UI already has windows, labels, buttons, image placeholders, spacers, surface boxes, and row/column containers.
+
+Next widgets:
 
 - checkbox / toggle
 - slider
@@ -21,49 +60,81 @@ The current retained UI already has windows, labels, buttons, spacers, surface b
 - progress bar
 - list box or selection list
 - separator or divider
-- optional icon or image placeholder widget
+- icon/image widget backed by real texture data
 
-The first implementation step should favor simple, composable widgets over a large framework.
+The first implementation should favor simple, composable widgets over a large framework.
 
 ## Demo Window Structure
 
-The demo should keep the current five-window test screen as a starting point, then evolve into a small application with dedicated windows:
+The demo should evolve from a test shell into a small application with clear windows:
 
-- Status window: app version, frame rate, active scene, current render mode, save state, and close button that exits the app
-- Widget demo window: interactive examples for buttons, toggles, sliders, dropdowns, and text fields
-- Controls window: keyboard and mouse help, plus short hints for UI interaction
-- Settings window: real settings dialog for display, controls, gameplay, audio, and UI options
-- Presets or shortcuts window: quick access to common configurations and window actions
+- Main/demo control window: opens tools, exits the app, and exposes common demo actions.
+- Status window: app version, frame rate, active scene, current render mode, and viewport state.
+- Widget demo window: interactive examples for buttons, toggles, sliders, dropdowns, and text fields.
+- Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
+- Settings window: display, controls, gameplay, audio, and UI options.
+- Presets/shortcuts window: common layouts, render profiles, and UI actions.
 
-The four corner windows should serve different roles so the UI reads as a proper demo application instead of a fixed debug layout.
+The four corner windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
 
-## Settings Dialog
+## Settings Policy
 
-The first serious settings dialog should cover the common options a demo or small game usually needs:
-
-- video and display settings such as window mode, fullscreen, resolution, VSync, and scaling
-- control settings such as mouse sensitivity, camera speed, and optional axis inversion
-- gameplay or demo settings such as default render mode, startup scene, and UI hints
-- audio settings such as master volume and effect volume
-- UI settings such as font scale, theme accents, and window behavior
-
-The dialog should support a visible Apply or Save action rather than writing config changes immediately on every widget interaction.
-
-## Persistence
-
-Settings should be stored at ~/.config/sdl2-vulcan-demo/config in INI format.
+Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.
 
 Expected behavior:
 
 - load defaults when the file does not exist
-- preserve a stable key layout so the file is easy to read and edit manually
-- save only through explicit Apply or Save actions
-- keep parsing and serialization small and dependency-free if possible
+- keep a stable, human-readable INI layout
+- Apply updates the running app state only
+- Save writes settings to disk
+- closing the app should not silently persist changed settings
+- parsing and serialization should stay small and dependency-free for now
+
+This keeps temporary experimentation local until the user explicitly saves.
+
+## Rename And Cleanup Plan
+
+Use generic UI names for renderer-facing data:
+
+- `HudOverlayGeometry` -> `UiOverlayGeometry`
+- `HudWindowDrawRange` -> `UiDrawRange` or `UiWindowDrawRange`
+- HUD-specific helper names should disappear from renderer imports
+
+Remove legacy code:
+
+- delete old stateless `buildHudOverlayVertices`
+- delete old `buildHudLayout`
+- delete old `hudDispatch...` helpers
+- delete old `HudLayoutState` fields that are no longer used by the retained `DemoUiScreen`
+- keep only retained screen/window/widget construction
+
+Use `UiScreen` properly:
+
+- register demo windows through generic `UiScreen` helpers
+- use `registerWindowInteractionHandlers` instead of duplicating drag/resize wiring
+- let `UiScreen` own generic window iteration and hit testing
+- keep demo-specific window creation, text, and callbacks in `DemoUiScreen`
 
 ## Implementation Order
 
-1. Introduce the settings data model and config I/O.
-2. Add the missing UI widgets needed by the settings dialog.
-3. Build the settings window and hook it into the demo UI.
-4. Rework the corner windows so each one has a clear purpose.
-5. Validate the flow with small commits after each coherent step.
+1. Update documentation and plans to reflect the engine-first direction. Done.
+2. Rename renderer-facing HUD data types to generic UI names.
+3. Remove the old stateless HUD helper block from `demo_ui.d`.
+4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently.
+5. Fix settings persistence so only explicit Save writes to disk.
+6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field.
+7. Rebuild the settings window around Apply and Save.
+8. Rework demo windows into clear app roles.
+9. Review which modules are reusable enough for the first Engine-only package boundary.
+
+## Public Package Preparation
+
+Before publishing on code.dlang.org, decide the package boundary:
+
+- reusable renderer modules
+- reusable UI modules
+- font atlas support
+- SDL2/Vulkan bootstrap helpers
+- demo-only executable and sample assets
+
+The public module should not expose demo-specific names, HUD naming, sample window text, or placeholder-only settings keys as engine APIs.

@@ -7,7 +7,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.instance;
+module vulkan.engine.instance;
 
 import bindbc.sdl : SDL_Vulkan_GetInstanceExtensions, SDL_Window;
 import bindbc.vulkan;

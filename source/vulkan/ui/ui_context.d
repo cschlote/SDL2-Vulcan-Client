@@ -10,7 +10,7 @@
 module vulkan.ui.ui_context;
 
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 
 /** Selects the font size used by a widget. */
 enum UiTextStyle

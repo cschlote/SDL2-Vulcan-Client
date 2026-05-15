@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Updated the engine and UI planning documentation.
 - Improved font test coverage and documentation for release checks.
 
 ## Release 26.20.6619

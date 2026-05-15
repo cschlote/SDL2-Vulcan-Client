@@ -12,6 +12,7 @@ import std.algorithm : max;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
+import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
@@ -107,6 +108,21 @@ final class UiWindow : UiWidget
     void addHeaderButton(UiWidget child)
     {
         addHeaderWidget(child);
+    }
+
+    /** Lays out the window body before rendering or hit testing.
+     *
+     * Params:
+     *   context = Layout context used to measure text and nested widgets.
+     * Returns:
+     *   Nothing.
+     */
+    void layoutWindow(ref UiLayoutContext context)
+    {
+        updateChromeLayout();
+
+        foreach (child; contentRoot.children)
+            child.layout(context);
     }
 
     /** Routes pointer events through the chrome before the body content. */

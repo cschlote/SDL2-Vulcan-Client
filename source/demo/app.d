@@ -12,19 +12,18 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module app;
+module demo.app;
 
 import bindbc.loader : LoadMsg;
-import bindbc.sdl : SDL_GetError, SDL_Init, SDL_InitFlags, SDL_Quit, loadSDL;
-import bindbc.vulkan : VulkanSupport, loadVulkan;
+import bindbc.sdl : loadSDL, SDL_GetError, SDL_Init, SDL_InitFlags, SDL_Quit;
+import bindbc.vulkan : loadVulkan, VulkanSupport;
+import demo.demo_settings : DemoSettings, loadDemoSettings, saveDemoSettings;
+import logging : logLine, logLineVerbose, setVerboseOutputs;
+import sdl2.window;
 import std.stdio : stderr;
 import std.string : fromStringz;
-
-import logging : logLine, logLineVerbose, setVerboseOutputs;
-import demo_settings : DemoSettings, loadDemoSettings, saveDemoSettings;
-import window;
-import vulkan.renderer : VulkanRenderer;
 import version_info : getGitDescribeVersion;
+import vulkan.engine.renderer : VulkanRenderer;
 
 /** Loads the SDL shared library bindings and reports failures on standard error.
  *

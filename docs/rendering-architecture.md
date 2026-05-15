@@ -1,121 +1,100 @@
 # Rendering Architecture
 
-This project renders the scene as a layered composition instead of a single flat frame. The result is easier to reason about, easier to extend, and closer to the way a senior renderer or engine developer would think about the frame graph.
+This project renders a compact scene plus a native-resolution retained UI. The current executable is a learning demo, but the architecture is being shaped as a reusable game-engine foundation in D.
 
 ## Visual Stack
 
-The rendered image is built in three main depth regions:
+The intended frame has three conceptual layers:
 
-1. The far background contains a star field.
-2. The middle layer contains the 3D world objects.
-3. The foreground contains the custom 2D interface with translucent windows and widgets.
-
-A practical mental model is shown below.
+1. A far background layer for skybox, star field, or other world backdrop.
+2. A 3D scene layer for game objects.
+3. A foreground UI layer for retained windows and widgets.
 
 ```mermaid
 flowchart TB
-    A[Background star field] --> B[3D scene layer]
-    B --> C[Foreground 2D UI]
-    C --> D[Final presented image]
+    A[Background layer] --> B[3D scene layer]
+    B --> C[Foreground retained UI]
+    C --> D[Presented swapchain image]
 ```
 
-## Background Layer
+The current code has a simple clear background, selectable placeholder meshes, and a custom UI overlay. The background layer is still mostly conceptual, but the renderer should keep enough separation for it to become a real pass later.
 
-The background is intended to behave like a distant skybox or star field. It should read as far away from the camera and should move in a controlled way when the player rotates the ship or the camera. The important property is not visual complexity, but parallax coherence.
+## 3D Scene Layer
 
-For implementation purposes, the background layer should be treated as a distinct rendering concern:
+The scene currently renders selectable Platonic solids from [source/vulkan/models/polyhedra.d](../source/vulkan/models/polyhedra.d). These meshes are placeholders for future authored models or game objects.
 
-- it may use its own texture or procedural generation
-- it should be rendered before the 3D scene
-- its movement should be tied to the same orientation state as the ship or camera
-- it should not share UI logic with the foreground
+They are useful because they exercise the important engine paths:
 
-The current codebase keeps this layer conceptually separate even when the exact visual treatment is still simple.
-
-## 3D Middle Layer
-
-The center of the image is reserved for 3D objects. In the current repository, the Platonic solids are used as placeholders for future ship models.
-
-That choice is deliberate:
-
-- the geometry is simple enough to debug visually
-- the meshes exercise indexing, normals, and texturing
-- the objects are easy to rotate and animate
-- they make the frame pipeline visible without needing art assets
-
-This layer is where most Vulkan-specific work lives:
-
-- vertex and index buffers
+- indexed geometry
+- normals
+- texture coordinates
+- filled, wireframe, and hidden-line render modes
 - depth buffering
-- transformation updates per frame
-- descriptor bindings for uniforms and textures
-- pipeline selection for filled, wireframe, and hidden-line views
+- per-frame transform updates
 
-The renderer should keep this layer independent from the UI layer so that the 3D system can evolve without forcing changes in the interface code.
+[source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d) transforms the mesh into the current view, uploads vertex/index data, updates uniforms, and records the draw commands.
 
-## Foreground UI Layer
+## UI Layer
 
-The foreground contains the custom 2D interface. It is rendered in native window pixels and uses semi-transparent windows so the 3D scene remains visible behind it.
+The foreground UI is a retained widget system rendered in native window pixels. It is not a screenshot texture or an immediate-mode debug overlay. Widgets generate panel and text geometry, and the renderer uploads that geometry into per-frame overlay buffers.
 
-The UI is intentionally not treated as a texture atlas screenshot or as a post-process overlay. Instead, it behaves like a real retained or semi-retained interface layer with explicit geometry generation.
+The ownership split is:
 
-The intended abstraction is a small class tree or type hierarchy for:
+- `source/vulkan/ui/` contains reusable UI engine classes such as `UiWidget`, `UiWindow`, `UiScreen`, layout containers, labels, buttons, and render helpers.
+- [source/demo/demo_ui.d](../source/demo/demo_ui.d) contains the current demo-specific screen construction.
+- [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d) consumes the generated overlay geometry and draw ranges.
 
-- windows
-- panels
-- widgets or gadgets
-- text and decorative primitives
-
-A good separation is:
-
-- one base type for common visual and layout behavior
-- one type for container-like windows
-- one type for child widgets
-- one renderer-facing layer that turns the UI tree into vertices
-
-This keeps the UI data structure independent from Vulkan. The renderer then only sees geometry, descriptors, and textures.
+The renderer should eventually know only generic UI render output names, not HUD-specific names. Existing names such as `HudOverlayGeometry` and `HudWindowDrawRange` are migration-era names and should be replaced with generic `Ui...` names during the next cleanup.
 
 ## Frame Order
 
 A frame should follow a stable order:
 
-1. Update simulation state.
-2. Rotate background and 3D orientation state.
-3. Build the 3D vertex data for the placeholder solids.
-4. Build the 2D UI geometry.
-5. Upload data into the current frame resources.
-6. Record commands.
+1. Process input and update runtime state.
+2. Update camera, scene, and UI state.
+3. Build or update scene geometry.
+4. Build UI overlay geometry.
+5. Upload scene and UI data into current frame resources.
+6. Record command buffers.
 7. Submit and present.
 
-That order matters because it keeps the data flow one-directional. Simulation generates geometry, geometry becomes draw commands, and the frame is then handed to the GPU.
+That order keeps the data flow one-directional. Runtime state produces geometry; geometry becomes GPU-visible buffers; command buffers describe the frame.
 
-## Why This Layout Works
+## Engine Boundary
 
-This split is useful for several reasons:
+The long-term goal is to extract the reusable engine pieces into an Engine-only D module. The demo exists to keep those pieces exercised while the shape settles.
 
-- the background can be replaced without touching the UI layer
-- the 3D layer can grow from placeholder geometry to real ships
-- the UI can stay crisp because it is rendered in native resolution
-- each layer can be debugged independently
-- resource ownership stays visible instead of being hidden in a monolithic renderer
+Reusable engine candidates:
 
-This is a good shape for a codebase that wants to remain understandable while still being close to production rendering patterns.
+- SDL/Vulkan bootstrap abstractions once they are no longer demo-specific
+- Vulkan instance/device/swapchain/pipeline/resource helpers
+- retained UI engine under `source/vulkan/ui/`
+- font atlas and text geometry support
+- mesh and asset-facing abstractions after placeholder geometry is replaced
+
+Demo-only candidates:
+
+- current Platonic-solid scene selection
+- current demo windows and text
+- demo settings keys and sample profiles
+- old HUD helper functions kept only as migration remnants
 
 ## Decision Points
 
-There are a few natural choices that may evolve later:
+The next architecture decisions are:
 
-- whether the background becomes procedural or texture based
-- whether the 3D layer keeps placeholder geometry or switches to authored assets
-- whether the UI tree stays custom or gets replaced by a specialized immediate-mode or retained-mode system
-- whether the overlay uses a fully retained widget tree or a hybrid with generated geometry
-
-The current repository is best understood as a compact rendering spine that leaves those decisions open without making the frame architecture ambiguous.
+- replace HUD-specific render data names with generic UI names
+- remove the old stateless HUD construction path from `demo_ui.d`
+- make `DemoUiScreen` use generic `UiScreen` helpers consistently
+- decide how far renderer ownership should be split before publishing a first package
+- decide which settings belong to the engine and which belong only to the demo application
 
 ## Related Files
 
-- [source/vulkan/renderer.d](../source/vulkan/renderer.d)
-- [source/vulkan/ui_layer.d](../source/vulkan/ui_layer.d)
-- [source/vulkan/polyhedra.d](../source/vulkan/polyhedra.d)
+- [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d)
+- [source/vulkan/engine/pipeline.d](../source/vulkan/engine/pipeline.d)
+- [source/vulkan/models/polyhedra.d](../source/vulkan/models/polyhedra.d)
+- [source/vulkan/ui/ui_screen.d](../source/vulkan/ui/ui_screen.d)
+- [source/demo/demo_ui.d](../source/demo/demo_ui.d)
 - [docs/vulkan-quickstart.md](vulkan-quickstart.md)
-- [docs/shaders.md](shaders.md)
+- [docs/ui-architecture.md](ui-architecture.md)

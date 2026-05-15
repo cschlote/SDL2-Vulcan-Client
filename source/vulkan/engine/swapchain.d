@@ -12,7 +12,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.swapchain;
+module vulkan.engine.swapchain;
 
 import bindbc.vulkan;
 import std.exception : enforce;
@@ -165,23 +165,10 @@ private VkSurfaceFormatKHR chooseSurfaceFormat(VkPhysicalDevice physicalDevice, 
  *
  * @param physicalDevice = Vulkan physical device handle.
  * @param surface = Presentation surface.
- * @returns A supported present mode, preferring mailbox when available.
+ * @returns FIFO present mode so rendering is synchronized to VSync.
  */
 private VkPresentModeKHR choosePresentMode(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
-    uint count = 0;
-    enforce(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &count, null) == VkResult.VK_SUCCESS, "vkGetPhysicalDeviceSurfacePresentModesKHR failed.");
-
-    VkPresentModeKHR[] modes;
-    modes.length = count;
-    enforce(vkGetPhysicalDeviceSurfacePresentModesKHR(physicalDevice, surface, &count, modes.ptr) == VkResult.VK_SUCCESS, "vkGetPhysicalDeviceSurfacePresentModesKHR failed.");
-
-    foreach (mode; modes)
-    {
-        if (mode == VkPresentModeKHR.VK_PRESENT_MODE_MAILBOX_KHR)
-            return mode;
-    }
-
     return VkPresentModeKHR.VK_PRESENT_MODE_FIFO_KHR;
 }
 

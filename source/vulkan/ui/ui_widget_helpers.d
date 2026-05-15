@@ -12,7 +12,7 @@ module vulkan.ui.ui_widget_helpers;
 import std.math : isInfinity, isNaN;
 
 import vulkan.font.font_legacy : appendText;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 
 /** Appends a generic surface fill with an optional border. */

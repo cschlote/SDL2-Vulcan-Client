@@ -13,7 +13,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.renderer;
+module vulkan.engine.renderer;
 
 import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
@@ -24,18 +24,18 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
-import demo_settings : DemoSettings, saveDemoSettings;
+import demo.demo_settings : DemoSettings, saveDemoSettings;
+import demo.demo_ui : DemoUiScreen, HudWindowDrawRange;
 import logging : logLine, logLineVerbose;
-import vulkan.font.font_legacy : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
-import vulkan.ui.ui_event : UiPointerEventKind;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, buildHudLayout, buildHudOverlayVertices, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
 import math.matrix;
-import window;
-import vulkan.device;
-import vulkan.instance;
-import vulkan.polyhedra : MeshData, buildPlatonicSolids;
-import vulkan.pipeline;
-import vulkan.swapchain;
+import vulkan.engine.device;
+import vulkan.engine.instance;
+import vulkan.engine.pipeline;
+import vulkan.engine.swapchain;
+import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
+import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import sdl2.window;
 
 private enum maxFramesInFlight = 2;
 
@@ -93,7 +93,6 @@ class VulkanRenderer
     private string buildVersion;
     private string platformName;
     private DemoSettings* demoSettings;
-    private DemoSettings settingsDraft;
     private VulkanInstance instance;
     private VkSurfaceKHR surface = VK_NULL_HANDLE;
     private VulkanDevice device;
@@ -139,9 +138,7 @@ class VulkanRenderer
     private enum sample11FontPixelHeight = 11;
     private enum sample12FontPixelHeight = 12;
     private enum sampleMonoFontPixelHeight = 10;
-    private HudLayoutState hudLayoutState;
-    private bool sceneMouseDragging;
-    private bool settingsCommitRequested;
+    private DemoUiScreen uiScreen;
     private float cameraFieldOfViewY = 55.0f * PI / 180.0f;
     private enum minCameraFieldOfViewY = 28.0f * PI / 180.0f;
     private enum maxCameraFieldOfViewY = 85.0f * PI / 180.0f;
@@ -167,46 +164,46 @@ class VulkanRenderer
     private enum vertexShaderPath = "build/shaders/main.vert.spv";
     private enum fragmentShaderPath = "build/shaders/main.frag.spv";
 
-    private enum Vertex[] cubeVertices = [
-        Vertex([-1, -1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([ 1, -1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([ 1,  1,  1], [0.95f, 0.25f, 0.25f]),
-        Vertex([-1,  1,  1], [0.95f, 0.25f, 0.25f]),
+    // private enum Vertex[] cubeVertices = [
+    //     Vertex([-1, -1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([ 1, -1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([ 1,  1,  1], [0.95f, 0.25f, 0.25f]),
+    //     Vertex([-1,  1,  1], [0.95f, 0.25f, 0.25f]),
 
-        Vertex([ 1, -1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([-1, -1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([-1,  1, -1], [0.25f, 0.85f, 0.35f]),
-        Vertex([ 1,  1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([ 1, -1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([-1, -1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([-1,  1, -1], [0.25f, 0.85f, 0.35f]),
+    //     Vertex([ 1,  1, -1], [0.25f, 0.85f, 0.35f]),
 
-        Vertex([-1, -1, -1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1, -1,  1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1,  1,  1], [0.25f, 0.45f, 0.95f]),
-        Vertex([-1,  1, -1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1, -1, -1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1, -1,  1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1,  1,  1], [0.25f, 0.45f, 0.95f]),
+    //     Vertex([-1,  1, -1], [0.25f, 0.45f, 0.95f]),
 
-        Vertex([ 1, -1,  1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1, -1, -1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1,  1, -1], [0.95f, 0.85f, 0.25f]),
-        Vertex([ 1,  1,  1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1, -1,  1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1, -1, -1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1,  1, -1], [0.95f, 0.85f, 0.25f]),
+    //     Vertex([ 1,  1,  1], [0.95f, 0.85f, 0.25f]),
 
-        Vertex([-1,  1,  1], [0.80f, 0.35f, 0.95f]),
-        Vertex([ 1,  1,  1], [0.80f, 0.35f, 0.95f]),
-        Vertex([ 1,  1, -1], [0.80f, 0.35f, 0.95f]),
-        Vertex([-1,  1, -1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([-1,  1,  1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([ 1,  1,  1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([ 1,  1, -1], [0.80f, 0.35f, 0.95f]),
+    //     Vertex([-1,  1, -1], [0.80f, 0.35f, 0.95f]),
 
-        Vertex([-1, -1, -1], [0.25f, 0.90f, 0.90f]),
-        Vertex([ 1, -1, -1], [0.25f, 0.90f, 0.90f]),
-        Vertex([ 1, -1,  1], [0.25f, 0.90f, 0.90f]),
-        Vertex([-1, -1,  1], [0.25f, 0.90f, 0.90f]),
-    ];
+    //     Vertex([-1, -1, -1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([ 1, -1, -1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([ 1, -1,  1], [0.25f, 0.90f, 0.90f]),
+    //     Vertex([-1, -1,  1], [0.25f, 0.90f, 0.90f]),
+    // ];
 
-    private enum uint[] cubeIndices = [
-        0, 1, 2, 0, 2, 3,
-        4, 5, 6, 4, 6, 7,
-        8, 9, 10, 8, 10, 11,
-        12, 13, 14, 12, 14, 15,
-        16, 17, 18, 16, 18, 19,
-        20, 21, 22, 20, 22, 23,
-    ];
+    // private enum uint[] cubeIndices = [
+    //     0, 1, 2, 0, 2, 3,
+    //     4, 5, 6, 4, 6, 7,
+    //     8, 9, 10, 8, 10, 11,
+    //     12, 13, 14, 12, 14, 15,
+    //     16, 17, 18, 16, 18, 19,
+    //     20, 21, 22, 20, 22, 23,
+    // ];
 
     /** Creates the full renderer stack for the current SDL window and build version.
      *
@@ -224,7 +221,7 @@ class VulkanRenderer
         this.buildVersion = buildVersion;
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
-        settingsDraft = demoSettings !is null ? *demoSettings : DemoSettings.init;
+        uiScreen = new DemoUiScreen();
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -250,7 +247,7 @@ class VulkanRenderer
         currentShapeName = shapeMeshes[currentShapeIndex].name;
         currentIndexCount = cast(uint)shapeMeshes[currentShapeIndex].indices.length;
         if (demoSettings !is null)
-            setRenderMode(renderModeFromSetting(settingsDraft.gameplay.startupRenderMode, currentRenderMode));
+            setRenderMode(renderModeFromSetting(demoSettings.gameplay.startupRenderMode, currentRenderMode));
         foreach (mesh; shapeMeshes)
         {
             if (mesh.vertices.length > maxShapeVertexCount)
@@ -265,7 +262,8 @@ class VulkanRenderer
         createOverlayBuffers();
         createTextureResources();
         createFontResources();
-        syncHudLayoutState();
+        uiScreen.initialize(fontAtlases[]);
+        uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -398,39 +396,14 @@ class VulkanRenderer
 
     }
 
-    /** Adjusts the camera opening angle when the wheel is used outside the HUD. */
+    /** Adjusts the camera opening angle when the wheel is used outside the UI. */
     private bool handleMouseWheel(ref SDL_Event event)
     {
-        if (hudLayoutState.settingsVisible)
-            return false;
+        const mouseX = cast(float)event.wheel.mouseX;
+        const mouseY = cast(float)event.wheel.mouseY;
 
-        const layout = buildHudLayout(
-            cast(float)swapchain.extent.width,
-            cast(float)swapchain.extent.height,
-            cast(float)fpsValue,
-            yawAngle,
-            pitchAngle,
-            currentShapeName,
-            currentRenderModeName,
-            buildVersion,
-            platformName,
-            VK_API_VERSION,
-            hudLayoutState,
-            fontAtlases[],
-            fontAtlases[0],
-            fontAtlases[1],
-            fontAtlases[2]);
-
-        const mouseX = event.wheel.mouseX;
-        const mouseY = event.wheel.mouseY;
-        if (hudPointInRect(layout.status, mouseX, mouseY)
-            || hudPointInRect(layout.modes, mouseX, mouseY)
-            || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
-            || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
-            || hudPointInRect(layout.center, mouseX, mouseY))
-        {
+        if (uiScreen.containsPointer(mouseX, mouseY))
             return false;
-        }
 
         cameraFieldOfViewY -= event.wheel.y * cameraFovStep;
         if (cameraFieldOfViewY < minCameraFieldOfViewY)
@@ -558,7 +531,7 @@ class VulkanRenderer
         createBuffer(meshIndexBuffer, maxShapeIndexCount * uint.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     }
 
-    /** Allocates the per-frame vertex buffers used by the HUD overlay. */
+    /** Allocates the per-frame vertex buffers used by the UI overlay. */
     private void createOverlayBuffers()
     {
         createFrameVertexBuffers(overlayPanels);
@@ -711,7 +684,7 @@ class VulkanRenderer
         destroyBuffer(meshIndexBuffer);
     }
 
-    /** Releases the HUD overlay buffers. */
+    /** Releases the UI overlay buffers. */
     private void destroyOverlayBuffers()
     {
         destroyFrameVertexBuffers(overlayPanels);
@@ -1049,7 +1022,7 @@ class VulkanRenderer
         }
     }
 
-    /// Updates the current mesh transform, uniform buffer, and HUD vertex data.
+    /// Updates the current mesh transform, uniform buffer, and UI vertex data.
     ///
     /// Params:
     ///   frameIndex = Index of the current in-flight frame.
@@ -1127,35 +1100,18 @@ class VulkanRenderer
         memcpy(meshVertexBuffer.mapped, meshTransformed.ptr, Vertex.sizeof * meshTransformed.length);
         memcpy(meshIndexBuffer.mapped, mesh.indices.ptr, uint.sizeof * mesh.indices.length);
 
-        auto overlayVertices = buildHudOverlayVertices(
+        auto overlayVertices = uiScreen.buildOverlayVertices(
             cast(float)swapchain.extent.width,
             cast(float)swapchain.extent.height,
             cast(float)fpsValue,
-            yawAngle,
-            pitchAngle,
             currentShapeName,
             currentRenderModeName,
             buildVersion,
-            hudLayoutState,
-            settingsDraft,
-            platformName,
-            VK_API_VERSION,
-            { setRenderMode(RenderMode.flatColor); },
-            { setRenderMode(RenderMode.litTextured); },
-            { setRenderMode(RenderMode.wireframe); },
-            { setRenderMode(RenderMode.hiddenLine); },
-            { advanceShape(-1); },
-            { advanceShape(1); },
-            &toggleSettingsDialog,
-            &applySettingsDialog,
-            fontAtlases[] ,
-            fontAtlases[0],
-            fontAtlases[1],
-            fontAtlases[2]);
+            fontAtlases[]);
 
-        enforce(overlayVertices.panels.length <= maxOverlayVertices, "HUD overlay panel vertex limit exceeded.");
+        enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
-            enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "HUD overlay text-layer vertex limit exceeded.");
+            enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "UI overlay text-layer vertex limit exceeded.");
 
         hudWindowRanges = overlayVertices.windows;
 
@@ -1170,112 +1126,49 @@ class VulkanRenderer
 
     /// Records the render pass commands for the current frame.
 
-            /** Recomputes the draggable HUD window clamp state for the current swapchain size. */
+            /** Recomputes the draggable UI window clamp state for the current swapchain size. */
             private void syncHudLayoutState()
             {
-                buildHudLayout(
+                uiScreen.syncViewport(
                     cast(float)swapchain.extent.width,
                     cast(float)swapchain.extent.height,
                     cast(float)fpsValue,
-                    yawAngle,
-                    pitchAngle,
                     currentShapeName,
                     currentRenderModeName,
                     buildVersion,
-                    platformName,
-                    VK_API_VERSION,
-                    hudLayoutState,
-                    fontAtlases[],
-                    fontAtlases[1],
-                    fontAtlases[1],
-                    fontAtlases[2]);
+                );
             }
 
-            /** Starts a scene drag when a mouse press does not hit the HUD. */
+            /** Starts a scene drag when a mouse press does not hit the UI. */
             private bool handleMouseButtonDown(ref SDL_Event event)
             {
                 if (event.button.button != 1)
                     return false;
 
-                const layout = buildHudLayout(
-                    cast(float)swapchain.extent.width,
-                    cast(float)swapchain.extent.height,
-                    cast(float)fpsValue,
-                    yawAngle,
-                    pitchAngle,
-                    currentShapeName,
-                    currentRenderModeName,
-                    buildVersion,
-                    platformName,
-                    VK_API_VERSION,
-                    hudLayoutState,
-                    fontAtlases[],
-                    fontAtlases[0],
-                    fontAtlases[1],
-                    fontAtlases[2]);
+                UiPointerEvent pointerEvent;
+                pointerEvent.kind = UiPointerEventKind.buttonDown;
+                pointerEvent.x = cast(float)event.button.x;
+                pointerEvent.y = cast(float)event.button.y;
+                pointerEvent.button = cast(uint)event.button.button;
 
-                const mouseX = cast(float)event.button.x;
-                const mouseY = cast(float)event.button.y;
-                logLineVerbose("Mouse down at ", mouseX, ", ", mouseY, ".");
-                logLineVerbose("Center window before dispatch: drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing, ", rect=", layout.center.left, ",", layout.center.top, ",", layout.center.width, ",", layout.center.height);
-                if (hudDispatchModeButtonDown(
-                    layout.modes,
-                    mouseX,
-                    mouseY,
-                    fontAtlases[1],
-                    { setRenderMode(RenderMode.flatColor); },
-                    { setRenderMode(RenderMode.litTextured); },
-                    { setRenderMode(RenderMode.wireframe); },
-                    { setRenderMode(RenderMode.hiddenLine); },
-                    { advanceShape(-1); },
-                    { advanceShape(1); },
-                    &toggleSettingsDialog,
-                    () { hudLayoutState.statusVisible = !hudLayoutState.statusVisible; },
-                    () { hudLayoutState.sampleVisible = !hudLayoutState.sampleVisible; },
-                    () { hudLayoutState.inputVisible = !hudLayoutState.inputVisible; },
-                    () { hudLayoutState.centerVisible = !hudLayoutState.centerVisible; }))
+                if (uiScreen.dispatchPointerEvent(pointerEvent))
                 {
-                    logLineVerbose("Mode button handled the press.");
+                    uiScreen.sceneMouseDragging = false;
+
+                    if (uiScreen.quitRequested)
+                        return true;
+
                     return false;
                 }
 
-                if (hudLayoutState.statusVisible && hudDispatchStatusWindowPointer(layout.status, hudLayoutState, cast(float)fpsValue, yawAngle, pitchAngle, currentShapeName, currentRenderModeName, buildVersion, platformName, VK_API_VERSION, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
+                if (uiScreen.containsPointer(pointerEvent.x, pointerEvent.y))
                 {
-                    logLineVerbose("Status window handled the press.");
-                    sceneMouseDragging = false;
+                    uiScreen.sceneMouseDragging = false;
+
                     return false;
                 }
 
-                if (hudLayoutState.settingsVisible && hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]))
-                {
-                    logLineVerbose("Settings window handled the press.");
-                    sceneMouseDragging = false;
-                    return false;
-                }
-
-                if (hudLayoutState.centerVisible && hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, mouseX, mouseY, UiPointerEventKind.buttonDown, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]))
-                {
-                    logLineVerbose("Center window handled the press. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
-                    sceneMouseDragging = false;
-                    return false;
-                }
-
-                const hitHud = hudPointInRect(layout.modes, mouseX, mouseY)
-                    || (hudLayoutState.sampleVisible && hudPointInRect(layout.sample, mouseX, mouseY))
-                    || (hudLayoutState.inputVisible && hudPointInRect(layout.input, mouseX, mouseY))
-                    || (hudLayoutState.statusVisible && hudPointInRect(layout.status, mouseX, mouseY))
-                    || (hudLayoutState.settingsVisible && hudPointInRect(buildSettingsRect(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, fontAtlases[1]), mouseX, mouseY))
-                    || (hudLayoutState.centerVisible && hudPointInRect(layout.center, mouseX, mouseY));
-
-                if (hudLayoutState.centerVisible && hudPointInHeader(layout.center, mouseX, mouseY))
-                {
-                    hudBeginDrag(hudLayoutState, layout.center, mouseX, mouseY);
-                    logLineVerbose("Fallback header drag started.");
-                    sceneMouseDragging = false;
-                    return false;
-                }
-
-                sceneMouseDragging = !hitHud;
+                uiScreen.sceneMouseDragging = true;
                 return false;
             }
 
@@ -1285,89 +1178,33 @@ class VulkanRenderer
                 if (event.button.button != 1)
                     return false;
 
-                const layout = buildHudLayout(
-                    cast(float)swapchain.extent.width,
-                    cast(float)swapchain.extent.height,
-                    cast(float)fpsValue,
-                    yawAngle,
-                    pitchAngle,
-                    currentShapeName,
-                    currentRenderModeName,
-                    buildVersion,
-                    platformName,
-                    VK_API_VERSION,
-                    hudLayoutState,
-                    fontAtlases[],
-                    fontAtlases[0],
-                    fontAtlases[1],
-                    fontAtlases[2]);
+                UiPointerEvent pointerEvent;
+                pointerEvent.kind = UiPointerEventKind.buttonUp;
+                pointerEvent.x = cast(float)event.button.x;
+                pointerEvent.y = cast(float)event.button.y;
+                pointerEvent.button = cast(uint)event.button.button;
 
-                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
-                {
-                    logLineVerbose("Mouse up routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing);
-                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, fontAtlases[0], fontAtlases[1]);
-                }
+                uiScreen.dispatchPointerEvent(pointerEvent);
 
-                if (hudLayoutState.settingsVisible)
-                    hudDispatchSettingsWindowPointer(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, hudLayoutState, settingsDraft, cast(float)event.button.x, cast(float)event.button.y, UiPointerEventKind.buttonUp, cast(uint)event.button.button, &applySettingsDialog, fontAtlases[0], fontAtlases[1]);
+                if (uiScreen.quitRequested)
+                    return true;
 
-                if (hudLayoutState.middleDragging)
-                    hudEndDrag(hudLayoutState);
-                if (hudLayoutState.middleResizing)
-                    logLineVerbose("Center resize ended.");
-
-                sceneMouseDragging = false;
+                uiScreen.sceneMouseDragging = false;
                 return false;
             }
 
             /** Routes mouse motion either to the draggable window or to the 3D layer. */
             private bool handleMouseMotion(ref SDL_Event event)
             {
-                if (hudLayoutState.centerVisible && (hudLayoutState.middleDragging || hudLayoutState.middleResizing))
-                {
-                    const layout = buildHudLayout(
-                        cast(float)swapchain.extent.width,
-                        cast(float)swapchain.extent.height,
-                        cast(float)fpsValue,
-                        yawAngle,
-                        pitchAngle,
-                        currentShapeName,
-                        currentRenderModeName,
-                        buildVersion,
-                        platformName,
-                        VK_API_VERSION,
-                        hudLayoutState,
-                        fontAtlases[],
-                        fontAtlases[0],
-                        fontAtlases[1],
-                        fontAtlases[2]);
+                UiPointerEvent pointerEvent;
+                pointerEvent.kind = UiPointerEventKind.move;
+                pointerEvent.x = cast(float)event.motion.x;
+                pointerEvent.y = cast(float)event.motion.y;
 
-                    logLineVerbose("Mouse move routed to center window. drag=", hudLayoutState.middleDragging, ", resize=", hudLayoutState.middleResizing, ", position=", event.motion.x, ",", event.motion.y);
-                    hudDispatchCenterWindowPointer(layout.center, hudLayoutState, cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)event.motion.x, cast(float)event.motion.y, UiPointerEventKind.move, 0, fontAtlases[0], fontAtlases[1]);
-                    return false;
-                }
-
-                if (hudLayoutState.settingsVisible && hudLayoutState.settingsDragging)
-                {
-                    hudDispatchSettingsWindowPointer(
-                        cast(float)swapchain.extent.width,
-                        cast(float)swapchain.extent.height,
-                        hudLayoutState,
-                        settingsDraft,
-                        cast(float)event.motion.x,
-                        cast(float)event.motion.y,
-                        UiPointerEventKind.move,
-                        0,
-                        &applySettingsDialog,
-                        fontAtlases[0],
-                        fontAtlases[1]);
-                    return false;
-                }
-
-                if (hudLayoutState.settingsVisible)
+                if (uiScreen.dispatchPointerEvent(pointerEvent))
                     return false;
 
-                if (sceneMouseDragging)
+                if (uiScreen.sceneMouseDragging)
                 {
                     yawAngle += cast(float)event.motion.xrel * 0.006f;
                     pitchAngle += cast(float)event.motion.yrel * 0.006f;
@@ -1651,22 +1488,13 @@ class VulkanRenderer
     /** Opens the settings dialog with a fresh copy of the current live settings. */
     private void openSettingsDialog()
     {
-        if (demoSettings !is null)
-            settingsDraft = *demoSettings;
-
-        hudLayoutState.settingsVisible = true;
+        uiScreen.toggleSettingsWindow();
     }
 
     /** Toggles the settings dialog and refreshes the draft when opening. */
     private void toggleSettingsDialog()
     {
-        if (hudLayoutState.settingsVisible)
-        {
-            hudLayoutState.settingsVisible = false;
-            return;
-        }
-
-        openSettingsDialog();
+        uiScreen.toggleSettingsWindow();
     }
 
     /** Applies the settings draft to the live bundle and writes it to disk. */
@@ -1675,7 +1503,7 @@ class VulkanRenderer
         if (demoSettings is null)
             return;
 
-        *demoSettings = settingsDraft;
+        *demoSettings = uiScreen.settingsDraft;
         saveDemoSettings(*demoSettings);
     }
 
