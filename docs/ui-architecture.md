@@ -42,6 +42,8 @@ That top-level object should be understood as a UiScreen-style coordinator:
 
 This keeps the global responsibilities in one place instead of spreading them across individual widgets. Widgets should be able to focus on their own local geometry and interaction while the screen object provides the shared context they need.
 
+The current implementation follows that shape in [source/vulkan/ui_screen.d](../source/vulkan/ui_screen.d), which owns the shared HUD layout state, the settings draft, and the per-frame overlay assembly used by the renderer.
+
 ## UiWidget As Box Model
 
 UiWidget should be treated as the smallest reusable retained UI object: a rectangular box with layout hints and optional surface styling.
@@ -226,5 +228,6 @@ These are not blockers, but they should stay visible so the code does not drift 
 - [source/vulkan/ui/ui_widget_helpers.d](../source/vulkan/ui/ui_widget_helpers.d)
 - [source/vulkan/ui/ui_layout.d](../source/vulkan/ui/ui_layout.d)
 - [source/vulkan/ui/ui_window.d](../source/vulkan/ui/ui_window.d)
+- [source/vulkan/ui_screen.d](../source/vulkan/ui_screen.d)
 - [source/vulkan/ui_layer.d](../source/vulkan/ui_layer.d)
 - [docs/rendering-architecture.md](rendering-architecture.md)
