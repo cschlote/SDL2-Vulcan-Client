@@ -61,7 +61,7 @@ Responsibilities that do not belong in `UiScreen`:
 
 Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific screen class.
 
-`UiScreen` is still experimental. The next code cleanup should make `DemoUiScreen` use the generic helpers consistently instead of duplicating drag, resize, layout, and iteration logic.
+`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, and viewport clamping. The next cleanup question is whether renderer-facing overlay geometry should also become a generic `vulkan.ui` type.
 
 ## UiWindow
 
