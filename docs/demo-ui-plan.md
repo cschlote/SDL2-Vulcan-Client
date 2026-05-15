@@ -119,7 +119,7 @@ Use `UiScreen` properly:
 5. Fix settings persistence so only explicit Save writes to disk. Done.
 6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field. Done.
 7. Rebuild the settings window around Apply and Save. Done.
-8. Rework demo windows into clear app roles.
+8. Rework demo windows into clear app roles. Done.
 9. Review which modules are reusable enough for the first Engine-only package boundary.
 
 ## Public Package Preparation
