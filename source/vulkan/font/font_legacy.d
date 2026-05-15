@@ -83,6 +83,7 @@ struct FontAtlas
     ubyte[] pixels;
 }
 
+/** Default glyph coverage used when no custom glyph set is supplied. */
 private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789 .,:;!?/\\+-()[]%";
 
 /** Chooses a reasonable system font path for the current platform.
@@ -515,6 +516,7 @@ private RenderBounds measureRenderedBounds(const(Vertex)[] vertices, float exten
     return bounds;
 }
 
+/** Returns true when the supplied UTF-8 string contains the requested code point. */
 private bool containsCodePoint(string text, dchar needle)
 {
     foreach (ch; text)
@@ -526,6 +528,7 @@ private bool containsCodePoint(string text, dchar needle)
     return false;
 }
 
+/** Copies one FreeType bitmap into the atlas pixel buffer. */
 private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atlasHeight, uint atlasX, uint atlasY, ref const(FT_Bitmap) bitmap)
 {
     const pitch = bitmap.pitch;
@@ -547,6 +550,7 @@ private void copyGlyphBitmap(ref ubyte[] atlasPixels, uint atlasWidth, uint atla
     }
 }
 
+/** Appends a textured quad in normalized device coordinates. */
 private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, float right, float bottom, float z, float u0, float v0, float u1, float v1, float[4] color, float extentWidth, float extentHeight)
 {
     const safeExtentWidth = extentWidth > 0.0f && !isNaN(extentWidth) && !isInfinity(extentWidth) ? extentWidth : 1.0f;
@@ -565,6 +569,7 @@ private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, fl
     vertices ~= Vertex([x0, y1, z], color, [0.0f, 0.0f, 1.0f], [u0, v1]);
 }
 
+@("default glyph set includes fallback characters")
 unittest
 {
     assert(indexOf(defaultGlyphSet, '?') >= 0);
@@ -572,6 +577,7 @@ unittest
     assert(selectDefaultFontPath().length > 0);
 }
 
+@("collect glyph set keeps first-seen order")
 unittest
 {
     // This is the first educational safety net: translate texts into a unique
@@ -584,6 +590,7 @@ unittest
     assert(containsCodePoint(glyphSet, '?'));
 }
 
+@("font atlas exposes usable metrics")
 unittest
 {
     // The atlas must expose sane metrics for the renderer and the UI layout.
@@ -601,6 +608,7 @@ unittest
     assert(('?' in atlas.glyphs) !is null);
 }
 
+@("text width matches emitted quads")
 unittest
 {
     // The width calculation must match the actual quads emitted by appendText().
@@ -616,6 +624,7 @@ unittest
     assert(renderedBounds.width > 0.0f);
 }
 
+@("multiline text uses widest line")
 unittest
 {
     // Multi-line input must use the widest line for width and the line height for height.
