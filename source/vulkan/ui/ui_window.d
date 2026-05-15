@@ -13,7 +13,7 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
-import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox;
+import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox, UiVBox;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
 import logging : logLine, logLineVerbose;
@@ -122,9 +122,7 @@ final class UiWindow : UiWidget
     void layoutWindow(ref UiLayoutContext context)
     {
         updateChromeLayout();
-
-        foreach (child; contentRoot.children)
-            child.layout(context);
+        contentRoot.layout(context);
     }
 
     /** Routes pointer events through the chrome before the body content. */
@@ -407,4 +405,20 @@ private:
             color[3],
         ];
     }
+}
+
+@("UiWindow stretches direct content to the content root")
+unittest
+{
+    auto window = new UiWindow("Test", 0.0f, 0.0f, 240.0f, 180.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, false, 12.0f, 8.0f, 16.0f, 10.0f);
+    auto content = new UiVBox();
+    window.add(content);
+
+    UiLayoutContext context;
+    window.layoutWindow(context);
+
+    assert(content.x == 12.0f);
+    assert(content.y == 8.0f);
+    assert(content.width == 240.0f - 6.0f - 12.0f - 16.0f);
+    assert(content.height == 180.0f - window.headerHeight - 6.0f - 8.0f - 10.0f);
 }

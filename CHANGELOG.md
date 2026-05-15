@@ -12,6 +12,7 @@
 - Fixed retained UI rendering after several windows by keeping overlay geometry in a stable depth range and disabling depth tests for the overlay pipeline.
 - Added a global `D` hotkey that overlays semi-transparent red bounds for every visible retained UI widget.
 - Colored the UI debug bounds by widget/layout type so nested layout boxes are easier to distinguish.
+- Fixed `UiWindow` content layout so direct body widgets fill the available content root instead of bypassing the root layout box.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 
