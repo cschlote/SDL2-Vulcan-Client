@@ -7,6 +7,7 @@
 - Refactored `DemoUiScreen` to use generic `UiScreen` window registration, iteration, hit testing, layout, and interaction helpers.
 - Stopped automatic demo settings persistence on Apply and application shutdown; only a future explicit Save action should write the config file.
 - Added generic retained toggle, slider, dropdown, and text field controls with unit coverage.
+- Rebuilt the demo settings window around generic controls with separate Apply and explicit Save actions.
 - Improved font test coverage and documentation for release checks.
 
 ## Release 26.20.6619

@@ -24,7 +24,7 @@ import std.math : PI, cos, sin, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
-import demo.demo_settings : DemoSettings;
+import demo.demo_settings : DemoSettings, saveDemoSettings;
 import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
 import logging : logLine, logLineVerbose;
 import math.matrix;
@@ -222,6 +222,8 @@ class VulkanRenderer
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
         uiScreen = new DemoUiScreen();
+        uiScreen.onApplySettings = &applySettingsDialog;
+        uiScreen.onSaveSettings = &saveSettingsDialog;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -263,6 +265,7 @@ class VulkanRenderer
         createTextureResources();
         createFontResources();
         uiScreen.initialize(fontAtlases[]);
+        uiScreen.setSettingsDraft(demoSettings);
         uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
         createUniformBuffers();
         createDescriptorPoolAndSets();
@@ -1488,13 +1491,13 @@ class VulkanRenderer
     /** Opens the settings dialog with a fresh copy of the current live settings. */
     private void openSettingsDialog()
     {
-        uiScreen.toggleSettingsWindow();
+        uiScreen.openSettingsDialog(demoSettings);
     }
 
     /** Toggles the settings dialog and refreshes the draft when opening. */
     private void toggleSettingsDialog()
     {
-        uiScreen.toggleSettingsWindow();
+        uiScreen.toggleSettingsDialog(demoSettings);
     }
 
     /** Applies the settings draft to the live bundle without persisting it. */
@@ -1504,6 +1507,16 @@ class VulkanRenderer
             return;
 
         *demoSettings = uiScreen.settingsDraft;
+    }
+
+    /** Saves the current settings draft to disk after applying it locally. */
+    private void saveSettingsDialog()
+    {
+        if (demoSettings is null)
+            return;
+
+        *demoSettings = uiScreen.settingsDraft;
+        saveDemoSettings(*demoSettings);
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

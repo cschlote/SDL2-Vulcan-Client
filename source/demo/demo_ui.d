@@ -20,6 +20,7 @@ module demo.demo_ui;
 
 import std.format : format;
 import std.algorithm : max;
+import std.conv : ConvException, to;
 
 import demo.demo_settings : DemoSettings;
 import vulkan.font.font_legacy : FontAtlas;
@@ -27,6 +28,7 @@ import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_event : UiResizeHandle;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
+import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
@@ -221,6 +223,8 @@ final class DemoUiScreen : UiScreen
 {
     DemoSettings settingsDraft;
     bool sceneMouseDragging;
+    void delegate() onApplySettings;
+    void delegate() onSaveSettings;
 
     private UiWindow initWindow;
     private UiWindow helpWindow;
@@ -250,7 +254,15 @@ final class DemoUiScreen : UiScreen
     private UiLabel settingsTitleLabel;
     private UiLabel settingsIntroLabel;
     private UiLabel settingsProfileLabel;
-    private UiLabel settingsPreviewLabel;
+    private UiDropdown settingsWindowModeDropdown;
+    private UiTextField settingsWidthField;
+    private UiTextField settingsHeightField;
+    private UiToggle settingsVsyncToggle;
+    private UiSlider settingsScaleSlider;
+    private UiDropdown settingsThemeDropdown;
+    private UiToggle settingsCompactToggle;
+    private UiButton settingsApplyButton;
+    private UiButton settingsSaveButton;
 
     private bool initAnchored;
     private bool helpAnchored;
@@ -355,14 +367,26 @@ final class DemoUiScreen : UiScreen
     {
         if (liveSettings !is null)
             settingsDraft = *liveSettings;
-        toggleSettingsWindow();
+        refreshSettingsControls();
+        if (!settingsWindow.visible)
+            toggleSettingsWindow();
     }
 
     void toggleSettingsDialog(const(DemoSettings)* liveSettings)
     {
         if (liveSettings !is null)
             settingsDraft = *liveSettings;
+        refreshSettingsControls();
         toggleSettingsWindow();
+    }
+
+    void setSettingsDraft(const(DemoSettings)* liveSettings)
+    {
+        if (liveSettings is null)
+            return;
+
+        settingsDraft = *liveSettings;
+        refreshSettingsControls();
     }
 
     void updateWindowState()
@@ -383,7 +407,7 @@ final class DemoUiScreen : UiScreen
         initStatusButton = new UiButton("Status ein- oder ausblenden", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         initStatusButton.onClick = &toggleStatusWindow;
         initSettingsButton = new UiButton("Einstellungen ein- oder ausblenden", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
-        initSettingsButton.onClick = &toggleSettingsWindow;
+        initSettingsButton.onClick = () { toggleSettingsDialog(null); };
         initTestButton = new UiButton("Layout-Testfenster öffnen", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         initTestButton.onClick = &spawnLayoutTestWindow;
 
@@ -458,14 +482,46 @@ final class DemoUiScreen : UiScreen
 
         settingsContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         settingsTitleLabel = new UiLabel("Einstellungsfenster", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsAccentColor);
-        settingsIntroLabel = new UiLabel("Dieses Fenster ist für künftige Werkzeuge und Konfigurationsoptionen reserviert.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
+        settingsIntroLabel = new UiLabel("Apply wirkt nur lokal. Save schreibt die Konfiguration.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
         settingsProfileLabel = new UiLabel("Aktuelles Profil: Standard-Demoeinstellungen.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
-        settingsPreviewLabel = new UiLabel("Nutze das Init-Fenster, um bei Bedarf weitere Testfenster zu öffnen.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
+        settingsWindowModeDropdown = new UiDropdown("Fenstermodus", ["windowed", "fullscreen", "borderless"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
+        settingsWidthField = new UiTextField("", "Breite", 0.0f, 0.0f, 104.0f, 28.0f);
+        settingsHeightField = new UiTextField("", "Hoehe", 0.0f, 0.0f, 104.0f, 28.0f);
+        settingsVsyncToggle = new UiToggle("VSync", false, 0.0f, 0.0f, 220.0f, 28.0f);
+        settingsScaleSlider = new UiSlider("UI Scale", 0.50f, 2.00f, 1.00f, 0.0f, 0.0f, 220.0f, 32.0f);
+        settingsThemeDropdown = new UiDropdown("Theme", ["midnight", "classic", "contrast"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
+        settingsCompactToggle = new UiToggle("Compact Windows", false, 0.0f, 0.0f, 220.0f, 28.0f);
+        settingsApplyButton = new UiButton("Apply", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+        settingsSaveButton = new UiButton("Save", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+
+        settingsWindowModeDropdown.onChanged = (index, value) { settingsDraft.display.windowMode = value; updateSettingsSummary(); };
+        settingsWidthField.onChanged = (value) { settingsDraft.display.windowWidth = parseUintSetting(value, settingsDraft.display.windowWidth); updateSettingsSummary(); };
+        settingsHeightField.onChanged = (value) { settingsDraft.display.windowHeight = parseUintSetting(value, settingsDraft.display.windowHeight); updateSettingsSummary(); };
+        settingsVsyncToggle.onChanged = (value) { settingsDraft.display.vsync = value; updateSettingsSummary(); };
+        settingsScaleSlider.onChanged = (value) { settingsDraft.display.scale = value; updateSettingsSummary(); };
+        settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
+        settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
+        settingsApplyButton.onClick = &applySettingsFromDialog;
+        settingsSaveButton.onClick = &saveSettingsFromDialog;
+
+        auto sizeRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        sizeRow.add(settingsWidthField);
+        sizeRow.add(settingsHeightField);
+
+        auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        actionRow.add(settingsApplyButton);
+        actionRow.add(settingsSaveButton);
 
         settingsContent.add(settingsTitleLabel);
         settingsContent.add(settingsIntroLabel);
         settingsContent.add(settingsProfileLabel);
-        settingsContent.add(settingsPreviewLabel);
+        settingsContent.add(settingsWindowModeDropdown);
+        settingsContent.add(sizeRow);
+        settingsContent.add(settingsVsyncToggle);
+        settingsContent.add(settingsScaleSlider);
+        settingsContent.add(settingsThemeDropdown);
+        settingsContent.add(settingsCompactToggle);
+        settingsContent.add(actionRow);
         settingsWindow.add(settingsContent);
         settingsWindow.visible = false;
         settingsWindow.onClose = ()
@@ -475,6 +531,86 @@ final class DemoUiScreen : UiScreen
         };
         registerWindowInteractionHandlers(settingsWindow);
         addWindow(settingsWindow);
+        refreshSettingsControls();
+    }
+
+    void refreshSettingsControls()
+    {
+        if (settingsWindowModeDropdown is null)
+            return;
+
+        settingsWindowModeDropdown.selectedIndex = optionIndex(settingsWindowModeDropdown.options, settingsDraft.display.windowMode);
+        settingsWidthField.setText(format("%u", settingsDraft.display.windowWidth));
+        settingsHeightField.setText(format("%u", settingsDraft.display.windowHeight));
+        settingsVsyncToggle.checked = settingsDraft.display.vsync;
+        settingsScaleSlider.value = settingsDraft.display.scale;
+        settingsThemeDropdown.selectedIndex = optionIndex(settingsThemeDropdown.options, settingsDraft.ui.theme);
+        settingsCompactToggle.checked = settingsDraft.ui.compactWindows;
+        updateSettingsSummary();
+    }
+
+    void applySettingsFromDialog()
+    {
+        syncSettingsDraftFromControls();
+        if (onApplySettings !is null)
+            onApplySettings();
+    }
+
+    void saveSettingsFromDialog()
+    {
+        syncSettingsDraftFromControls();
+        if (onSaveSettings !is null)
+            onSaveSettings();
+    }
+
+    void syncSettingsDraftFromControls()
+    {
+        if (settingsWindowModeDropdown is null)
+            return;
+
+        settingsDraft.display.windowMode = settingsWindowModeDropdown.selectedText();
+        settingsDraft.display.windowWidth = parseUintSetting(settingsWidthField.text, settingsDraft.display.windowWidth);
+        settingsDraft.display.windowHeight = parseUintSetting(settingsHeightField.text, settingsDraft.display.windowHeight);
+        settingsDraft.display.vsync = settingsVsyncToggle.checked;
+        settingsDraft.display.scale = settingsScaleSlider.value;
+        settingsDraft.ui.theme = settingsThemeDropdown.selectedText();
+        settingsDraft.ui.compactWindows = settingsCompactToggle.checked;
+        updateSettingsSummary();
+    }
+
+    void updateSettingsSummary()
+    {
+        if (settingsProfileLabel is null)
+            return;
+
+        settingsProfileLabel.text = format("Profil: %s, %ux%u, Theme %s", settingsDraft.display.windowMode, settingsDraft.display.windowWidth, settingsDraft.display.windowHeight, settingsDraft.ui.theme);
+    }
+
+    static size_t optionIndex(string[] options, string value)
+    {
+        foreach (index, option; options)
+        {
+            if (option == value)
+                return index;
+        }
+
+        return 0;
+    }
+
+    static uint parseUintSetting(string value, uint fallback)
+    {
+        try
+        {
+            return to!uint(value);
+        }
+        catch (ConvException)
+        {
+            return fallback;
+        }
+        catch (Exception)
+        {
+            return fallback;
+        }
     }
 
     void updateStatusText(float fps, string currentShapeName, string currentRenderModeName, string buildVersion)
@@ -485,7 +621,7 @@ final class DemoUiScreen : UiScreen
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
         helpIntroLabel.text = format("Geöffnete Fenster: %u", cast(uint)testWindows.length);
-        settingsProfileLabel.text = format("Aktuelles Profil: %s", settingsDraft.display.windowMode);
+        updateSettingsSummary();
     }
 
     override void anchorWindows()
