@@ -52,6 +52,23 @@ protected:
     }
 }
 
+@("UiVBox can shrink children after a previous larger layout")
+unittest
+{
+    auto column = new UiVBox(0.0f, 0.0f, 100.0f, 120.0f, 0.0f);
+    auto child = new UiSpacer(10.0f, 20.0f);
+    child.setLayoutHint(10.0f, 20.0f, 10.0f, 20.0f, float.max, float.max, 1.0f, 1.0f);
+    column.add(child);
+
+    UiLayoutContext context;
+    column.layout(context);
+    assert(child.height == 120.0f);
+
+    column.height = 60.0f;
+    column.layout(context);
+    assert(child.height == 60.0f);
+}
+
 private float clampFloat(float value, float minimum, float maximum)
 {
     return value < minimum ? minimum : (value > maximum ? maximum : value);

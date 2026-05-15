@@ -77,8 +77,10 @@ abstract class UiWidget
     final UiLayoutSize measure(ref UiLayoutContext context)
     {
         const measured = measureSelf(context);
-        preferredWidth = measured.width;
-        preferredHeight = measured.height;
+        if (preferredWidth <= 0.0f)
+            preferredWidth = measured.width;
+        if (preferredHeight <= 0.0f)
+            preferredHeight = measured.height;
         if (minimumWidth <= 0.0f)
             minimumWidth = measured.width;
         if (minimumHeight <= 0.0f)

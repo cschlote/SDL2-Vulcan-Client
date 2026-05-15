@@ -81,6 +81,8 @@ The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible
 
 `UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space.
 
+Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
+
 ## Settings Policy
 
 Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.
