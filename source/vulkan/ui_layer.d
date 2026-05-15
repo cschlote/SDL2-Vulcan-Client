@@ -302,12 +302,47 @@ private struct StatusWindowMetrics
     float contentHeight;
 }
 
+private enum float statusWindowMargin = 18.0f;
+private enum float statusWindowTitlePaddingX = 24.0f;
+private enum float statusWindowContentPaddingX = 32.0f;
+private enum float statusWindowTitleHeight = 32.0f;
+private enum float statusWindowFooterPadding = 16.0f;
+private enum float statusWindowRowGap = 4.0f;
+private enum float statusWindowColumnGap = 10.0f;
+private enum float statusWindowInnerWidthPadding = 28.0f;
+private enum float statusWindowInnerHeightPadding = 28.0f;
+private enum float statusWindowRowExtraGap = 8.0f;
+private enum float statusWindowTitleTextPadding = 2.0f;
+private enum float statusWindowHeaderTextPadding = 0.72f; // Default accent for platform/version labels.
+private enum float statusWindowLabelWidthFallback = 0.0f;
+private enum float statusWindowValueWidthFallback = 0.0f;
+
+private immutable float[4] statusWindowBodyColor = [0.10f, 0.12f, 0.16f, 0.96f];
+private immutable float[4] statusWindowHeaderColor = [0.14f, 0.16f, 0.20f, 0.96f];
+private immutable float[4] statusWindowTitleColor = [1.00f, 0.98f, 0.82f, 1.00f];
+private immutable float[4] statusWindowPlatformColor = [0.72f, 0.96f, 1.00f, 1.00f];
+private immutable float[4] statusWindowBodyTextColor = [1.00f, 1.00f, 1.00f, 1.00f];
+private immutable float[4] statusWindowYawColor = [0.40f, 1.00f, 0.70f, 1.00f];
+private immutable float[4] statusWindowPitchColor = [0.50f, 0.86f, 1.00f, 1.00f];
+private immutable float[4] statusWindowModeColor = [1.00f, 0.90f, 0.45f, 1.00f];
+private immutable float[4] statusWindowBuildColor = [0.86f, 0.96f, 1.00f, 1.00f];
+
+private enum size_t statusRowPlatform = 0;
+private enum size_t statusRowVulkan = 1;
+private enum size_t statusRowFrameRate = 2;
+private enum size_t statusRowYaw = 3;
+private enum size_t statusRowPitch = 4;
+private enum size_t statusRowShape = 5;
+private enum size_t statusRowMode = 6;
+private enum size_t statusRowBuild = 7;
+private enum size_t statusRowCount = 8;
+
 private StatusWindowMetrics measureStatusWindow(float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) mediumFont)
 {
     StatusWindowMetrics metrics;
     const valueTextHeight = textBlockHeight(mediumFont);
     metrics.rowHeight = valueTextHeight;
-    metrics.rowSpacing = 4.0f;
+    metrics.rowSpacing = statusWindowRowGap;
 
     const labelTexts = ["PLATFORM:", "VULKAN API:", "FRAME RATE:", "CAMERA YAW:", "CAMERA PITCH:", "ACTIVE SHAPE:", "CURRENT MODE:", "BUILD:"];
     const valueTexts = [
@@ -320,15 +355,15 @@ private StatusWindowMetrics measureStatusWindow(float fps, float yawAngle, float
         renderModeName,
         buildVersion,
     ];
-
+    metrics.labelWidth = statusWindowLabelWidthFallback;
+    metrics.valueWidth = statusWindowValueWidthFallback;
     foreach (labelText; labelTexts)
         metrics.labelWidth = max(metrics.labelWidth, textBlockWidth(mediumFont, labelText));
     foreach (valueText; valueTexts)
         metrics.valueWidth = max(metrics.valueWidth, textBlockWidth(mediumFont, valueText));
 
-    metrics.contentWidth = metrics.labelWidth + 10.0f + metrics.valueWidth;
-    const rowCount = labelTexts.length;
-    metrics.contentHeight = cast(float)rowCount * metrics.rowHeight + cast(float)(rowCount > 0 ? rowCount - 1 : 0) * metrics.rowSpacing;
+    metrics.contentWidth = metrics.labelWidth + statusWindowColumnGap + metrics.valueWidth;
+    metrics.contentHeight = cast(float)statusRowCount * metrics.rowHeight + cast(float)(statusRowCount - 1) * metrics.rowSpacing;
     return metrics;
 }
 
@@ -349,7 +384,7 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         buildVersion,
     ];
 
-    auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.96f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
+    auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, cast(float[4])statusWindowBodyColor, cast(float[4])statusWindowHeaderColor, cast(float[4])statusWindowTitleColor, false, true, false);
     window.visible = layoutState.statusVisible;
     window.onClose = ()
     {
@@ -357,15 +392,15 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         layoutState.statusVisible = false;
     };
 
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), metrics.rowSpacing);
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - statusWindowInnerWidthPadding, 0.0f), max(rect.height - statusWindowInnerHeightPadding, 0.0f), metrics.rowSpacing);
     content.setLayoutHint(0.0f, metrics.contentHeight, metrics.contentWidth, metrics.contentHeight, float.max, metrics.contentHeight, 1.0f, 0.0f);
 
     foreach (index; 0 .. rowLabels.length)
     {
-        auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, 8.0f);
+        auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, statusWindowRowExtraGap);
         row.setLayoutHint(0.0f, metrics.rowHeight, metrics.contentWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
 
-        auto label = new UiLabel(rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, [0.72f, 0.96f, 1.00f, 1.00f], metrics.rowHeight);
+        auto label = new UiLabel(cast(string)rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusWindowPlatformColor, metrics.rowHeight);
         label.width = metrics.labelWidth;
         label.height = metrics.rowHeight;
         label.setLayoutHint(metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, 0.0f, 0.0f);
@@ -374,18 +409,18 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         float[4] valueColor;
         switch (index)
         {
-            case 0: valueColor = [0.72f, 0.96f, 1.00f, 1.00f]; break;
-            case 1: valueColor = [0.72f, 0.96f, 1.00f, 1.00f]; break;
-            case 2: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
-            case 3: valueColor = [0.40f, 1.00f, 0.70f, 1.00f]; break;
-            case 4: valueColor = [0.50f, 0.86f, 1.00f, 1.00f]; break;
-            case 5: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
-            case 6: valueColor = [1.00f, 0.90f, 0.45f, 1.00f]; break;
-            case 7: valueColor = [0.86f, 0.96f, 1.00f, 1.00f]; break;
-            default: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
+            case statusRowPlatform: valueColor = cast(float[4])statusWindowPlatformColor; break;
+            case statusRowVulkan: valueColor = cast(float[4])statusWindowPlatformColor; break;
+            case statusRowFrameRate: valueColor = cast(float[4])statusWindowBodyTextColor; break;
+            case statusRowYaw: valueColor = cast(float[4])statusWindowYawColor; break;
+            case statusRowPitch: valueColor = cast(float[4])statusWindowPitchColor; break;
+            case statusRowShape: valueColor = cast(float[4])statusWindowBodyTextColor; break;
+            case statusRowMode: valueColor = cast(float[4])statusWindowModeColor; break;
+            case statusRowBuild: valueColor = cast(float[4])statusWindowBuildColor; break;
+            default: valueColor = cast(float[4])statusWindowBodyTextColor; break;
         }
 
-        auto value = new UiLabel(rowValues[index], 0.0f, 0.0f, UiTextStyle.medium, valueColor, metrics.rowHeight);
+        auto value = new UiLabel(cast(string)rowValues[index], 0.0f, 0.0f, UiTextStyle.medium, valueColor, metrics.rowHeight);
         value.width = metrics.valueWidth;
         value.height = metrics.rowHeight;
         value.setLayoutHint(metrics.valueWidth, metrics.rowHeight, metrics.valueWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
@@ -830,9 +865,9 @@ private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, flo
 {
     const metrics = measureStatusWindow(fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, mediumFont);
     const titleWidth = textBlockWidth(mediumFont, "STATUS");
-    const width = max(titleWidth + 24.0f, metrics.contentWidth + 32.0f);
-    const height = 32.0f + metrics.contentHeight + 16.0f;
-    return HudWindowRect(18.0f, 18.0f, width, height);
+    const width = max(titleWidth + statusWindowTitlePaddingX, metrics.contentWidth + statusWindowContentPaddingX);
+    const height = statusWindowTitleHeight + metrics.contentHeight + statusWindowFooterPadding;
+    return HudWindowRect(statusWindowMargin, statusWindowMargin, width, height);
 }
 
 private HudWindowRect buildModesRect(float extentWidth, float extentHeight, ref const(FontAtlas) mediumFont)

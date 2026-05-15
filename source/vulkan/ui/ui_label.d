@@ -20,15 +20,15 @@ final class UiLabel : UiWidget
     UiTextStyle style;
     float[4] color;
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
         this(text, x, y, style, color, 0.0f, height);
     }
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
     {
         super(x, y, width, height);
-        this.text = text;
+        this.text = cast(string)text;
         this.style = style;
         this.color = color;
     }
@@ -47,15 +47,15 @@ final class UiTextBlock : UiWidget
     UiTextStyle style;
     float[4] color;
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
         this(text, x, y, style, color, 0.0f, height);
     }
 
-    this(string text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    this(const(string) text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
     {
         super(x, y, width, height);
-        this.text = text;
+        this.text = cast(string)text;
         this.style = style;
         this.color = color;
     }
