@@ -92,7 +92,8 @@ private enum defaultGlyphSet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuv
  * which keeps the sample runnable on a fresh system.
  *
  *
- * @returns A usable font file path.
+ * Returns:
+ *   A usable font file path.
  */
 string selectDefaultFontPath()
 {
@@ -122,7 +123,11 @@ string selectDefaultFontPath()
     return "/usr/share/fonts/TTF/DejaVuSans.ttf".idup;
 }
 
-/** Chooses a reasonable system monospace font path for the current platform. */
+/** Chooses a reasonable system monospace font path for the current platform.
+ *
+ * Returns:
+ *   A usable monospace font file path.
+ */
 string selectDefaultMonospaceFontPath()
 {
     const overrideFontPath = environment.get("SDL2_VULCAN_CLIENT_MONO_FONT_PATH", "");
@@ -157,10 +162,13 @@ string selectDefaultMonospaceFontPath()
  * text by appending textured quads into the shared vertex buffers.
  *
  *
- * @param fontPath = Path to the font file.
- * @param pixelHeight = Requested pixel height.
- * @param glyphSet = Characters to include in the atlas.
- * @returns A populated atlas with bitmap pixels and glyph metrics.
+ * Params:
+ *   fontPath = Path to the font file.
+ *   pixelHeight = Requested pixel height.
+ *   glyphSet = Characters to include in the atlas.
+ *
+ * Returns:
+ *   A populated atlas with bitmap pixels and glyph metrics.
  */
 FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = defaultGlyphSet)
 {
@@ -409,15 +417,18 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
  * layered with the rest of the retained widgets and the HUD overlay.
  *
  *
- * @param vertices = Destination vertex list.
- * @param atlas = Font atlas used for the text.
- * @param text = Text to append.
- * @param x = Starting x position in pixels.
- * @param y = Starting y position in pixels.
- * @param color = Text color in RGBA format.
- * @param extentWidth = Swapchain width in pixels.
- * @param extentHeight = Swapchain height in pixels.
- * @returns Nothing.
+ * Params:
+ *   vertices = Destination vertex list.
+ *   atlas = Font atlas used for the text.
+ *   text = Text to append.
+ *   x = Starting x position in pixels.
+ *   y = Starting y position in pixels.
+ *   color = Text color in RGBA format.
+ *   extentWidth = Swapchain width in pixels.
+ *   extentHeight = Swapchain height in pixels.
+ *
+ * Returns:
+ *   Nothing.
  */
 void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, float x, float y, float z, float[4] color, float extentWidth, float extentHeight)
 {

@@ -19,7 +19,7 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - When using Silly, name every `unittest` with a string UDA such as `@("descriptive test name")` so the runner can report and filter it cleanly.
 - Keep module dependencies minimal and prefer small helper functions over large monolithic functions.
 - Use DDoc tags for modules and other documentable language elements.
-- For every documented function, method, or helper, include the relevant `@param` entries and an `@returns` entry even when the return value is `void`.
+- For every documented function, method, or helper, include a `Params:` section for arguments and a `Returns:` section for the result, even when the return value is `void`.
 - Document private types, methods, functions, and other meaningful helpers with DDoc when they are part of the implementation contract or maintenance surface.
 
 ## Resource management
