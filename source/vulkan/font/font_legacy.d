@@ -29,7 +29,11 @@ import std.string : indexOf, toStringz;
 
 import vulkan.pipeline : Vertex;
 
-/** Glyph metrics and atlas coordinates for one code point. */
+/** Glyph metrics and atlas coordinates for one code point.
+ *
+ * The renderer caches FreeType query results here so later text layout and
+ * quad generation can work without repeating glyph lookups or bitmap scans.
+ */
 struct FontGlyph
 {
     float advance; /// Horizontal advance in pixels.
@@ -43,7 +47,11 @@ struct FontGlyph
     float v1; /// Maximum atlas V coordinate.
 }
 
-/** FreeType-rasterized atlas and glyph metrics for one text size. */
+/** FreeType-rasterized atlas and glyph metrics for one text size.
+ *
+ * The renderer keeps one atlas per requested size so UI code can measure and
+ * render consistently without re-rasterizing glyphs for every widget frame.
+ */
 struct FontAtlas
 {
     uint pixelHeight; /// Requested pixel height for the font.
