@@ -23,6 +23,7 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - For structs and classes, describe not only the shape but also the reason they exist and any important background or design context.
 - For every documented function, method, or helper, include a `Params:` section for arguments and a `Returns:` section for the result, even when the return value is `void`.
 - Document private types, methods, functions, and other meaningful helpers with DDoc.
+- Place a `unittest` directly after the function it tests when the target is a free function; for methods, place the `unittest` after the class definition so the object and its methods are tested together.
 
 ## Resource management
 
