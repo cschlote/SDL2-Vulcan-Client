@@ -94,15 +94,14 @@ This keeps temporary experimentation local until the user explicitly saves.
 
 ## Cleanup Plan
 
-Renderer-facing draw data now uses generic UI names. The remaining cleanup is to remove the old HUD construction path and keep only retained screen/window/widget construction.
+Renderer-facing draw data now uses generic UI names. The old stateless HUD construction path has been removed from the demo UI module, so `demo_ui.d` now builds overlay geometry from retained `UiScreen`/`UiWindow` state only.
 
-Remove legacy code:
+Completed legacy cleanup:
 
-- delete old stateless `buildHudOverlayVertices`
-- delete old `buildHudLayout`
-- delete old `hudDispatch...` helpers
-- delete old `HudLayoutState` fields that are no longer used by the retained `DemoUiScreen`
-- keep only retained screen/window/widget construction
+- removed the old stateless `buildHudOverlayVertices` path
+- removed the old `buildHudLayout` and `HudLayoutState` bridge
+- removed the old `hudDispatch...` helpers
+- kept only retained screen/window/widget construction in `DemoUiScreen`
 
 Use `UiScreen` properly:
 
@@ -115,7 +114,7 @@ Use `UiScreen` properly:
 
 1. Update documentation and plans to reflect the engine-first direction. Done.
 2. Rename renderer-facing HUD data types to generic UI names. Done.
-3. Remove the old stateless HUD helper block from `demo_ui.d`.
+3. Remove the old stateless HUD helper block from `demo_ui.d`. Done.
 4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently.
 5. Fix settings persistence so only explicit Save writes to disk.
 6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field.

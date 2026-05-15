@@ -1127,7 +1127,7 @@ class VulkanRenderer
     /// Records the render pass commands for the current frame.
 
             /** Recomputes the draggable UI window clamp state for the current swapchain size. */
-            private void syncHudLayoutState()
+            private void syncUiLayoutState()
             {
                 uiScreen.syncViewport(
                     cast(float)swapchain.extent.width,
