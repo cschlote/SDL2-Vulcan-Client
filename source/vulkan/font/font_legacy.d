@@ -1,7 +1,7 @@
 /** Builds font atlases and emits textured text geometry.
  *
- * Loads fonts through FreeType, derives glyph metrics, creates atlas textures,
- * and appends screen-space text quads for the UI and overlay layers. The atlas
+ * Loads fonts through FreeType, caches glyph metrics in a per-size atlas, and
+ * appends screen-space text quads for the UI and overlay layers. The atlas
  * output is used by source/vulkan/ui.d and source/vulkan/ui_layer.d, while the
  * wider build pipeline is described in docs/vulkan-quickstart.md and
  * docs/shaders.md.
@@ -33,6 +33,8 @@ import vulkan.pipeline : Vertex;
  *
  * The renderer caches FreeType query results here so later text layout and
  * quad generation can work without repeating glyph lookups or bitmap scans.
+ * This keeps text rendering deterministic and avoids repeated FreeType work
+ * during frame updates.
  */
 struct FontGlyph
 {
@@ -51,6 +53,8 @@ struct FontGlyph
  *
  * The renderer keeps one atlas per requested size so UI code can measure and
  * render consistently without re-rasterizing glyphs for every widget frame.
+ * This is the central cache for the font subsystem and the reason the module
+ * exists as a separate layer above the UI code.
  */
 struct FontAtlas
 {
