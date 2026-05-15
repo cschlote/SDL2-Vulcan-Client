@@ -15,7 +15,7 @@
  *
  * Legacy helper block below is kept only until the old HUD geometry path is fully removed.
  */
-module vulkan.ui_layer;
+module demo_ui;
 
 import std.format : format;
 import std.algorithm : max, min;

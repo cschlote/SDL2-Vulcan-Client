@@ -25,7 +25,7 @@ import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
-import vulkan.ui_layer : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, HudWindowRect, LayoutDemoWindow, buildLayoutDemoWindow;
+import demo_ui : HudLayout, HudLayoutState, HudOverlayGeometry, HudWindowDrawRange, HudWindowRect, LayoutDemoWindow, buildLayoutDemoWindow;
 
 private enum float windowMargin = 18.0f;
 private enum float initWidth = 352.0f;

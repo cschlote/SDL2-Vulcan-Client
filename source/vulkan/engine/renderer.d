@@ -35,7 +35,7 @@ import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPat
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_screen : UiScreen;
-import vulkan.ui_layer : buildSettingsRect, hudBeginDrag, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect, HudWindowDrawRange;
+import demo_ui : buildSettingsRect, hudBeginDrag, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect, HudWindowDrawRange;
 import window;
 
 private enum maxFramesInFlight = 2;
