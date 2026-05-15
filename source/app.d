@@ -23,7 +23,7 @@ import std.string : fromStringz;
 import logging : logLine, logLineVerbose, setVerboseOutputs;
 import demo_settings : DemoSettings, loadDemoSettings, saveDemoSettings;
 import window;
-import vulkan.renderer : VulkanRenderer;
+import vulkan.engine.renderer : VulkanRenderer;
 import version_info : getGitDescribeVersion;
 
 /** Loads the SDL shared library bindings and reports failures on standard error.

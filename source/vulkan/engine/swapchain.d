@@ -12,7 +12,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.swapchain;
+module vulkan.engine.swapchain;
 
 import bindbc.vulkan;
 import std.exception : enforce;

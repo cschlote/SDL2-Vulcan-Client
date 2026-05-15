@@ -16,7 +16,7 @@ import std.format : format;
 import demo_settings : DemoSettings;
 import logging : logLine;
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;

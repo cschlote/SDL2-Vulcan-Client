@@ -23,7 +23,7 @@ import std.math : PI;
 
 import demo_settings : DemoSettings;
 import vulkan.font.font_legacy : FontAtlas, measureTextWidth;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;

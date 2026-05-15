@@ -28,7 +28,7 @@ import std.process : environment;
 import std.string : endsWith, indexOf, toLower, toStringz;
 
 import logging : logLine, logLineVerbose;
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 
 /** Glyph metrics and atlas coordinates for one code point.
  *

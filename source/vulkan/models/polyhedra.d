@@ -18,7 +18,7 @@ module vulkan.models.polyhedra;
 import std.algorithm : sort;
 import std.math : abs, atan2, sqrt;
 
-import vulkan.pipeline : Vertex;
+import vulkan.engine.pipeline : Vertex;
 
 /** Describes a mesh that can be uploaded to the renderer.
  *

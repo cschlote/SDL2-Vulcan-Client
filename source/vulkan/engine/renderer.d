@@ -13,7 +13,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.renderer;
+module vulkan.engine.renderer;
 
 import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
@@ -26,17 +26,17 @@ import std.string : fromStringz;
 
 import demo_settings : DemoSettings, saveDemoSettings;
 import logging : logLine, logLineVerbose;
-import vulkan.font.font_legacy : FontAtlas, buildFontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
-import vulkan.ui_layer : HudWindowDrawRange, buildSettingsRect, hudBeginDrag, hudDragTo, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudEndDrag, hudPointInHeader, hudPointInRect;
-import vulkan.ui.ui_screen : UiScreen;
 import math.matrix;
+import vulkan.engine.device;
+import vulkan.engine.instance;
+import vulkan.engine.pipeline;
+import vulkan.engine.swapchain;
+import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
+import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import vulkan.ui.ui_screen : UiScreen;
+import vulkan.ui_layer : buildSettingsRect, hudBeginDrag, hudDispatchCenterWindowPointer, hudDispatchModeButtonDown, hudDispatchSettingsWindowPointer, hudDispatchStatusWindowPointer, hudDragTo, hudEndDrag, hudPointInHeader, hudPointInRect, HudWindowDrawRange;
 import window;
-import vulkan.device;
-import vulkan.instance;
-import vulkan.models.polyhedra : MeshData, buildPlatonicSolids;
-import vulkan.pipeline;
-import vulkan.swapchain;
 
 private enum maxFramesInFlight = 2;
 
