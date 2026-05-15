@@ -932,6 +932,7 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
     content.add(headerRow);
 
     auto bodySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+    bodySection.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
     auto topStretch = new UiSpacer(0.0f, 0.0f);
     topStretch.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
     bodySection.add(topStretch);
