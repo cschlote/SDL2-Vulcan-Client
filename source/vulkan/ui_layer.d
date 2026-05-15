@@ -485,6 +485,7 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 22.0f, 0.0f), max(rect.height - 22.0f, 0.0f));
     UiLayoutContext layoutContext = buildLayoutContext(mediumFont, mediumFont);
 
+    auto modeSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto topRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto flatColorButton = new UiButton("F  FLAT COLOR", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     flatColorButton.onClick = onFlatColor;
@@ -492,9 +493,9 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto litTexturedButton = new UiButton("T  LIT / TEXTURED", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     litTexturedButton.onClick = onLitTextured;
     topRow.add(litTexturedButton);
-    content.add(topRow);
-    content.add(new UiSpacer(0.0f, 3.0f));
+    modeSection.add(topRow);
 
+    auto secondarySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto bottomRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto wireframeButton = new UiButton("W  WIREFRAME", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     wireframeButton.onClick = onWireframe;
@@ -502,9 +503,9 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto hiddenLineButton = new UiButton("H  HIDDEN LINE", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     hiddenLineButton.onClick = onHiddenLine;
     bottomRow.add(hiddenLineButton);
-    content.add(bottomRow);
+    secondarySection.add(bottomRow);
 
-    content.add(new UiSpacer(0.0f, 3.0f));
+    auto shapeSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto modelRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto previousShapeButton = new UiButton("MODEL -", 0.0f, 0.0f, 0.0f, 0.0f, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     previousShapeButton.onClick = onPreviousShape;
@@ -512,9 +513,9 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto nextShapeButton = new UiButton("MODEL +", 0.0f, 0.0f, 0.0f, 0.0f, [0.14f, 0.16f, 0.22f, 0.96f], [0.18f, 0.46f, 0.82f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     nextShapeButton.onClick = onNextShape;
     modelRow.add(nextShapeButton);
-    content.add(modelRow);
+    shapeSection.add(modelRow);
 
-    content.add(new UiSpacer(0.0f, 3.0f));
+    auto windowSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto windowRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto statusButton = new UiButton("STATUS", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     statusButton.onClick = onToggleStatus;
@@ -522,8 +523,9 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto sampleButton = new UiButton("SAMPLE", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     sampleButton.onClick = onToggleSample;
     windowRow.add(sampleButton);
-    content.add(windowRow);
+    windowSection.add(windowRow);
 
+    auto logSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto secondWindowRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto logButton = new UiButton("LOG", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     logButton.onClick = onToggleInput;
@@ -531,14 +533,26 @@ private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) medium
     auto settingsToggleButton = new UiButton("SETTINGS", 0.0f, 0.0f, 0.0f, 0.0f, [0.18f, 0.20f, 0.28f, 0.96f], [0.32f, 0.72f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     settingsToggleButton.onClick = onSettings;
     secondWindowRow.add(settingsToggleButton);
-    content.add(secondWindowRow);
+    logSection.add(secondWindowRow);
 
-    content.add(new UiSpacer(0.0f, 3.0f));
+    auto centerSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto centerRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto centerToggleButton = new UiButton("DRAG ME", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]);
     centerToggleButton.onClick = onToggleCenter;
     centerRow.add(centerToggleButton);
-    content.add(centerRow);
+    centerSection.add(centerRow);
+
+    content.add(modeSection);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    content.add(secondarySection);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    content.add(shapeSection);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    content.add(windowSection);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    content.add(logSection);
+    content.add(new UiSpacer(0.0f, 3.0f));
+    content.add(centerSection);
 
     content.layout(layoutContext);
 
@@ -613,7 +627,9 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
 
     auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 36.0f, 0.0f), max(rect.height - 36.0f, 0.0f), 6.0f);
     UiLayoutContext layoutContext = buildLayoutContext(smallFont, mediumFont);
-    content.add(new UiLabel("VIDEO AND DISPLAY", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+
+    auto displaySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    displaySection.add(new UiLabel("VIDEO AND DISPLAY", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
 
     auto displayRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto windowedButton = new UiButton("WINDOWED", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
@@ -636,11 +652,10 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
         settingsDraft.display.vsync = !settingsDraft.display.vsync;
     };
     displayRow.add(vsyncButton);
-    content.add(displayRow);
+    displaySection.add(displayRow);
 
+    displaySection.add(new UiLabel(format("RESOLUTION: %s x %s", settingsDraft.display.windowWidth, settingsDraft.display.windowHeight), 0.0f, 0.0f, UiTextStyle.medium, labelColor, cast(float)mediumFont.lineHeight));
     auto resolutionRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
-    auto resolutionLabel = new UiLabel(format("RESOLUTION: %s x %s", settingsDraft.display.windowWidth, settingsDraft.display.windowHeight), 0.0f, 0.0f, UiTextStyle.medium, labelColor, cast(float)mediumFont.lineHeight);
-    content.add(resolutionLabel);
     auto lowerResolutionButton = new UiButton("-", 0.0f, 0.0f, 36.0f, buttonHeight, buttonFill, buttonBorder, labelColor);
     lowerResolutionButton.onClick = ()
     {
@@ -670,10 +685,10 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
         settingsDraft.display.windowHeight = 1080;
     };
     resolutionRow.add(higherResolutionButton);
-    content.add(resolutionRow);
+    displaySection.add(resolutionRow);
 
-    content.add(new UiSpacer(0.0f, 6.0f));
-    content.add(new UiLabel("GAMEPLAY AND INPUT", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+    auto gameplaySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    gameplaySection.add(new UiLabel("GAMEPLAY AND INPUT", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
     auto gameplayRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto flatButton = new UiButton("FLAT COLOR", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
     flatButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "flatColor"; };
@@ -687,10 +702,10 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
     auto hiddenButton = new UiButton("HIDDEN LINE", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
     hiddenButton.onClick = () { settingsDraft.gameplay.startupRenderMode = "hiddenLine"; };
     gameplayRow.add(hiddenButton);
-    content.add(gameplayRow);
+    gameplaySection.add(gameplayRow);
 
-    content.add(new UiSpacer(0.0f, 6.0f));
-    content.add(new UiLabel("AUDIO AND UI", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
+    auto audioSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
+    audioSection.add(new UiLabel("AUDIO AND UI", 0.0f, 0.0f, UiTextStyle.medium, accentColor, cast(float)mediumFont.lineHeight));
     auto uiRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto compactButton = new UiButton(settingsDraft.ui.compactWindows ? "COMPACT ON" : "COMPACT OFF", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
     compactButton.onClick = () { settingsDraft.ui.compactWindows = !settingsDraft.ui.compactWindows; };
@@ -701,9 +716,9 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
     auto fontUpButton = new UiButton("FONT +", 0.0f, 0.0f, wideButton, buttonHeight, buttonFill, buttonBorder, labelColor);
     fontUpButton.onClick = () { settingsDraft.ui.fontScale = min(1.6f, settingsDraft.ui.fontScale + 0.1f); };
     uiRow.add(fontUpButton);
-    content.add(uiRow);
+    audioSection.add(uiRow);
 
-    content.add(new UiSpacer(0.0f, 2.0f));
+    auto actionSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, buttonHeight, 4.0f);
     auto applyButton = new UiButton("APPLY", 0.0f, 0.0f, wideButton, buttonHeight, [0.20f, 0.34f, 0.22f, 0.96f], [0.28f, 0.80f, 0.46f, 1.00f], labelColor);
     applyButton.onClick = ()
@@ -725,7 +740,15 @@ private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layo
         layoutState.settingsVisible = false;
     };
     actionRow.add(closeButton);
-    content.add(actionRow);
+    actionSection.add(actionRow);
+
+    content.add(displaySection);
+    content.add(new UiSpacer(0.0f, 6.0f));
+    content.add(gameplaySection);
+    content.add(new UiSpacer(0.0f, 6.0f));
+    content.add(audioSection);
+    content.add(new UiSpacer(0.0f, 2.0f));
+    content.add(actionSection);
 
     content.layout(layoutContext);
 
@@ -816,13 +839,16 @@ private UiWindow buildSampleWindow(HudWindowRect rect, const(FontAtlas)[] fontAt
     layoutContext.fonts[cast(size_t)UiTextStyle.sample11] = &fontAtlases[4];
     layoutContext.fonts[cast(size_t)UiTextStyle.sample12] = &fontAtlases[5];
     layoutContext.fonts[cast(size_t)UiTextStyle.sampleMono] = &fontAtlases[6];
-    content.add(new UiLabel("7 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample7, [1.00f, 1.00f, 1.00f, 1.00f], sample7TextHeight));
-    content.add(new UiLabel("8 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample8, [1.00f, 1.00f, 1.00f, 1.00f], sample8TextHeight));
-    content.add(new UiLabel("9 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample9, [1.00f, 1.00f, 1.00f, 1.00f], sample9TextHeight));
-    content.add(new UiLabel("10 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample10, [1.00f, 1.00f, 1.00f, 1.00f], sample10TextHeight));
-    content.add(new UiLabel("11 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample11, [1.00f, 1.00f, 1.00f, 1.00f], sample11TextHeight));
-    content.add(new UiLabel("12 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample12, [1.00f, 1.00f, 1.00f, 1.00f], sample12TextHeight));
-    content.add(new UiLabel("10 PX MONO THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sampleMono, [1.00f, 1.00f, 1.00f, 1.00f], sampleMonoTextHeight));
+
+    auto sampleColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 2.0f);
+    sampleColumn.add(new UiLabel("7 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample7, [1.00f, 1.00f, 1.00f, 1.00f], sample7TextHeight));
+    sampleColumn.add(new UiLabel("8 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample8, [1.00f, 1.00f, 1.00f, 1.00f], sample8TextHeight));
+    sampleColumn.add(new UiLabel("9 PX  THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample9, [1.00f, 1.00f, 1.00f, 1.00f], sample9TextHeight));
+    sampleColumn.add(new UiLabel("10 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample10, [1.00f, 1.00f, 1.00f, 1.00f], sample10TextHeight));
+    sampleColumn.add(new UiLabel("11 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample11, [1.00f, 1.00f, 1.00f, 1.00f], sample11TextHeight));
+    sampleColumn.add(new UiLabel("12 PX THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sample12, [1.00f, 1.00f, 1.00f, 1.00f], sample12TextHeight));
+    sampleColumn.add(new UiLabel("10 PX MONO THE QUICK BROWN FOX", 0.0f, 0.0f, UiTextStyle.sampleMono, [1.00f, 1.00f, 1.00f, 1.00f], sampleMonoTextHeight));
+    content.add(sampleColumn);
     content.layout(layoutContext);
     window.add(content);
     return window;
@@ -840,9 +866,19 @@ private UiWindow buildSampleWindow(HudWindowRect rect, const(FontAtlas)[] fontAt
 private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) mediumFont)
 {
     auto window = new UiWindow("LOG", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 4.0f);
-    content.add(new UiTextBlock("INPUT WINDOW BECOMES A LOG WINDOW.\n\n- FUTURE CONSOLE TARGET\n- MULTILINE RETAINED TEXT\n- EVENT AND DIAGNOSTICS OUTPUT\n- READY FOR ADMIN COMMANDS", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumFont.lineHeight * 7.0f));
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), 6.0f);
     UiLayoutContext layoutContext = buildLayoutContext(mediumFont, mediumFont);
+
+    auto headerSection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 2.0f);
+    headerSection.add(new UiLabel("INPUT WINDOW", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 0.98f, 0.82f, 1.00f], cast(float)mediumFont.lineHeight));
+    headerSection.add(new UiLabel("BECOMES A LOG WINDOW", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+
+    auto bodySection = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 3.0f);
+    bodySection.add(new UiTextBlock("- FUTURE CONSOLE TARGET\n- MULTILINE RETAINED TEXT\n- EVENT AND DIAGNOSTICS OUTPUT\n- READY FOR ADMIN COMMANDS", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumFont.lineHeight * 6.0f));
+
+    content.add(headerSection);
+    content.add(new UiSpacer(0.0f, 6.0f));
+    content.add(bodySection);
     content.layout(layoutContext);
     window.add(content);
     return window;
