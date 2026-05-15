@@ -27,6 +27,7 @@ import std.math : abs, ceil, isInfinity, isNaN, sqrt;
 import std.process : environment;
 import std.string : indexOf, toStringz;
 
+import logging : logLine, logLineVerbose;
 import vulkan.pipeline : Vertex;
 
 /** Glyph metrics and atlas coordinates for one code point.
@@ -81,7 +82,10 @@ string selectDefaultFontPath()
 {
     const overrideFontPath = environment.get("SDL2_VULCAN_CLIENT_FONT_PATH", "");
     if (overrideFontPath.length != 0 && overrideFontPath.exists)
+    {
+        logLineVerbose("Font path override selected: ", overrideFontPath);
         return overrideFontPath.idup;
+    }
 
     version(linux)
     {
@@ -92,7 +96,10 @@ string selectDefaultFontPath()
         ])
         {
             if (candidate.exists)
+            {
+                logLineVerbose("Font path candidate selected: ", candidate);
                 return candidate.idup;
+            }
         }
     }
 
@@ -100,8 +107,12 @@ string selectDefaultFontPath()
         return "/System/Library/Fonts/Supplemental/Arial Unicode.ttf".idup;
 
     version(Windows)
+    {
+        logLineVerbose("Font path default selected: C:/Windows/Fonts/arial.ttf");
         return "C:/Windows/Fonts/arial.ttf".idup;
+    }
 
+    logLineVerbose("Font path fallback selected: /usr/share/fonts/TTF/DejaVuSans.ttf");
     return "/usr/share/fonts/TTF/DejaVuSans.ttf".idup;
 }
 
@@ -114,7 +125,10 @@ string selectDefaultMonospaceFontPath()
 {
     const overrideFontPath = environment.get("SDL2_VULCAN_CLIENT_MONO_FONT_PATH", "");
     if (overrideFontPath.length != 0 && overrideFontPath.exists)
+    {
+        logLineVerbose("Monospace font path override selected: ", overrideFontPath);
         return overrideFontPath.idup;
+    }
 
     version(linux)
     {
@@ -125,7 +139,10 @@ string selectDefaultMonospaceFontPath()
         ])
         {
             if (candidate.exists)
+            {
+                logLineVerbose("Monospace font path candidate selected: ", candidate);
                 return candidate.idup;
+            }
         }
     }
 
@@ -133,8 +150,12 @@ string selectDefaultMonospaceFontPath()
         return "/System/Library/Fonts/Menlo.ttc".idup;
 
     version(Windows)
+    {
+        logLineVerbose("Monospace font path default selected: C:/Windows/Fonts/consola.ttf");
         return "C:/Windows/Fonts/consola.ttf".idup;
+    }
 
+    logLineVerbose("Monospace font path fallback selected: /usr/share/fonts/noto/NotoSansMono-Regular.ttf");
     return "/usr/share/fonts/noto/NotoSansMono-Regular.ttf".idup;
 }
 
@@ -153,6 +174,7 @@ string selectDefaultMonospaceFontPath()
  */
 FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = defaultGlyphSet)
 {
+    logLine("Building font atlas: ", fontPath, " @ ", pixelHeight, "px");
     auto loadResult = loadFreeType();
     enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
 
@@ -172,15 +194,24 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
 
     string uniqueGlyphSet = glyphSet;
     if (indexOf(uniqueGlyphSet, '?') < 0)
+    {
+        logLineVerbose("Glyph set missing fallback '?', appending it.");
         uniqueGlyphSet ~= "?";
+    }
     if (indexOf(uniqueGlyphSet, ' ') < 0)
+    {
+        logLineVerbose("Glyph set missing space, prepending it.");
         uniqueGlyphSet = ' ' ~ uniqueGlyphSet;
+    }
 
     uint maxGlyphWidth = 1;
     uint maxGlyphHeight = 1;
+    size_t kerningPairCount = 0;
     float ascent = cast(float)face.size.metrics.ascender / 64.0f;
     float descent = -cast(float)face.size.metrics.descender / 64.0f;
     float lineHeight = cast(float)face.size.metrics.height / 64.0f;
+
+    logLineVerbose("Atlas glyph request count: ", uniqueGlyphSet.length, ", ascent=", ascent, ", descent=", descent, ", lineHeight=", lineHeight);
 
     foreach (ch; uniqueGlyphSet)
     {
@@ -247,10 +278,16 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
             {
                 const kerningPixels = cast(float)kerningVector.x / 64.0f;
                 if (kerningPixels != 0.0f)
+                {
                     atlas.kerning[leftChar][rightChar] = kerningPixels;
+                    kerningPairCount++;
+                }
             }
         }
     }
+
+    logLine("Built font atlas: glyphs=", atlas.glyphs.length, ", kerning pairs=", kerningPairCount, ", size=", atlas.width, "x", atlas.height);
+    logLineVerbose("Atlas pixel buffer size: ", atlas.pixels.length, ", max glyph size=", maxGlyphWidth, "x", maxGlyphHeight, ", font path=", fontPath);
 
     return atlas;
 }
@@ -272,6 +309,8 @@ string collectGlyphSet(const(string)[] texts)
     bool[dchar] seen;
     string glyphSet;
 
+    logLineVerbose("collectGlyphSet: input strings=", texts.length);
+
     foreach (text; texts)
     {
         foreach (ch; text)
@@ -288,6 +327,8 @@ string collectGlyphSet(const(string)[] texts)
         glyphSet ~= ' ';
     if ('?' !in seen)
         glyphSet ~= '?';
+
+    logLineVerbose("collectGlyphSet: output code points=", glyphSet.length);
 
     return glyphSet;
 }
@@ -309,6 +350,7 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
     float lineRight = 0.0f;
     bool lineHasGlyph = false;
     dchar previousChar = '\0';
+    size_t lineCount = 1;
 
     void commitLine()
     {
@@ -316,6 +358,9 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
         const renderedRight = lineRight > cursorX ? lineRight : cursorX;
         const lineWidth = renderedRight - renderedLeft;
         widestWidth = lineWidth > widestWidth ? lineWidth : widestWidth;
+
+        logLineVerbose("measureTextWidth line ", lineCount, ": width=", lineWidth, ", renderedLeft=", renderedLeft, ", renderedRight=", renderedRight);
+        lineCount++;
 
         cursorX = 0.0f;
         lineLeft = 0.0f;
@@ -397,6 +442,8 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
     const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
     const renderedRight = lineRight > cursorX ? lineRight : cursorX;
     const lineWidth = renderedRight - renderedLeft;
+    logLineVerbose("measureTextWidth final line ", lineCount, ": width=", lineWidth, ", text chars=", text.length);
+    logLineVerbose("measureTextWidth result: widestWidth=", (lineWidth > widestWidth ? lineWidth : widestWidth), ", lines=", text.length == 0 ? 0 : lineCount);
     return lineWidth > widestWidth ? lineWidth : widestWidth;
 }
 
@@ -424,6 +471,9 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     float cursorY = y;
     const baselineOffset = atlas.ascent;
     dchar previousChar = '\0';
+    const vertexCountBefore = vertices.length;
+
+    logLineVerbose("appendText: text chars=", text.length, ", start=", x, ",", y, ", baselineOffset=", baselineOffset, ", atlas=", atlas.width, "x", atlas.height);
 
     foreach (ch; text)
     {
@@ -461,6 +511,8 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
         cursorX += glyph.advance;
         previousChar = ch;
     }
+
+    logLineVerbose("appendText: emitted vertices=", vertices.length - vertexCountBefore, ", quads=", (vertices.length - vertexCountBefore) / 6, ", final cursor=", cursorX, ",", cursorY);
 }
 
 /** Pixel-space bounds of rendered text geometry. */
