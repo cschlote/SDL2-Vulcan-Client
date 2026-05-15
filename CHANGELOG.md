@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Fixed middle-click window chrome stacking so retained UI windows can be brought to the front or sent to the back outside their content area.
+- Improved `UiWindow` chrome with edge resize grips, smaller corner markers, larger title text, and content-root insets that avoid the resize ring.
 
 ## Release 26.20.7022
 

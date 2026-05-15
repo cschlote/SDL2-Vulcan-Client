@@ -15,10 +15,15 @@ import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox, UiVBox;
 import vulkan.ui.ui_widget : UiWidget;
-import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
-import logging : logLine, logLineVerbose;
+import vulkan.ui.ui_widget_helpers : appendQuad, appendTextLine, appendTriangle, appendWindowBorder, appendWindowFrame;
+import logging : logLine;
 
 private immutable float[4] windowDebugBoundsColor = [1.00f, 0.20f, 0.05f, 0.70f];
+private enum float resizeGripHitSize = 14.0f;
+private enum float resizeGripMarkerSize = 7.0f;
+private enum float resizeGripLineInset = 3.0f;
+private enum float windowContentMargin = 3.0f;
+private enum float chromeTopInset = 7.0f;
 
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
@@ -33,13 +38,14 @@ final class UiWindow : UiWidget
     bool dragTracking;                              ///< True while a drag gesture is active.
     bool resizeTracking;                            ///< True while a resize gesture is active.
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
-    float headerHeight = 26.0f;                     ///< Height of the decorative header bar.
+    float headerHeight = 30.0f;                     ///< Height of the decorative header bar.
 
     private UiSurfaceBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
     private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
     private UiButton closeButton;                   ///< Optional close button rendered in the header.
     private float headerExtrasWidth;                ///< Cached width of all extra header widgets.
     private float headerExtrasHeight;               ///< Cached height of all extra header widgets.
+    private uint resizeButton;                      ///< Mouse button that owns the active resize gesture.
 
     void delegate(float, float) onHeaderDragStart;              ///< Notified when a header drag starts.
     void delegate(float, float) onHeaderDragMove;               ///< Notified while a header drag is running.
@@ -166,31 +172,26 @@ final class UiWindow : UiWidget
                 return true;
             }
 
-            if (event.kind == UiPointerEventKind.buttonUp && event.button == 1)
+            if (event.kind == UiPointerEventKind.buttonUp && event.button == resizeButton)
             {
                 if (onResizeEnd !is null)
                     onResizeEnd(resizeHandle);
                 logLine("UiWindow resize end: ", title, " [", resizeHandle, "]");
                 resizeTracking = false;
                 resizeHandle = UiResizeHandle.none;
+                resizeButton = 0;
                 return true;
             }
         }
 
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 2 && dragable && isInWindowChrome(event.x, event.y))
-        {
-            if (onHeaderMiddleClick !is null)
-                onHeaderMiddleClick();
-            return true;
-        }
-
-        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
+        if (event.kind == UiPointerEventKind.buttonDown)
         {
             const handle = hitResizeHandle(event.x, event.y);
             if (handle != UiResizeHandle.none)
             {
-                logLine("UiWindow resize hit: ", title, " [", handle, "] at ", event.x, ", ", event.y);
+                logLine("UiWindow resize hit: ", title, " [", handle, "] button ", event.button, " at ", event.x, ", ", event.y);
                 resizeHandle = handle;
+                resizeButton = event.button;
                 resizeTracking = true;
                 dragTracking = false;
                 if (onResizeStart !is null)
@@ -219,7 +220,14 @@ final class UiWindow : UiWidget
                     return true;
             }
 
-            if (dragable && isInDragHeader(event.x, event.y))
+            if (event.button == 2 && dragable && isInWindowChrome(event.x, event.y))
+            {
+                if (onHeaderMiddleClick !is null)
+                    onHeaderMiddleClick();
+                return true;
+            }
+
+            if (event.button == 1 && dragable && isInDragHeader(event.x, event.y))
             {
                 logLine("UiWindow drag start: ", title, " at ", event.x, ", ", event.y);
                 if (onHeaderDragStart !is null)
@@ -256,7 +264,7 @@ protected:
         const headerFill = headerColor;
         const bodyFill = bodyColor;
 
-        const gripInset = sizeable ? 18.0f : 0.0f;
+        const gripInset = sizeable ? resizeGripHitSize : 0.0f;
         float headerRightInset = gripInset;
 
         if (headerExtras.children.length > 0)
@@ -268,17 +276,10 @@ protected:
         appendWindowFrame(context, 0.0f, 0.0f, width, height, headerHeight, bodyFill, headerFill, context.depthBase, gripInset, headerRightInset);
 
         if (sizeable)
-        {
-            float[4] gripFill = [0.18f, 0.24f, 0.36f, 0.92f];
-            float[4] gripBorder = [0.32f, 0.68f, 0.98f, 0.98f];
-            appendButtonFrame(context, 0.0f, 0.0f, 16.0f, 16.0f, gripFill, gripBorder, context.depthBase - 0.0005f);
-            appendButtonFrame(context, width - 16.0f, 0.0f, width, 16.0f, gripFill, gripBorder, context.depthBase - 0.0005f);
-            appendButtonFrame(context, 0.0f, height - 16.0f, 16.0f, height, gripFill, gripBorder, context.depthBase - 0.0005f);
-            appendButtonFrame(context, width - 16.0f, height - 16.0f, width, height, gripFill, gripBorder, context.depthBase - 0.0005f);
-        }
+            appendResizeGrips(context);
 
-        const titleX = sizeable ? 20.0f : 10.0f;
-        appendTextLine(context, UiTextStyle.medium, title, titleX, 2.0f, titleColor, context.depthBase - 0.001f);
+        const titleX = sizeable ? resizeGripHitSize + 6.0f : 10.0f;
+        appendTextLine(context, UiTextStyle.large, title, titleX, 1.0f, titleColor, context.depthBase - 0.001f);
 
         if (headerExtras.children.length > 0)
         {
@@ -304,25 +305,45 @@ private:
     {
         const closeWidth = closeButton !is null ? closeButton.width : 0.0f;
         const closeGap = closeButton !is null ? 4.0f : 0.0f;
-        const gripReserve = sizeable ? 18.0f : 0.0f;
-        const contentMargin = 3.0f;
-        const chromeTopInset = 7.0f;
+        const gripReserve = sizeable ? resizeGripHitSize : 0.0f;
+        const contentInset = sizeable ? resizeGripHitSize : windowContentMargin;
 
         headerExtras.width = headerExtrasWidth;
         headerExtras.height = headerExtrasHeight;
         headerExtras.x = max(10.0f, width - gripReserve - closeWidth - closeGap - headerExtrasWidth - 12.0f);
         headerExtras.y = chromeTopInset + 1.0f;
 
-        contentRoot.x = contentMargin;
-        contentRoot.y = headerHeight + contentMargin;
-        contentRoot.width = max(width - contentMargin * 2.0f, 0.0f);
-        contentRoot.height = max(height - headerHeight - contentMargin * 2.0f, 0.0f);
+        contentRoot.x = contentInset;
+        contentRoot.y = headerHeight + windowContentMargin;
+        contentRoot.width = max(width - contentInset * 2.0f, 0.0f);
+        contentRoot.height = max(height - headerHeight - windowContentMargin - contentInset, 0.0f);
 
         if (closeButton !is null)
         {
             closeButton.x = width - gripReserve - closeWidth - 3.0f;
             closeButton.y = max(0.0f, (headerHeight - closeButton.height) * 0.5f);
         }
+    }
+
+    /** Draws the visual resize ring and corner markers around the window. */
+    void appendResizeGrips(ref UiRenderContext context) const
+    {
+        const z = context.depthBase - 0.0005f;
+        float[4] gripLine = [0.34f, 0.58f, 0.78f, 0.48f];
+        float[4] gripLight = [0.72f, 0.88f, 1.00f, 0.70f];
+        float[4] gripShadow = [0.04f, 0.06f, 0.08f, 0.48f];
+        const marker = resizeGripMarkerSize;
+        const inset = resizeGripLineInset;
+
+        appendQuad(context, resizeGripHitSize, inset, width - resizeGripHitSize, inset + 1.0f, z, gripLine);
+        appendQuad(context, resizeGripHitSize, height - inset - 1.0f, width - resizeGripHitSize, height - inset, z, gripLine);
+        appendQuad(context, inset, resizeGripHitSize, inset + 1.0f, height - resizeGripHitSize, z, gripLine);
+        appendQuad(context, width - inset - 1.0f, resizeGripHitSize, width - inset, height - resizeGripHitSize, z, gripLine);
+
+        appendTriangle(context, 0.0f, 0.0f, marker, 0.0f, 0.0f, marker, z - 0.0005f, gripLight);
+        appendTriangle(context, width, 0.0f, width - marker, 0.0f, width, marker, z - 0.0005f, gripLight);
+        appendTriangle(context, 0.0f, height, marker, height, 0.0f, height - marker, z - 0.0005f, gripShadow);
+        appendTriangle(context, width, height, width - marker, height, width, height - marker, z - 0.0005f, gripShadow);
     }
 
     /** Recomputes the cached size of the header widgets. */
@@ -376,16 +397,16 @@ private:
 
         if (sizeable)
         {
-            if (localX < x + 16.0f && localY < y + 16.0f)
+            if (localX < x + resizeGripHitSize && localY < y + resizeGripHitSize)
                 return false;
 
-            if (localX >= x + width - 16.0f && localY < y + 16.0f)
+            if (localX >= x + width - resizeGripHitSize && localY < y + resizeGripHitSize)
                 return false;
 
-            if (localX < x + 16.0f && localY >= y + height - 16.0f)
+            if (localX < x + resizeGripHitSize && localY >= y + height - resizeGripHitSize)
                 return false;
 
-            if (localX >= x + width - 16.0f && localY >= y + height - 16.0f)
+            if (localX >= x + width - resizeGripHitSize && localY >= y + height - resizeGripHitSize)
                 return false;
         }
 
@@ -416,28 +437,29 @@ private:
         if (!sizeable)
             return UiResizeHandle.none;
 
-        if (localX >= x && localX < x + 16.0f && localY >= y && localY < y + 16.0f)
+        if (localX < x || localX >= x + width || localY < y || localY >= y + height)
+            return UiResizeHandle.none;
+
+        if (localX >= x && localX < x + resizeGripHitSize && localY >= y && localY < y + resizeGripHitSize)
             return UiResizeHandle.topLeft;
-        if (localX >= x + width - 16.0f && localX < x + width && localY >= y && localY < y + 16.0f)
+        if (localX >= x + width - resizeGripHitSize && localX < x + width && localY >= y && localY < y + resizeGripHitSize)
             return UiResizeHandle.topRight;
-        if (localX >= x && localX < x + 16.0f && localY >= y + height - 16.0f && localY < y + height)
+        if (localX >= x && localX < x + resizeGripHitSize && localY >= y + height - resizeGripHitSize && localY < y + height)
             return UiResizeHandle.bottomLeft;
-        if (localX >= x + width - 16.0f && localX < x + width && localY >= y + height - 16.0f && localY < y + height)
+        if (localX >= x + width - resizeGripHitSize && localX < x + width && localY >= y + height - resizeGripHitSize && localY < y + height)
             return UiResizeHandle.bottomRight;
+        if (localY >= y && localY < y + resizeGripHitSize)
+            return UiResizeHandle.top;
+        if (localX >= x + width - resizeGripHitSize && localX < x + width)
+            return UiResizeHandle.right;
+        if (localY >= y + height - resizeGripHitSize && localY < y + height)
+            return UiResizeHandle.bottom;
+        if (localX >= x && localX < x + resizeGripHitSize)
+            return UiResizeHandle.left;
 
         return UiResizeHandle.none;
     }
 
-    /** Tints a color tuple by a small amount without changing the alpha channel. */
-    static float[4] tintColor(float[4] color, float amount)
-    {
-        return [
-            color[0] + (1.0f - color[0]) * amount,
-            color[1] + (1.0f - color[1]) * amount,
-            color[2] + (1.0f - color[2]) * amount,
-            color[3],
-        ];
-    }
 }
 
 @("UiWindow stretches direct content to the content root")
@@ -454,4 +476,20 @@ unittest
     assert(content.y == 8.0f);
     assert(content.width == 240.0f - 6.0f - 12.0f - 16.0f);
     assert(content.height == 180.0f - window.headerHeight - 6.0f - 8.0f - 10.0f);
+}
+
+@("UiWindow keeps sizeable content clear of the resize ring")
+unittest
+{
+    auto window = new UiWindow("Test", 0.0f, 0.0f, 240.0f, 180.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], true, false, false, 12.0f, 8.0f, 16.0f, 10.0f);
+    auto content = new UiVBox();
+    window.add(content);
+
+    UiLayoutContext context;
+    window.layoutWindow(context);
+
+    assert(content.x == 12.0f);
+    assert(content.y == 8.0f);
+    assert(content.width == 240.0f - resizeGripHitSize * 2.0f - 12.0f - 16.0f);
+    assert(content.height == 180.0f - window.headerHeight - windowContentMargin - resizeGripHitSize - 8.0f - 10.0f);
 }

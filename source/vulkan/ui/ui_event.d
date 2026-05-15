@@ -18,14 +18,18 @@ enum UiPointerEventKind
     wheel,
 }
 
-/** Corner used when resizing a window from one of its grips. */
+/** Edge or corner used when resizing a window from one of its grips. */
 enum UiResizeHandle
 {
     none,
+    top,
     topLeft,
     topRight,
+    right,
+    bottom,
     bottomLeft,
     bottomRight,
+    left,
 }
 
 /** Describes one pointer event in widget-local coordinates. */

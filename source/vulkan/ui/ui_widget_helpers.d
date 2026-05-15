@@ -111,6 +111,35 @@ void appendQuad(ref UiRenderContext context, float left, float top, float right,
     (*context.panels) ~= Vertex([x0, y1, z], color);
 }
 
+/** Appends a colored triangle to the panel vertex buffer in normalized device space.
+ *
+ * Params:
+ *   context = Active UI render context receiving panel vertices.
+ *   x0Pixels = First point X coordinate in local pixels.
+ *   y0Pixels = First point Y coordinate in local pixels.
+ *   x1Pixels = Second point X coordinate in local pixels.
+ *   y1Pixels = Second point Y coordinate in local pixels.
+ *   x2Pixels = Third point X coordinate in local pixels.
+ *   y2Pixels = Third point Y coordinate in local pixels.
+ *   z = Depth value for the emitted triangle.
+ *   color = Vertex color applied to the triangle.
+ * Returns:
+ *   Nothing.
+ */
+void appendTriangle(ref UiRenderContext context, float x0Pixels, float y0Pixels, float x1Pixels, float y1Pixels, float x2Pixels, float y2Pixels, float z, float[4] color)
+{
+    const x0 = toNdcX(context, x0Pixels);
+    const y0 = toNdcY(context, y0Pixels);
+    const x1 = toNdcX(context, x1Pixels);
+    const y1 = toNdcY(context, y1Pixels);
+    const x2 = toNdcX(context, x2Pixels);
+    const y2 = toNdcY(context, y2Pixels);
+
+    (*context.panels) ~= Vertex([x0, y0, z], color);
+    (*context.panels) ~= Vertex([x1, y1, z], color);
+    (*context.panels) ~= Vertex([x2, y2, z], color);
+}
+
 /** Converts a local X coordinate from pixels to normalized device space. */
 float toNdcX(ref UiRenderContext context, float pixelX)
 {

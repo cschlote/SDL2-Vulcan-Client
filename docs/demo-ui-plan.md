@@ -77,7 +77,7 @@ The four corner windows should serve different roles so the UI reads like a real
 
 The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
 
-`UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space.
+`UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space. The content root must stay clear of chrome controls and the resize ring so window grips never overlap application widgets.
 
 Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
 
@@ -85,7 +85,7 @@ Interactive controls that drag, such as sliders, need local pointer capture afte
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
 
-`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Header middle-click toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position.
+`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
 ## Settings Policy
 

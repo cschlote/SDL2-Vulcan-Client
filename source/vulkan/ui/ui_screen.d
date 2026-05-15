@@ -426,6 +426,13 @@ private:
 
         final switch (resizeStartHandle)
         {
+            case UiResizeHandle.top:
+            {
+                const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
+                activeResizeWindow.y = newTop;
+                activeResizeWindow.height = startBottom - newTop;
+                break;
+            }
             case UiResizeHandle.topLeft:
             {
                 const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
@@ -445,6 +452,18 @@ private:
                 activeResizeWindow.height = startBottom - newTop;
                 break;
             }
+            case UiResizeHandle.right:
+            {
+                const availableRight = viewportWidth_ > resizeStartLeft ? viewportWidth_ - resizeStartLeft : minimumWidth;
+                activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableRight);
+                break;
+            }
+            case UiResizeHandle.bottom:
+            {
+                const availableBottom = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
+                activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableBottom);
+                break;
+            }
             case UiResizeHandle.bottomLeft:
             {
                 const availableBottom = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
@@ -460,6 +479,13 @@ private:
                 const availableHeight = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
                 activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableWidth);
                 activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableHeight);
+                break;
+            }
+            case UiResizeHandle.left:
+            {
+                const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
+                activeResizeWindow.x = newLeft;
+                activeResizeWindow.width = startRight - newLeft;
                 break;
             }
             case UiResizeHandle.none:
@@ -533,6 +559,38 @@ unittest
     event.y = 78.0f;
     assert(screen.dispatchPointerEvent(event));
     assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen resizes windows from edge grips with non-primary buttons")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto window = new UiWindow("window", 10.0f, 10.0f, 80.0f, 70.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], true, false, true);
+    window.minimumWidth = 40.0f;
+    window.minimumHeight = 40.0f;
+    screen.registerWindowInteractionHandlers(window);
+    screen.addWindow(window);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 3;
+    event.x = 88.0f;
+    event.y = 42.0f;
+    assert(screen.dispatchPointerEvent(event));
+
+    event.kind = UiPointerEventKind.move;
+    event.x = 110.0f;
+    event.y = 42.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(window.width == 100.0f);
+    assert(window.height == 70.0f);
+
+    event.kind = UiPointerEventKind.buttonUp;
+    event.button = 3;
+    assert(screen.dispatchPointerEvent(event));
 }
 
 @("UiScreen can place a window away from existing visible windows")
