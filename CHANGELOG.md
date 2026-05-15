@@ -17,6 +17,7 @@
 - Fixed layout measurement so arranged widget sizes do not become new intrinsic sizes, and improved slider dragging.
 - Anchored the settings Apply and Save buttons in a fixed bottom action row below the growable settings body.
 - Added UiScreen window stacking and non-overlap placement helpers; middle-clicking a window header toggles that window between front and back.
+- Added the UI debug bounds color legend to the Controls / Log window.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 

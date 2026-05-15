@@ -251,6 +251,14 @@ final class DemoUiScreen : UiScreen
     private UiLabel helpIntroLabel;
     private UiLabel helpLayoutLabel;
     private UiLabel helpCloseLabel;
+    private UiLabel helpDebugLegendTitleLabel;
+    private UiLabel helpDebugLegendWindowLabel;
+    private UiLabel helpDebugLegendSurfaceLabel;
+    private UiLabel helpDebugLegendVBoxLabel;
+    private UiLabel helpDebugLegendHBoxLabel;
+    private UiLabel helpDebugLegendGridLabel;
+    private UiLabel helpDebugLegendSpacerLabel;
+    private UiLabel helpDebugLegendWidgetLabel;
 
     private UiLabel statusBuildLabel;
     private UiLabel statusFpsLabel;
@@ -441,11 +449,28 @@ final class DemoUiScreen : UiScreen
         helpIntroLabel = new UiLabel("Open windows: 0", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpLayoutLabel = new UiLabel("Arrow keys rotate, Shift accelerates, mouse drag rotates outside UI.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpCloseLabel = new UiLabel("F/T/W/H switch render modes, D toggles UI bounds, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendTitleLabel = new UiLabel("Debug bounds colors:", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
+        helpDebugLegendWindowLabel = new UiLabel("Orange: UiWindow", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiSurfaceBox / content root", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendVBoxLabel = new UiLabel("Green: UiVBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendHBoxLabel = new UiLabel("Blue: UiHBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendGridLabel = new UiLabel("Purple: UiGrid", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendSpacerLabel = new UiLabel("Yellow: UiSpacer", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendWidgetLabel = new UiLabel("Red: basic widgets and controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
 
         helpContent.add(helpTitleLabel);
         helpContent.add(helpIntroLabel);
         helpContent.add(helpLayoutLabel);
         helpContent.add(helpCloseLabel);
+        helpContent.add(new UiSpacer(0.0f, sectionSpacing));
+        helpContent.add(helpDebugLegendTitleLabel);
+        helpContent.add(helpDebugLegendWindowLabel);
+        helpContent.add(helpDebugLegendSurfaceLabel);
+        helpContent.add(helpDebugLegendVBoxLabel);
+        helpContent.add(helpDebugLegendHBoxLabel);
+        helpContent.add(helpDebugLegendGridLabel);
+        helpContent.add(helpDebugLegendSpacerLabel);
+        helpContent.add(helpDebugLegendWidgetLabel);
         helpWindow.add(helpContent);
         helpWindow.visible = false;
         helpWindow.onClose = ()
