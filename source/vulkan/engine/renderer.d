@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import demo.demo_settings : DemoSettings, saveDemoSettings;
-import demo.demo_ui : DemoUiScreen, HudWindowDrawRange;
+import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.engine.device;
@@ -128,7 +128,7 @@ class VulkanRenderer
     private TextureResource[7] fontTextures;
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[7] overlayFonts;
-    private HudWindowDrawRange[] hudWindowRanges;
+    private UiWindowDrawRange[] uiWindowRanges;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -156,6 +156,7 @@ class VulkanRenderer
     private bool rotateRight;
     private bool rotateUp;
     private bool rotateDown;
+    private bool uiDebugMode;
     private float yawAngle = 0.22f;
     private float pitchAngle = 0.14f;
     private double fpsValue;
@@ -222,6 +223,8 @@ class VulkanRenderer
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
         uiScreen = new DemoUiScreen();
+        uiScreen.onApplySettings = &applySettingsDialog;
+        uiScreen.onSaveSettings = &saveSettingsDialog;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
 
@@ -263,6 +266,7 @@ class VulkanRenderer
         createTextureResources();
         createFontResources();
         uiScreen.initialize(fontAtlases[]);
+        uiScreen.setSettingsDraft(demoSettings);
         uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
         createUniformBuffers();
         createDescriptorPoolAndSets();
@@ -358,6 +362,8 @@ class VulkanRenderer
                     setRenderMode(RenderMode.wireframe);
                 else if (!event.key.repeat && event.key.scancode == SDL_Scancode.h)
                     setRenderMode(RenderMode.hiddenLine);
+                else if (!event.key.repeat && event.key.scancode == SDL_Scancode.d)
+                    toggleUiDebugMode();
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = true;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -1107,13 +1113,14 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             buildVersion,
-            fontAtlases[]);
+            fontAtlases[],
+            uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
             enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "UI overlay text-layer vertex limit exceeded.");
 
-        hudWindowRanges = overlayVertices.windows;
+        uiWindowRanges = overlayVertices.windows;
 
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
@@ -1127,7 +1134,7 @@ class VulkanRenderer
     /// Records the render pass commands for the current frame.
 
             /** Recomputes the draggable UI window clamp state for the current swapchain size. */
-            private void syncHudLayoutState()
+            private void syncUiLayoutState()
             {
                 uiScreen.syncViewport(
                     cast(float)swapchain.extent.width,
@@ -1277,7 +1284,7 @@ class VulkanRenderer
             vkCmdDrawIndexed(commandBuffer, currentIndexCount, 1, 0, 0, 0);
         }
 
-        foreach (windowRange; hudWindowRanges)
+        foreach (windowRange; uiWindowRanges)
         {
             vkCmdBindPipeline(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.overlayPipeline);
             if (windowRange.panelsCount > 0)
@@ -1485,20 +1492,36 @@ class VulkanRenderer
         updateWindowTitle();
     }
 
+    /** Toggles the retained UI widget bounds debug overlay. */
+    private void toggleUiDebugMode()
+    {
+        uiDebugMode = !uiDebugMode;
+        logLine("UI debug bounds: ", uiDebugMode ? "on" : "off");
+    }
+
     /** Opens the settings dialog with a fresh copy of the current live settings. */
     private void openSettingsDialog()
     {
-        uiScreen.toggleSettingsWindow();
+        uiScreen.openSettingsDialog(demoSettings);
     }
 
     /** Toggles the settings dialog and refreshes the draft when opening. */
     private void toggleSettingsDialog()
     {
-        uiScreen.toggleSettingsWindow();
+        uiScreen.toggleSettingsDialog(demoSettings);
     }
 
-    /** Applies the settings draft to the live bundle and writes it to disk. */
+    /** Applies the settings draft to the live bundle without persisting it. */
     private void applySettingsDialog()
+    {
+        if (demoSettings is null)
+            return;
+
+        *demoSettings = uiScreen.settingsDraft;
+    }
+
+    /** Saves the current settings draft to disk after applying it locally. */
+    private void saveSettingsDialog()
     {
         if (demoSettings is null)
             return;

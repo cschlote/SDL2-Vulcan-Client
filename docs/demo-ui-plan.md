@@ -20,17 +20,19 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, buttons, image placeholders, spacers, surface boxes, HBox/VBox layout
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
 - INI settings load/save model
+- generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
+- D-key debug bounds overlay with color-coded widget and layout outlines
 
-Known migration debt:
+Remaining migration debt:
 
-- `source/demo/demo_ui.d` still contains an old stateless HUD construction and dispatch block.
-- renderer-facing UI data still uses HUD-specific names.
-- `DemoUiScreen` duplicates logic that should move into or use `UiScreen`.
-- settings are currently too close to automatic persistence in some paths.
+- `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the type names are generic.
+- keyboard focus and text editing are not yet implemented for retained controls.
+- popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
+- settings tabs and broader settings categories are still planned demo work.
 
 ## UI Design Direction
 
@@ -48,14 +50,10 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, buttons, image placeholders, spacers, surface boxes, and row/column containers.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
 
 Next widgets:
 
-- checkbox / toggle
-- slider
-- text field
-- combo box / dropdown
 - tab bar
 - progress bar
 - list box or selection list
@@ -77,6 +75,18 @@ The demo should evolve from a test shell into a small application with clear win
 
 The four corner windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
 
+The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
+
+`UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space.
+
+Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
+
+Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
+
+Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
+
+`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Header middle-click toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position.
+
 ## Settings Policy
 
 Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.
@@ -92,40 +102,37 @@ Expected behavior:
 
 This keeps temporary experimentation local until the user explicitly saves.
 
-## Rename And Cleanup Plan
+## Cleanup Plan
 
-Use generic UI names for renderer-facing data:
+Renderer-facing draw data now uses generic UI names. The old stateless HUD construction path has been removed from the demo UI module, so `demo_ui.d` now builds overlay geometry from retained `UiScreen`/`UiWindow` state only.
 
-- `HudOverlayGeometry` -> `UiOverlayGeometry`
-- `HudWindowDrawRange` -> `UiDrawRange` or `UiWindowDrawRange`
-- HUD-specific helper names should disappear from renderer imports
+Completed legacy cleanup:
 
-Remove legacy code:
-
-- delete old stateless `buildHudOverlayVertices`
-- delete old `buildHudLayout`
-- delete old `hudDispatch...` helpers
-- delete old `HudLayoutState` fields that are no longer used by the retained `DemoUiScreen`
-- keep only retained screen/window/widget construction
+- removed the old stateless `buildHudOverlayVertices` path
+- removed the old `buildHudLayout` and `HudLayoutState` bridge
+- removed the old `hudDispatch...` helpers
+- kept only retained screen/window/widget construction in `DemoUiScreen`
 
 Use `UiScreen` properly:
 
-- register demo windows through generic `UiScreen` helpers
-- use `registerWindowInteractionHandlers` instead of duplicating drag/resize wiring
-- let `UiScreen` own generic window iteration and hit testing
-- keep demo-specific window creation, text, and callbacks in `DemoUiScreen`
+- demo windows are registered through generic `UiScreen` helpers
+- `registerWindowInteractionHandlers` owns common drag/resize wiring
+- `UiScreen` owns generic window iteration, hit testing, layout, and viewport clamping
+- demo-specific window creation, text, and callbacks stay in `DemoUiScreen`
 
 ## Implementation Order
 
 1. Update documentation and plans to reflect the engine-first direction. Done.
-2. Rename renderer-facing HUD data types to generic UI names.
-3. Remove the old stateless HUD helper block from `demo_ui.d`.
-4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently.
-5. Fix settings persistence so only explicit Save writes to disk.
-6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field.
-7. Rebuild the settings window around Apply and Save.
-8. Rework demo windows into clear app roles.
-9. Review which modules are reusable enough for the first Engine-only package boundary.
+2. Rename renderer-facing HUD data types to generic UI names. Done.
+3. Remove the old stateless HUD helper block from `demo_ui.d`. Done.
+4. Refactor `DemoUiScreen` to use `UiScreen` helpers consistently. Done.
+5. Fix settings persistence so only explicit Save writes to disk. Done.
+6. Add missing controls for a real settings dialog: toggle, slider, dropdown, text field. Done.
+7. Rebuild the settings window around Apply and Save. Done.
+8. Rework demo windows into clear app roles. Done.
+9. Review which modules are reusable enough for the first Engine-only package boundary. Done.
+10. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
+11. Add keyboard focus, text editing, and popup/menu infrastructure for retained controls.
 
 ## Public Package Preparation
 

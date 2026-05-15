@@ -124,8 +124,8 @@ protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
         const contentSize = contentRow.measure(context);
-        const measuredWidth = width > 0.0f ? width : contentSize.width;
-        const measuredHeight = height > 0.0f ? height : contentSize.height;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : contentSize.width;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : contentSize.height;
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }

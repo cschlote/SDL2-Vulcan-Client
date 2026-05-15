@@ -13,10 +13,12 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
-import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox;
+import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox, UiVBox;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendButtonFrame, appendTextLine, appendWindowBorder, appendWindowFrame;
 import logging : logLine, logLineVerbose;
+
+private immutable float[4] windowDebugBoundsColor = [1.00f, 0.20f, 0.05f, 0.70f];
 
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
@@ -45,6 +47,7 @@ final class UiWindow : UiWidget
     void delegate(UiResizeHandle) onResizeStart;                ///< Notified when a resize gesture starts.
     void delegate(UiResizeHandle, float, float) onResizeMove;   ///< Notified while a resize gesture is running.
     void delegate(UiResizeHandle) onResizeEnd;                  ///< Notified when a resize gesture ends.
+    void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks the header.
     void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
 
     /**
@@ -62,6 +65,10 @@ final class UiWindow : UiWidget
      *   sizeable = Enables the four resize corner grips.
      *   closable = Shows a close button in the header.
      *   dragable = Makes the header visually distinct and accepts drag gestures.
+     *   contentPaddingLeft = Left inset for the internal content root.
+     *   contentPaddingTop = Top inset for the internal content root.
+     *   contentPaddingRight = Right inset for the internal content root.
+     *   contentPaddingBottom = Bottom inset for the internal content root.
      */
     this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false, float contentPaddingLeft = 18.0f, float contentPaddingTop = 10.0f, float contentPaddingRight = 18.0f, float contentPaddingBottom = 10.0f)
     {
@@ -120,9 +127,7 @@ final class UiWindow : UiWidget
     void layoutWindow(ref UiLayoutContext context)
     {
         updateChromeLayout();
-
-        foreach (child; contentRoot.children)
-            child.layout(context);
+        contentRoot.layout(context);
     }
 
     /** Routes pointer events through the chrome before the body content. */
@@ -170,6 +175,13 @@ final class UiWindow : UiWidget
                 resizeHandle = UiResizeHandle.none;
                 return true;
             }
+        }
+
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 2 && dragable && isInDragHeader(event.x, event.y))
+        {
+            if (onHeaderMiddleClick !is null)
+                onHeaderMiddleClick();
+            return true;
         }
 
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
@@ -279,6 +291,11 @@ protected:
         }
 
         appendWindowBorder(context, 0.0f, 0.0f, width, height, context.depthBase - 0.003f);
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])windowDebugBoundsColor;
     }
 
 private:
@@ -400,4 +417,20 @@ private:
             color[3],
         ];
     }
+}
+
+@("UiWindow stretches direct content to the content root")
+unittest
+{
+    auto window = new UiWindow("Test", 0.0f, 0.0f, 240.0f, 180.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, false, 12.0f, 8.0f, 16.0f, 10.0f);
+    auto content = new UiVBox();
+    window.add(content);
+
+    UiLayoutContext context;
+    window.layoutWindow(context);
+
+    assert(content.x == 12.0f);
+    assert(content.y == 8.0f);
+    assert(content.width == 240.0f - 6.0f - 12.0f - 16.0f);
+    assert(content.height == 180.0f - window.headerHeight - 6.0f - 8.0f - 10.0f);
 }

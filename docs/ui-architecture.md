@@ -27,6 +27,7 @@ Reusable UI engine code lives in [source/vulkan/ui/](../source/vulkan/ui):
 - [ui_layout.d](../source/vulkan/ui/ui_layout.d): box-style layout containers and spacers
 - [ui_label.d](../source/vulkan/ui/ui_label.d): text widgets
 - [ui_button.d](../source/vulkan/ui/ui_button.d): button widget
+- [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, and text field controls
 - [ui_image.d](../source/vulkan/ui/ui_image.d): small image/icon placeholder widget
 - [ui_context.d](../source/vulkan/ui/ui_context.d): renderer-facing UI render context
 - [ui_widget_helpers.d](../source/vulkan/ui/ui_widget_helpers.d): geometry helper functions
@@ -43,10 +44,12 @@ Generic responsibilities belong in `UiScreen`:
 - store screen-wide font atlas references
 - own the ordered list of `UiWindow` objects
 - iterate windows from back to front or front to back
+- move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
+- place windows in free screen space when possible
 - provide shared helpers for window dragging, resizing, toggling, registration, and removal
 
 Responsibilities that do not belong in `UiScreen`:
@@ -60,7 +63,7 @@ Responsibilities that do not belong in `UiScreen`:
 
 Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific screen class.
 
-`UiScreen` is still experimental. The next code cleanup should make `DemoUiScreen` use the generic helpers consistently instead of duplicating drag, resize, layout, and iteration logic.
+`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, and viewport clamping. The next cleanup question is whether renderer-facing overlay geometry should also become a generic `vulkan.ui` type.
 
 ## UiWindow
 
@@ -75,6 +78,27 @@ Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific s
 - resize/drag tracking callbacks
 
 Window content should be ordinary widgets. Application code should build a window body with layout containers and controls, then hand it to `UiWindow`.
+
+## Current Widget Set
+
+The reusable UI package currently provides these retained widgets:
+
+- `UiWindow`: framed, draggable, resizeable top-level window with an internal content root
+- `UiLabel`: single-line text label
+- `UiTextBlock`: text block placeholder for multi-line text rendering
+- `UiButton`: framed button with optional icon and label content row
+- `UiImage`: compact framed image/icon placeholder
+- `UiSpacer`: invisible layout spacer
+- `UiSurfaceBox`: optional background/border surface that assigns its child the full padded content area
+- `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
+- `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
+- `UiGrid`: weighted grid with explicit cell placement
+- `UiToggle`: boolean checkbox-style setting control
+- `UiSlider`: horizontal floating-point value control with pointer dragging
+- `UiDropdown`: compact option selector that cycles values until popup menus exist
+- `UiTextField`: single-line text value field with focus state; keyboard editing is still planned
+
+The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
 ## UiWidget Box Model
 
@@ -133,17 +157,17 @@ Whether signals are synchronous delegates, queued events, or a small typed event
 
 The renderer should not know widget internals. It should receive generated UI geometry and draw ranges.
 
-Current migration issue:
+Current boundary:
 
-- `HudOverlayGeometry` and `HudWindowDrawRange` are still HUD-named data types.
+- `UiOverlayGeometry` and `UiWindowDrawRange` are the current generic renderer-facing data types.
 - The renderer imports `DemoUiScreen` because the demo currently owns overlay construction.
 
 Target direction:
 
-- rename renderer-facing UI geometry to generic `UiOverlayGeometry` / `UiDrawRange` names
+- keep renderer-facing UI geometry named generically
 - keep demo-specific screen construction in `source/demo/`
 - keep reusable widget and screen code in `source/vulkan/ui/`
-- remove stateless legacy HUD builder functions after the retained screen path fully replaces them
+- move renderer-facing UI geometry types into `vulkan.ui` once `UiScreen` owns enough generic render traversal
 
 ## Persistence Policy
 
@@ -154,7 +178,7 @@ For the demo application:
 - loading settings at startup is fine
 - Apply updates the running state only
 - Save writes settings to disk
-- closing the app should not silently persist changed UI settings unless the user explicitly saved
+- closing the app must not silently persist changed UI settings unless the user explicitly saved
 
 This policy keeps runtime experimentation separate from permanent configuration.
 

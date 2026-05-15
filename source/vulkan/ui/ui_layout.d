@@ -17,6 +17,12 @@ import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
+private immutable float[4] surfaceDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
+private immutable float[4] verticalLayoutDebugBoundsColor = [0.20f, 1.00f, 0.35f, 0.65f];
+private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.00f, 0.65f];
+private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
+private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f];
+
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
 {
@@ -39,6 +45,28 @@ protected:
     {
         return false;
     }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])spacerDebugBoundsColor;
+    }
+}
+
+@("UiVBox can shrink children after a previous larger layout")
+unittest
+{
+    auto column = new UiVBox(0.0f, 0.0f, 100.0f, 120.0f, 0.0f);
+    auto child = new UiSpacer(10.0f, 20.0f);
+    child.setLayoutHint(10.0f, 20.0f, 10.0f, 20.0f, float.max, float.max, 1.0f, 1.0f);
+    column.add(child);
+
+    UiLayoutContext context;
+    column.layout(context);
+    assert(child.height == 120.0f);
+
+    column.height = 60.0f;
+    column.layout(context);
+    assert(child.height == 60.0f);
 }
 
 private float clampFloat(float value, float minimum, float maximum)
@@ -203,8 +231,8 @@ protected:
                 tallest = childSize.height;
         }
 
-        const measuredWidth = width > 0.0f ? width : widest + paddingLeft + paddingRight;
-        const measuredHeight = height > 0.0f ? height : tallest + paddingTop + paddingBottom;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : widest + paddingLeft + paddingRight;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : tallest + paddingTop + paddingBottom;
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
 
@@ -228,6 +256,11 @@ protected:
             child.height = innerHeight();
             child.layout(context);
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])surfaceDebugBoundsColor;
     }
 }
 
@@ -258,7 +291,7 @@ protected:
                 totalHeight += spacing;
         }
 
-        return UiLayoutSize(width > 0.0f ? width : widest + paddingLeft + paddingRight, height > 0.0f ? height : totalHeight + paddingTop + paddingBottom);
+        return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : widest + paddingLeft + paddingRight, preferredHeight > 0.0f ? preferredHeight : totalHeight + paddingTop + paddingBottom);
     }
 
     override void layoutChildren()
@@ -302,6 +335,11 @@ protected:
             cursorY += child.height;
             cursorY += spacing;
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])verticalLayoutDebugBoundsColor;
     }
 }
 
@@ -332,7 +370,7 @@ protected:
                 totalWidth += spacing;
         }
 
-        return UiLayoutSize(width > 0.0f ? width : totalWidth + paddingLeft + paddingRight, height > 0.0f ? height : widest + paddingTop + paddingBottom);
+        return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : totalWidth + paddingLeft + paddingRight, preferredHeight > 0.0f ? preferredHeight : widest + paddingTop + paddingBottom);
     }
 
     override void layoutChildren()
@@ -376,6 +414,11 @@ protected:
             cursorX += child.width;
             cursorX += spacing;
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])horizontalLayoutDebugBoundsColor;
     }
 }
 
@@ -482,5 +525,10 @@ protected:
             if (child.height <= 0.0f)
                 child.height = childHeight;
         }
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])gridLayoutDebugBoundsColor;
     }
 }

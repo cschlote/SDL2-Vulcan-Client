@@ -44,7 +44,7 @@ The ownership split is:
 - [source/demo/demo_ui.d](../source/demo/demo_ui.d) contains the current demo-specific screen construction.
 - [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d) consumes the generated overlay geometry and draw ranges.
 
-The renderer should eventually know only generic UI render output names, not HUD-specific names. Existing names such as `HudOverlayGeometry` and `HudWindowDrawRange` are migration-era names and should be replaced with generic `Ui...` names during the next cleanup.
+The renderer should know only generic UI render output names. `UiOverlayGeometry` and `UiWindowDrawRange` are the current renderer-facing names. Overlay geometry now comes from the retained `DemoUiScreen` window stack rather than from the old stateless HUD builder path.
 
 ## Frame Order
 
@@ -66,28 +66,27 @@ The long-term goal is to extract the reusable engine pieces into an Engine-only 
 
 Reusable engine candidates:
 
-- SDL/Vulkan bootstrap abstractions once they are no longer demo-specific
-- Vulkan instance/device/swapchain/pipeline/resource helpers
-- retained UI engine under `source/vulkan/ui/`
-- font atlas and text geometry support
+- `source/vulkan/ui/`: retained UI widgets, layout containers, controls, `UiScreen`, and `UiWindow`
+- `source/vulkan/font/`: font atlas and text geometry support
+- `source/vulkan/engine/instance.d`, `device.d`, `swapchain.d`, and `pipeline.d`: Vulkan setup helpers after API boundaries are tightened
+- renderer-facing UI draw data once it moves out of the demo module
 - mesh and asset-facing abstractions after placeholder geometry is replaced
 
 Demo-only candidates:
 
-- current Platonic-solid scene selection
-- current demo windows and text
-- demo settings keys and sample profiles
-- old HUD helper functions kept only as migration remnants
+- `source/demo/`: bootstrap policy, demo settings, demo UI construction, and application-level persistence decisions
+- `source/vulkan/models/polyhedra.d`: current Platonic-solid placeholder scene selection
+- current demo window labels, sample profiles, render-mode shortcuts, and learning-demo workflows
+- renderer code that directly knows about demo shape names, demo settings, or demo-specific callbacks
 
 ## Decision Points
 
 The next architecture decisions are:
 
-- replace HUD-specific render data names with generic UI names
-- remove the old stateless HUD construction path from `demo_ui.d`
-- make `DemoUiScreen` use generic `UiScreen` helpers consistently
 - decide how far renderer ownership should be split before publishing a first package
 - decide which settings belong to the engine and which belong only to the demo application
+- decide whether `UiOverlayGeometry` and `UiWindowDrawRange` should move into `source/vulkan/ui/`
+- decide whether the current `VulkanRenderer` becomes an engine renderer plus a smaller demo scene controller
 
 ## Related Files
 

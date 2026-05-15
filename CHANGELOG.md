@@ -3,6 +3,23 @@
 ## Unreleased
 
 - Updated the engine and UI planning documentation.
+- Removed the legacy stateless HUD construction path from the retained demo UI.
+- Refactored `DemoUiScreen` to use generic `UiScreen` window registration, iteration, hit testing, layout, and interaction helpers.
+- Stopped automatic demo settings persistence on Apply and application shutdown; only a future explicit Save action should write the config file.
+- Added generic retained toggle, slider, dropdown, and text field controls with unit coverage.
+- Rebuilt the demo settings window around generic controls with separate Apply and explicit Save actions.
+- Renamed the demo UI windows and actions around clearer app roles: demo control, status, controls/log, settings, and widget demo.
+- Fixed retained UI rendering after several windows by keeping overlay geometry in a stable depth range and disabling depth tests for the overlay pipeline.
+- Added a global `D` hotkey that overlays semi-transparent red bounds for every visible retained UI widget.
+- Colored the UI debug bounds by widget/layout type so nested layout boxes are easier to distinguish.
+- Fixed `UiWindow` content layout so direct body widgets fill the available content root instead of bypassing the root layout box.
+- Fixed retained layout shrinking after a window was resized larger, and made the widget demo rows grow vertically.
+- Fixed layout measurement so arranged widget sizes do not become new intrinsic sizes, and improved slider dragging.
+- Anchored the settings Apply and Save buttons in a fixed bottom action row below the growable settings body.
+- Added UiScreen window stacking and non-overlap placement helpers; middle-clicking a window header toggles that window between front and back.
+- Added the UI debug bounds color legend to the Controls / Log window.
+- Removed stale layout-demo color literals, expanded DDoc for the retained controls and `UiScreen`, and refreshed the UI plan to match the current widget set.
+- Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 
 ## Release 26.20.6619

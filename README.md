@@ -48,16 +48,18 @@ The build runs the version helper and shader compiler before linking the executa
 - `T` selects lit and textured rendering.
 - `W` selects wireframe rendering.
 - `H` selects hidden-line rendering.
+- `D` toggles red UI widget bounds for layout debugging.
 - Arrow keys rotate the camera.
 - Hold `Shift` while rotating for faster camera movement.
 - Mouse drag outside UI windows rotates the scene.
+- Middle-click a UI window header to toggle that window between front and back.
 - Mouse wheel outside UI windows changes the camera field of view.
 - `+` and `-` switch the active Platonic solid, including keypad variants.
 - `Esc` closes the application.
 
 ## Settings Policy
 
-Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes should stay local unless the user explicitly chooses an Apply or Save action. Apply may update the running app state; persistence to disk should be a deliberate Save operation.
+Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes stay local. Apply updates the running app state only; persistence to disk is reserved for an explicit Save operation.
 
 ## Release and Versioning
 

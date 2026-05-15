@@ -19,6 +19,7 @@ import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
 
+/** Screen-level coordinator for retained UI windows. */
 class UiScreen
 {
     private float viewportWidth_;
@@ -37,6 +38,7 @@ class UiScreen
     private float resizeStartHeight;
     private UiResizeHandle resizeStartHandle;
 
+    /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
     {
         fontAtlases_ = liveFonts;
@@ -48,6 +50,7 @@ class UiScreen
         ensureWindowLayout();
     }
 
+    /** Updates the screen viewport in native window pixels and relayouts windows. */
     void syncViewport(float extentWidth, float extentHeight)
     {
         viewportWidth_ = extentWidth;
@@ -55,6 +58,7 @@ class UiScreen
         ensureWindowLayout();
     }
 
+    /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         if (activeResizeWindow !is null && activeResizeWindow.visible)
@@ -75,6 +79,7 @@ class UiScreen
         return false;
     }
 
+    /** Returns true when the point is inside any visible window. */
     bool containsPointer(float x, float y) const
     {
         foreach_reverse (window; windowsInFrontToBack())
@@ -89,16 +94,19 @@ class UiScreen
         return false;
     }
 
+    /** Returns the windows in draw order from back to front. */
     UiWindow[] windowsInFrontToBack()
     {
         return windows_;
     }
 
+    /** Returns the windows in draw order from back to front. */
     const(UiWindow)[] windowsInFrontToBack() const
     {
         return windows_;
     }
 
+    /** Recomputes layout and keeps windows inside the viewport. */
     void ensureWindowLayout()
     {
         if (viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
@@ -110,34 +118,41 @@ class UiScreen
     }
 
 protected:
+    /** Hook for subclasses to build and register their windows. */
     void onInitialize()
     {
     }
 
+    /** Hook for subclasses to place initial windows after layout. */
     void anchorWindows()
     {
     }
 
+    /** Current viewport width in native window pixels. */
     @property float viewportWidth() const
     {
         return viewportWidth_;
     }
 
+    /** Current viewport height in native window pixels. */
     @property float viewportHeight() const
     {
         return viewportHeight_;
     }
 
+    /** Font atlases used by the screen layout context. */
     @property const(FontAtlas)[] fontAtlases() const
     {
         return fontAtlases_;
     }
 
+    /** Last layout context built by `ensureWindowLayout`. */
     @property ref UiLayoutContext layoutContext()
     {
         return layoutContext_;
     }
 
+    /** Registers a window at the front of the draw order. */
     void addWindow(UiWindow window)
     {
         if (window is null)
@@ -146,6 +161,7 @@ protected:
         windows_ ~= window;
     }
 
+    /** Removes a registered window and cancels active interactions for it. */
     void removeWindow(UiWindow window)
     {
         if (window is null)
@@ -164,6 +180,7 @@ protected:
         }
     }
 
+    /** Connects a window's generic drag, resize, and stack callbacks. */
     void registerWindowInteractionHandlers(UiWindow window)
     {
         if (window is null)
@@ -175,8 +192,10 @@ protected:
         window.onResizeStart = (handle) { beginWindowResize(window, handle); };
         window.onResizeMove = (handle, cursorX, cursorY) { updateWindowResize(cursorX, cursorY); };
         window.onResizeEnd = (handle) { endWindowInteraction(); };
+        window.onHeaderMiddleClick = () { toggleWindowStackPosition(window); };
     }
 
+    /** Toggles visibility and places a shown window in usable screen space. */
     void toggleWindow(UiWindow window)
     {
         if (window is null)
@@ -186,10 +205,85 @@ protected:
 
         if (!window.visible && isInteractingWith(window))
             endWindowInteraction();
+        else if (window.visible)
+            bringWindowToFront(window);
 
         ensureWindowLayout();
+        if (window.visible)
+            placeWindowWithoutOverlap(window);
     }
 
+    /** Moves a registered window to the front of the draw order. */
+    void bringWindowToFront(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index < 0 || cast(size_t)index + 1 == windows_.length)
+            return;
+
+        windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
+    }
+
+    /** Moves a registered window to the back of the draw order. */
+    void sendWindowToBack(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index <= 0)
+            return;
+
+        windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
+    }
+
+    /** Brings a window forward, or sends it back when it is already front-most. */
+    void toggleWindowStackPosition(UiWindow window)
+    {
+        if (window is null)
+            return;
+
+        if (isFrontWindow(window))
+            sendWindowToBack(window);
+        else
+            bringWindowToFront(window);
+    }
+
+    /** Returns true when `window` is the front-most registered window. */
+    bool isFrontWindow(UiWindow window) const
+    {
+        return window !is null && windows_.length > 0 && windows_[$ - 1] is window;
+    }
+
+    /** Attempts to move `window` to the first free non-overlapping viewport slot. */
+    void placeWindowWithoutOverlap(UiWindow window, float inset = 10.0f, float step = 24.0f)
+    {
+        if (window is null || viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
+            return;
+
+        clampWindowToViewport(window);
+        if (!overlapsVisibleWindow(window, window.x, window.y))
+            return;
+
+        const maximumLeft = viewportWidth_ > window.width ? viewportWidth_ - window.width : 0.0f;
+        const maximumTop = viewportHeight_ > window.height ? viewportHeight_ - window.height : 0.0f;
+        const startX = clampFloat(inset, 0.0f, maximumLeft);
+        const startY = clampFloat(inset, 0.0f, maximumTop);
+        const effectiveStep = step > 0.0f ? step : 24.0f;
+
+        for (float y = startY; y <= maximumTop; y += effectiveStep)
+        {
+            for (float x = startX; x <= maximumLeft; x += effectiveStep)
+            {
+                if (!overlapsVisibleWindow(window, x, y))
+                {
+                    window.x = x;
+                    window.y = y;
+                    return;
+                }
+            }
+        }
+
+        clampWindowToViewport(window);
+    }
+
+    /** Cancels active window dragging or resizing. */
     void endWindowInteraction()
     {
         activeDragWindow = null;
@@ -197,16 +291,19 @@ protected:
         resizeStartHandle = UiResizeHandle.none;
     }
 
+    /** Returns true when the window is currently dragged or resized. */
     bool isInteractingWith(UiWindow window) const
     {
         return window !is null && (activeDragWindow is window || activeResizeWindow is window);
     }
 
+    /** Clamps a scalar value into a closed range. */
     static float clampFloat(float value, float minimum, float maximum)
     {
         return value < minimum ? minimum : (value > maximum ? maximum : value);
     }
 
+    /** Builds a layout context from the provided font atlases. */
     UiLayoutContext buildLayoutContext(const(FontAtlas)[] liveFonts) const
     {
         UiLayoutContext context;
@@ -215,6 +312,7 @@ protected:
         return context;
     }
 
+    /** Measures content and applies effective minimum window size. */
     void autoSizeWindow(UiWindow window, UiWidget content, float paddingLeft, float paddingTop, float paddingRight, float paddingBottom, float minimumWidth, float minimumHeight)
     {
         if (window is null || content is null || fontAtlases_.length == 0)
@@ -238,6 +336,7 @@ protected:
             window.height = minimumWindowHeight;
     }
 
+    /** Keeps a window fully inside the current viewport when possible. */
     void clampWindowToViewport(UiWindow window)
     {
         if (window is null)
@@ -250,6 +349,39 @@ protected:
     }
 
 private:
+    ptrdiff_t windowIndex(UiWindow window) const
+    {
+        foreach (index, candidate; windows_)
+        {
+            if (candidate is window)
+                return cast(ptrdiff_t)index;
+        }
+
+        return -1;
+    }
+
+    bool overlapsVisibleWindow(UiWindow window, float candidateX, float candidateY) const
+    {
+        foreach (other; windows_)
+        {
+            if (other is window || other is null || !other.visible)
+                continue;
+
+            if (rectsOverlap(candidateX, candidateY, window.width, window.height, other.x, other.y, other.width, other.height))
+                return true;
+        }
+
+        return false;
+    }
+
+    static bool rectsOverlap(float leftA, float topA, float widthA, float heightA, float leftB, float topB, float widthB, float heightB)
+    {
+        return leftA < leftB + widthB &&
+            leftA + widthA > leftB &&
+            topA < topB + heightB &&
+            topA + heightA > topB;
+    }
+
     void beginWindowDrag(UiWindow window, float cursorX, float cursorY)
     {
         activeDragWindow = window;
@@ -352,4 +484,38 @@ private:
         foreach (window; windows_)
             clampWindowToViewport(window);
     }
+}
+
+@("UiScreen reorders windows without z values")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto first = new UiWindow("first", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto second = new UiWindow("second", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(first);
+    screen.addWindow(second);
+
+    assert(screen.isFrontWindow(second));
+    screen.bringWindowToFront(first);
+    assert(screen.isFrontWindow(first));
+    screen.toggleWindowStackPosition(first);
+    assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen can place a window away from existing visible windows")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(260.0f, 160.0f);
+
+    auto occupied = new UiWindow("occupied", 10.0f, 10.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto target = new UiWindow("target", 10.0f, 10.0f, 60.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(occupied);
+    screen.addWindow(target);
+
+    screen.placeWindowWithoutOverlap(target, 10.0f, 24.0f);
+    assert(!UiScreen.rectsOverlap(target.x, target.y, target.width, target.height, occupied.x, occupied.y, occupied.width, occupied.height));
 }
