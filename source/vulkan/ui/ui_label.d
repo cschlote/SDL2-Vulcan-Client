@@ -39,8 +39,8 @@ final class UiLabel : UiWidget
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        const measuredWidth = width > 0.0f ? width : context.textWidth(style, text) + textWidthSafetyMargin;
-        const measuredHeight = height > 0.0f ? height : context.textHeight(style);
+        const measuredWidth = context.textWidth(style, text) + textWidthSafetyMargin;
+        const measuredHeight = context.textHeight(style);
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight, 0.0f, 0.0f);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
@@ -76,8 +76,8 @@ final class UiTextBlock : UiWidget
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        const measuredWidth = width > 0.0f ? width : context.textWidth(style, text) + textWidthSafetyMargin;
-        const measuredHeight = height > 0.0f ? height : context.textHeight(style);
+        const measuredWidth = context.textWidth(style, text) + textWidthSafetyMargin;
+        const measuredHeight = context.textHeight(style);
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight, 0.0f, 0.0f);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }

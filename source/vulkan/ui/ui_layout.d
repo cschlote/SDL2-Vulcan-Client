@@ -231,8 +231,8 @@ protected:
                 tallest = childSize.height;
         }
 
-        const measuredWidth = width > 0.0f ? width : widest + paddingLeft + paddingRight;
-        const measuredHeight = height > 0.0f ? height : tallest + paddingTop + paddingBottom;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : widest + paddingLeft + paddingRight;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : tallest + paddingTop + paddingBottom;
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
 
@@ -291,7 +291,7 @@ protected:
                 totalHeight += spacing;
         }
 
-        return UiLayoutSize(width > 0.0f ? width : widest + paddingLeft + paddingRight, height > 0.0f ? height : totalHeight + paddingTop + paddingBottom);
+        return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : widest + paddingLeft + paddingRight, preferredHeight > 0.0f ? preferredHeight : totalHeight + paddingTop + paddingBottom);
     }
 
     override void layoutChildren()
@@ -370,7 +370,7 @@ protected:
                 totalWidth += spacing;
         }
 
-        return UiLayoutSize(width > 0.0f ? width : totalWidth + paddingLeft + paddingRight, height > 0.0f ? height : widest + paddingTop + paddingBottom);
+        return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : totalWidth + paddingLeft + paddingRight, preferredHeight > 0.0f ? preferredHeight : widest + paddingTop + paddingBottom);
     }
 
     override void layoutChildren()

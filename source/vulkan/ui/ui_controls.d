@@ -80,8 +80,8 @@ protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
         const labelWidth = label.length == 0 ? 0.0f : textWidth(context, style, label) + controlGap;
-        const measuredWidth = width > 0.0f ? width : controlHeight + labelWidth;
-        const measuredHeight = height > 0.0f ? height : max(controlHeight, textHeight(context, style));
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : controlHeight + labelWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : max(controlHeight, textHeight(context, style));
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
@@ -126,6 +126,7 @@ final class UiSlider : UiWidget
     float[4] accentColor;
     float[4] textColor;
     void delegate(float) onChanged;
+    private bool dragging;
 
     this(string label, float minimum, float maximum, float value, float x = 0.0f, float y = 0.0f, float width = 220.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
     {
@@ -148,12 +149,20 @@ final class UiSlider : UiWidget
             onChanged(value);
     }
 
+    override bool dispatchPointerEvent(ref UiPointerEvent event)
+    {
+        if (dragging)
+            return handlePointerEvent(event);
+
+        return super.dispatchPointerEvent(event);
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
         const labelText = format("%s %.2f", label, value);
-        const measuredWidth = width > 0.0f ? width : max(180.0f, textWidth(context, style, labelText) + 80.0f);
-        const measuredHeight = height > 0.0f ? height : controlHeight;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : max(180.0f, textWidth(context, style, labelText) + 80.0f);
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : controlHeight;
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, float.max, measuredHeight, 1.0f, 0.0f);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
@@ -174,12 +183,33 @@ protected:
 
     override bool handlePointerEvent(ref UiPointerEvent event)
     {
-        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
-            return false;
+        if (event.kind == UiPointerEventKind.buttonUp && event.button == 1)
+        {
+            dragging = false;
+            return true;
+        }
 
-        const ratio = width > 0.0f ? clampFloat(event.x / width, 0.0f, 1.0f) : 0.0f;
-        setValue(minimum + (maximum - minimum) * ratio);
+        if (event.kind == UiPointerEventKind.move)
+        {
+            if (!dragging)
+                return false;
+
+            updateValueFromPointer(event.x);
+            return true;
+        }
+
+        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
+            return dragging;
+
+        dragging = true;
+        updateValueFromPointer(event.x);
         return true;
+    }
+
+    void updateValueFromPointer(float pointerX)
+    {
+        const ratio = width > 0.0f ? clampFloat(pointerX / width, 0.0f, 1.0f) : 0.0f;
+        setValue(minimum + (maximum - minimum) * ratio);
     }
 }
 
@@ -219,8 +249,8 @@ protected:
         foreach (option; options)
             widest = max(widest, textWidth(context, style, option));
 
-        const measuredWidth = width > 0.0f ? width : widest + controlPaddingX * 2.0f + 28.0f;
-        const measuredHeight = height > 0.0f ? height : controlHeight;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : widest + controlPaddingX * 2.0f + 28.0f;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : controlHeight;
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
@@ -280,8 +310,8 @@ protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
         const sampleText = text.length != 0 ? text : placeholder;
-        const measuredWidth = width > 0.0f ? width : max(140.0f, textWidth(context, style, sampleText) + controlPaddingX * 2.0f);
-        const measuredHeight = height > 0.0f ? height : controlHeight;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : max(140.0f, textWidth(context, style, sampleText) + controlPaddingX * 2.0f);
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : controlHeight;
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, float.max, measuredHeight, 1.0f, 0.0f);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
@@ -335,6 +365,27 @@ unittest
 
     assert(slider.dispatchPointerEvent(event));
     assert(slider.value > 4.9f && slider.value < 5.1f);
+}
+
+@("UiSlider drags while pointer is captured")
+unittest
+{
+    auto slider = new UiSlider("Scale", 0.0f, 10.0f, 0.0f, 0.0f, 0.0f, 200.0f, 28.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 10.0f;
+    event.y = 20.0f;
+    assert(slider.dispatchPointerEvent(event));
+
+    event.kind = UiPointerEventKind.move;
+    event.x = 150.0f;
+    assert(slider.dispatchPointerEvent(event));
+    assert(slider.value > 7.4f && slider.value < 7.6f);
+
+    event.kind = UiPointerEventKind.buttonUp;
+    assert(slider.dispatchPointerEvent(event));
 }
 
 @("UiDropdown cycles options")

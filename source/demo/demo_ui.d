@@ -85,8 +85,8 @@ private final class LayoutDemoProbeBox : UiWidget
 
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        setLayoutHint(width, height, width, height, width, height, 0.0f, 0.0f);
-        return UiLayoutSize(width, height);
+        setLayoutHint(preferredWidth, preferredHeight, preferredWidth, preferredHeight, preferredWidth, preferredHeight, 0.0f, 0.0f);
+        return UiLayoutSize(preferredWidth, preferredHeight);
     }
 
     override void renderSelf(ref UiRenderContext context)

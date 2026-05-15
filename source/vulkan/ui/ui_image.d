@@ -44,8 +44,8 @@ final class UiImage : UiWidget
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        const measuredWidth = width > 0.0f ? width : defaultImageSize;
-        const measuredHeight = height > 0.0f ? height : defaultImageSize;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : defaultImageSize;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : defaultImageSize;
         setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight);
         return UiLayoutSize(measuredWidth, measuredHeight);
     }

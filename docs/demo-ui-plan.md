@@ -83,6 +83,8 @@ The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible
 
 Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
 
+Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
+
 ## Settings Policy
 
 Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.

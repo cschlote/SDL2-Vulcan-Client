@@ -14,6 +14,7 @@
 - Colored the UI debug bounds by widget/layout type so nested layout boxes are easier to distinguish.
 - Fixed `UiWindow` content layout so direct body widgets fill the available content root instead of bypassing the root layout box.
 - Fixed retained layout shrinking after a window was resized larger, and made the widget demo rows grow vertically.
+- Fixed layout measurement so arranged widget sizes do not become new intrinsic sizes, and improved slider dragging.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.
 
