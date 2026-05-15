@@ -419,7 +419,9 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         auto label = new UiLabel(cast(string)rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusWindowPlatformColor);
         row.add(label);
 
-        row.add(new UiSpacer(statusWindowColumnGap, metrics.rowHeight));
+        auto spacer = new UiSpacer(statusWindowColumnGap, metrics.rowHeight);
+        spacer.setLayoutHint(statusWindowColumnGap, metrics.rowHeight, statusWindowColumnGap, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
+        row.add(spacer);
 
         float[4] valueColor;
         switch (index)
