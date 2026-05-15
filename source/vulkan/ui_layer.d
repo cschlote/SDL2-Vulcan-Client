@@ -905,8 +905,9 @@ private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layout
 
     auto centerPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
     centerPanel.add(new UiLabel("CENTER PANEL", 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f]));
-    centerPanel.add(new UiTextBlock("THIS COLUMN EXPANDS WITH THE WINDOW.\nTHE TEXT STAYS RETAINED.", 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight * 2.0f));
-    centerPanel.add(new UiLabel("VERTICAL STACK", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f], smallTextHeight));
+    centerPanel.add(new UiLabel("SHORT LABELS", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+    centerPanel.add(new UiLabel("NO OVERLAP WHEN SHRINKING", 0.0f, 0.0f, UiTextStyle.small, [0.90f, 0.95f, 1.00f, 1.00f]));
+    centerPanel.add(new UiButton("CENTER ACTION", 0.0f, 0.0f, 0.0f, 0.0f, [0.16f, 0.18f, 0.24f, 0.96f], [0.20f, 0.56f, 0.98f, 1.00f], [1.00f, 1.00f, 1.00f, 1.00f]));
     panelRow.add(centerPanel);
 
     auto rightPanel = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);
@@ -1077,7 +1078,7 @@ private HudWindowRect buildCenterRect(float extentWidth, float extentHeight, ref
     const centerButtonHeight = max(cast(float)mediumFont.lineHeight + 10.0f, 24.0f);
 
     const leftPanelWidth = max(max(textBlockWidth(mediumFont, "LEFT PANEL"), textBlockWidth(smallFont, "HEADER DRAG")), measuredButtonWidth(mediumFont, "CHECK", 20.0f));
-    const centerPanelWidth = max(max(textBlockWidth(mediumFont, "CENTER PANEL"), textBlockWidth(mediumFont, "THIS COLUMN EXPANDS WITH THE WINDOW.")), textBlockWidth(smallFont, "VERTICAL STACK"));
+    const centerPanelWidth = max(max(max(textBlockWidth(mediumFont, "CENTER PANEL"), textBlockWidth(smallFont, "SHORT LABELS")), textBlockWidth(smallFont, "NO OVERLAP WHEN SHRINKING")), measuredButtonWidth(mediumFont, "CENTER ACTION", 20.0f));
     const rightPanelWidth = max(max(textBlockWidth(mediumFont, "RIGHT PANEL"), measuredButtonWidth(mediumFont, "LAYOUT", 20.0f)), measuredButtonWidth(mediumFont, "TEST", 20.0f));
     const panelWidth = leftPanelWidth + 20.0f + centerPanelWidth + 20.0f + rightPanelWidth;
 
