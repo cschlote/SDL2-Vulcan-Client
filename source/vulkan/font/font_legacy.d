@@ -22,10 +22,10 @@ import std.format;
 import bindbc.freetype;
 import std.algorithm : max;
 import std.exception : enforce;
-import std.file : exists;
+import std.file : SpanMode, dirEntries, exists;
 import std.math : abs, ceil, isInfinity, isNaN, sqrt;
 import std.process : environment;
-import std.string : indexOf, toStringz;
+import std.string : endsWith, indexOf, toLower, toStringz;
 
 import logging : logLine, logLineVerbose;
 import vulkan.pipeline : Vertex;
@@ -159,6 +159,391 @@ string selectDefaultMonospaceFontPath()
     return "/usr/share/fonts/noto/NotoSansMono-Regular.ttf".idup;
 }
 
+private string normalizeGlyphSetForAtlas(string glyphSet)
+{
+    string normalized = glyphSet;
+    if (indexOf(normalized, '?') < 0)
+        normalized ~= "?";
+    if (indexOf(normalized, ' ') < 0)
+        normalized = ' ' ~ normalized;
+
+    return normalized;
+}
+
+private RenderBounds freeTypeMeasureTextBounds(string fontPath, uint pixelHeight, string text)
+{
+    auto loadResult = loadFreeType();
+    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
+
+    FT_Library library = null;
+    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
+    scope (exit)
+        if (library !is null)
+            FT_Done_FreeType(library);
+
+    FT_Face face = null;
+    enforce(FT_New_Face(library, fontPath.toStringz, 0, &face) == 0, "FT_New_Face failed for font path: " ~ fontPath);
+    scope (exit)
+        if (face !is null)
+            FT_Done_Face(face);
+
+    enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
+
+    RenderBounds bounds;
+    float cursorX = 0.0f;
+    float cursorY = 0.0f;
+    const baselineOffset = cast(float)face.size.metrics.ascender / 64.0f;
+    const lineHeight = cast(float)face.size.metrics.height / 64.0f;
+    dchar previousChar = '\0';
+    bool first = true;
+    float minLeft = 0.0f;
+    float maxRight = 0.0f;
+    float minTop = 0.0f;
+    float maxBottom = 0.0f;
+
+    foreach (ch; text)
+    {
+        if (ch == '\n')
+        {
+            cursorX = 0.0f;
+            cursorY += lineHeight;
+            previousChar = '\0';
+            continue;
+        }
+
+        if (previousChar != '\0')
+        {
+            const previousGlyphIndex = FT_Get_Char_Index(face, previousChar);
+            const currentGlyphIndex = FT_Get_Char_Index(face, ch);
+            FT_Vector kerningVector;
+            if (FT_Get_Kerning(face, previousGlyphIndex, currentGlyphIndex, 0, &kerningVector) == 0)
+                cursorX += cast(float)kerningVector.x / 64.0f;
+        }
+
+        const glyphIndex = FT_Get_Char_Index(face, ch);
+        if (glyphIndex != 0)
+        {
+            enforce(FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT) == 0, "FT_Load_Glyph failed while measuring text bounds.");
+            enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while measuring text bounds.");
+
+            const glyph = face.glyph;
+            const left = cursorX + cast(float)glyph.bitmap_left;
+            const top = cursorY + baselineOffset - cast(float)glyph.bitmap_top;
+            const right = left + cast(float)glyph.bitmap.width;
+            const bottom = top + cast(float)glyph.bitmap.rows;
+
+            if (first)
+            {
+                minLeft = left;
+                maxRight = right;
+                minTop = top;
+                maxBottom = bottom;
+                first = false;
+            }
+            else
+            {
+                if (left < minLeft)
+                    minLeft = left;
+                if (right > maxRight)
+                    maxRight = right;
+                if (top < minTop)
+                    minTop = top;
+                if (bottom > maxBottom)
+                    maxBottom = bottom;
+            }
+
+            cursorX += cast(float)glyph.advance.x / 64.0f;
+        }
+        else
+        {
+            cursorX += pixelHeight * 0.6f;
+        }
+
+        previousChar = ch;
+    }
+
+    if (!first)
+    {
+        bounds.width = maxRight - minLeft;
+        bounds.height = maxBottom - minTop;
+    }
+
+    return bounds;
+}
+
+private float freeTypeMeasureTextWidth(string fontPath, uint pixelHeight, string text)
+{
+    auto loadResult = loadFreeType();
+    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
+
+    FT_Library library = null;
+    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
+    scope (exit)
+        if (library !is null)
+            FT_Done_FreeType(library);
+
+    FT_Face face = null;
+    enforce(FT_New_Face(library, fontPath.toStringz, 0, &face) == 0, "FT_New_Face failed for font path: " ~ fontPath);
+    scope (exit)
+        if (face !is null)
+            FT_Done_Face(face);
+
+    enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
+
+    float widestWidth = 0.0f;
+    float cursorX = 0.0f;
+    float lineLeft = 0.0f;
+    float lineRight = 0.0f;
+    bool lineHasGlyph = false;
+    dchar previousChar = '\0';
+
+    void commitLine()
+    {
+        const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
+        const renderedRight = lineRight > cursorX ? lineRight : cursorX;
+        const lineWidth = renderedRight - renderedLeft;
+        widestWidth = lineWidth > widestWidth ? lineWidth : widestWidth;
+
+        cursorX = 0.0f;
+        lineLeft = 0.0f;
+        lineRight = 0.0f;
+        lineHasGlyph = false;
+        previousChar = '\0';
+    }
+
+    foreach (ch; text)
+    {
+        if (ch == '\n')
+        {
+            commitLine();
+            continue;
+        }
+
+        if (previousChar != '\0')
+        {
+            const previousGlyphIndex = FT_Get_Char_Index(face, previousChar);
+            const currentGlyphIndex = FT_Get_Char_Index(face, ch);
+            FT_Vector kerningVector;
+            if (FT_Get_Kerning(face, previousGlyphIndex, currentGlyphIndex, 0, &kerningVector) == 0)
+                cursorX += cast(float)kerningVector.x / 64.0f;
+        }
+
+        const glyphIndex = FT_Get_Char_Index(face, ch);
+        if (glyphIndex != 0)
+        {
+            enforce(FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT) == 0, "FT_Load_Glyph failed while measuring text width.");
+            enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while measuring text width.");
+
+            const glyph = face.glyph;
+            const advance = cast(float)glyph.advance.x / 64.0f;
+            const left = cursorX + cast(float)glyph.bitmap_left;
+            const right = left + cast(float)glyph.bitmap.width;
+
+            if (!lineHasGlyph)
+            {
+                lineLeft = left;
+                lineRight = right;
+                lineHasGlyph = true;
+            }
+            else
+            {
+                lineLeft = lineLeft < left ? lineLeft : left;
+                lineRight = lineRight > right ? lineRight : right;
+            }
+
+            cursorX += advance;
+        }
+        else
+        {
+            cursorX += pixelHeight * 0.6f;
+        }
+
+        previousChar = ch;
+    }
+
+    const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
+    const renderedRight = lineRight > cursorX ? lineRight : cursorX;
+    const lineWidth = renderedRight - renderedLeft;
+    return lineWidth > widestWidth ? lineWidth : widestWidth;
+}
+
+private string[] collectSystemFontPaths()
+{
+    string[] fontPaths;
+    bool[string] seen;
+
+    version(linux)
+    {
+        foreach (root; [
+            "/usr/share/fonts",
+            "/usr/local/share/fonts",
+            environment.get("HOME", "") ~ "/.local/share/fonts",
+        ])
+        {
+            if (root.length == 0 || !root.exists)
+                continue;
+
+            foreach (entry; dirEntries(root, SpanMode.depth))
+            {
+                if (!entry.isFile)
+                    continue;
+
+                auto lowerName = entry.name.toLower();
+                if (!(lowerName.endsWith(".ttf") || lowerName.endsWith(".otf") || lowerName.endsWith(".ttc")))
+                    continue;
+
+                if (entry.name in seen)
+                    continue;
+
+                seen[entry.name] = true;
+                fontPaths ~= entry.name.idup;
+            }
+        }
+    }
+
+    if (fontPaths.length == 0)
+        fontPaths ~= selectDefaultFontPath();
+
+    return fontPaths;
+}
+
+private bool fontSupportsGlyphSet(string fontPath, string glyphSet, uint pixelHeight)
+{
+    auto loadResult = loadFreeType();
+    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
+
+    FT_Library library = null;
+    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
+    scope (exit)
+        if (library !is null)
+            FT_Done_FreeType(library);
+
+    FT_Face face = null;
+    if (FT_New_Face(library, fontPath.toStringz, 0, &face) != 0)
+        return false;
+    scope (exit)
+        if (face !is null)
+            FT_Done_Face(face);
+
+    if (FT_Set_Pixel_Sizes(face, 0, pixelHeight) != 0)
+        return false;
+
+    foreach (ch; glyphSet)
+    {
+        if (ch == '\n' || ch == '\r')
+            continue;
+
+        if (FT_Get_Char_Index(face, ch) == 0)
+            return false;
+    }
+
+    return true;
+}
+
+private bool fontSupportsText(string fontPath, string text, uint pixelHeight)
+{
+    return fontSupportsGlyphSet(fontPath, collectGlyphSet([text]), pixelHeight);
+}
+
+private void verifyAtlasBitmapMatchesFreeType(string fontPath, uint pixelHeight, string glyphSet, ref const(FontAtlas) atlas)
+{
+    auto loadResult = loadFreeType();
+    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
+
+    FT_Library library = null;
+    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
+    scope (exit)
+        if (library !is null)
+            FT_Done_FreeType(library);
+
+    FT_Face face = null;
+    enforce(FT_New_Face(library, fontPath.toStringz, 0, &face) == 0, "FT_New_Face failed for font path: " ~ fontPath);
+    scope (exit)
+        if (face !is null)
+            FT_Done_Face(face);
+
+    enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
+
+    const normalizedGlyphSet = normalizeGlyphSetForAtlas(glyphSet);
+    uint maxGlyphWidth = 1;
+    uint maxGlyphHeight = 1;
+
+    foreach (ch; normalizedGlyphSet)
+    {
+        enforce(FT_Load_Char(face, ch, FT_LOAD_DEFAULT) == 0, "FT_Load_Char failed while verifying glyph metrics.");
+        enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while verifying glyph metrics.");
+        maxGlyphWidth = max(maxGlyphWidth, cast(uint)face.glyph.bitmap.width);
+        maxGlyphHeight = max(maxGlyphHeight, cast(uint)face.glyph.bitmap.rows);
+    }
+
+    const columns = cast(uint)ceil(sqrt(cast(double)normalizedGlyphSet.length));
+    const cellWidth = maxGlyphWidth + 2;
+    const cellHeight = maxGlyphHeight + 2;
+
+    foreach (index, ch; normalizedGlyphSet)
+    {
+        enforce(FT_Load_Char(face, ch, FT_LOAD_DEFAULT) == 0, "FT_Load_Char failed while verifying atlas bitmap.");
+        enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while verifying atlas bitmap.");
+
+        const bitmap = face.glyph.bitmap;
+        const glyphColumn = cast(uint)index % columns;
+        const glyphRow = cast(uint)index / columns;
+        const atlasX = glyphColumn * cellWidth + 1;
+        const atlasY = glyphRow * cellHeight + 1;
+
+        const glyphPtr = ch in atlas.glyphs;
+        assert(glyphPtr !is null, format("atlas is missing glyph %s", ch));
+        const glyph = *glyphPtr;
+
+        assert(abs(glyph.advance - cast(float)face.glyph.advance.x / 64.0f) <= 0.01f, format("glyph %s advance mismatch: atlas=%s freetype=%s", ch, glyph.advance, cast(float)face.glyph.advance.x / 64.0f));
+        assert(abs(glyph.bearingX - cast(float)face.glyph.bitmapLeft) <= 0.01f, format("glyph %s bearingX mismatch: atlas=%s freetype=%s", ch, glyph.bearingX, cast(float)face.glyph.bitmapLeft));
+        assert(abs(glyph.bearingY - cast(float)face.glyph.bitmapTop) <= 0.01f, format("glyph %s bearingY mismatch: atlas=%s freetype=%s", ch, glyph.bearingY, cast(float)face.glyph.bitmapTop));
+        assert(abs(glyph.width - cast(float)bitmap.width) <= 0.01f, format("glyph %s width mismatch: atlas=%s freetype=%s", ch, glyph.width, cast(float)bitmap.width));
+        assert(abs(glyph.height - cast(float)bitmap.rows) <= 0.01f, format("glyph %s height mismatch: atlas=%s freetype=%s", ch, glyph.height, cast(float)bitmap.rows));
+
+        const pitch = bitmap.pitch;
+        const rowStride = cast(uint)(pitch < 0 ? -pitch : pitch);
+        const sourceStart = pitch < 0 ? bitmap.buffer + (bitmap.rows - 1) * rowStride : bitmap.buffer;
+
+        foreach (row; 0 .. bitmap.rows)
+        {
+            const sourceRow = pitch < 0 ? sourceStart - cast(ptrdiff_t)row * rowStride : sourceStart + row * rowStride;
+            foreach (column; 0 .. bitmap.width)
+            {
+                const sourceValue = sourceRow[column];
+                const destinationIndex = ((atlasY + row) * atlas.width + (atlasX + column)) * 4;
+                assert(atlas.pixels[destinationIndex + 3] == sourceValue, format("glyph %s alpha mismatch at row=%s column=%s: atlas=%s freetype=%s", ch, row, column, atlas.pixels[destinationIndex + 3], sourceValue));
+            }
+        }
+    }
+
+    foreach (leftChar; normalizedGlyphSet)
+    {
+        const leftGlyphIndex = FT_Get_Char_Index(face, leftChar);
+        foreach (rightChar; normalizedGlyphSet)
+        {
+            const rightGlyphIndex = FT_Get_Char_Index(face, rightChar);
+
+            FT_Vector kerningVector;
+            const hasFreeTypeKerning = FT_Get_Kerning(face, leftGlyphIndex, rightGlyphIndex, 0, &kerningVector) == 0 && kerningVector.x != 0;
+            const(float)* kerningPtr = null;
+            const leftKerningPtr = leftChar in atlas.kerning;
+            if (leftKerningPtr !is null)
+                kerningPtr = rightChar in *leftKerningPtr;
+
+            if (hasFreeTypeKerning)
+            {
+                assert(kerningPtr !is null, format("missing kerning entry for %s -> %s", leftChar, rightChar));
+                assert(abs(*kerningPtr - cast(float)kerningVector.x / 64.0f) <= 0.01f, format("kerning mismatch for %s -> %s: atlas=%s freetype=%s", leftChar, rightChar, *kerningPtr, cast(float)kerningVector.x / 64.0f));
+            }
+            else
+            {
+                assert(kerningPtr is null, format("unexpected kerning entry for %s -> %s", leftChar, rightChar));
+            }
+        }
+    }
+}
+
 /** Builds a FreeType-rasterized atlas for the requested glyph set.
  *
  * The resulting atlas is consumed by the UI and overlay modules, which render
@@ -192,18 +577,7 @@ FontAtlas buildFontAtlas(string fontPath, uint pixelHeight, string glyphSet = de
 
     enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
 
-    string uniqueGlyphSet = glyphSet;
-    if (indexOf(uniqueGlyphSet, '?') < 0)
-    {
-        logLineVerbose("Glyph set missing fallback '?', appending it.");
-        uniqueGlyphSet ~= "?";
-    }
-    if (indexOf(uniqueGlyphSet, ' ') < 0)
-    {
-        logLineVerbose("Glyph set missing space, prepending it.");
-        uniqueGlyphSet = ' ' ~ uniqueGlyphSet;
-    }
-
+    string uniqueGlyphSet = normalizeGlyphSetForAtlas(glyphSet);
     uint maxGlyphWidth = 1;
     uint maxGlyphHeight = 1;
     size_t kerningPairCount = 0;
@@ -515,210 +889,6 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     logLineVerbose("appendText: emitted vertices=", vertices.length - vertexCountBefore, ", quads=", (vertices.length - vertexCountBefore) / 6, ", final cursor=", cursorX, ",", cursorY);
 }
 
-private string normalizeGlyphSetForAtlas(string glyphSet)
-{
-    string normalized = glyphSet;
-    if (indexOf(normalized, '?') < 0)
-        normalized ~= "?";
-    if (indexOf(normalized, ' ') < 0)
-        normalized = ' ' ~ normalized;
-
-    return normalized;
-}
-
-private float freeTypeMeasureTextWidth(string fontPath, uint pixelHeight, string text)
-{
-    auto loadResult = loadFreeType();
-    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
-
-    FT_Library library = null;
-    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
-    scope (exit)
-        if (library !is null)
-            FT_Done_FreeType(library);
-
-    FT_Face face = null;
-    enforce(FT_New_Face(library, fontPath.toStringz, 0, &face) == 0, "FT_New_Face failed for font path: " ~ fontPath);
-    scope (exit)
-        if (face !is null)
-            FT_Done_Face(face);
-
-    enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
-
-    float widestWidth = 0.0f;
-    float cursorX = 0.0f;
-    float lineLeft = 0.0f;
-    float lineRight = 0.0f;
-    bool lineHasGlyph = false;
-    FT_UInt previousGlyphIndex = 0;
-
-    void commitLine()
-    {
-        const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
-        const renderedRight = lineRight > cursorX ? lineRight : cursorX;
-        const lineWidth = renderedRight - renderedLeft;
-        widestWidth = lineWidth > widestWidth ? lineWidth : widestWidth;
-
-        cursorX = 0.0f;
-        lineLeft = 0.0f;
-        lineRight = 0.0f;
-        lineHasGlyph = false;
-        previousGlyphIndex = 0;
-    }
-
-    foreach (ch; text)
-    {
-        if (ch == '\n')
-        {
-            commitLine();
-            continue;
-        }
-
-        const glyphIndex = FT_Get_Char_Index(face, ch);
-        if (previousGlyphIndex != 0)
-        {
-            FT_Vector kerningVector;
-            if (FT_Get_Kerning(face, previousGlyphIndex, glyphIndex, 0, &kerningVector) == 0)
-                cursorX += cast(float)kerningVector.x / 64.0f;
-        }
-
-        if (glyphIndex != 0)
-        {
-            enforce(FT_Load_Glyph(face, glyphIndex, FT_LOAD_DEFAULT) == 0, "FT_Load_Glyph failed while measuring text width.");
-            enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while measuring text width.");
-
-            const glyph = face.glyph;
-            const advance = cast(float)glyph.advance.x / 64.0f;
-            const left = cursorX + cast(float)glyph.bitmap_left;
-            const right = left + cast(float)glyph.bitmap.width;
-
-            if (!lineHasGlyph)
-            {
-                lineLeft = left;
-                lineRight = right;
-                lineHasGlyph = true;
-            }
-            else
-            {
-                lineLeft = lineLeft < left ? lineLeft : left;
-                lineRight = lineRight > right ? lineRight : right;
-            }
-
-            cursorX += advance;
-        }
-        else
-        {
-            cursorX += pixelHeight * 0.6f;
-        }
-
-        previousGlyphIndex = glyphIndex;
-    }
-
-    const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
-    const renderedRight = lineRight > cursorX ? lineRight : cursorX;
-    const lineWidth = renderedRight - renderedLeft;
-    return lineWidth > widestWidth ? lineWidth : widestWidth;
-}
-
-private void verifyAtlasBitmapMatchesFreeType(string fontPath, uint pixelHeight, string glyphSet, ref const(FontAtlas) atlas)
-{
-    auto loadResult = loadFreeType();
-    enforce(loadResult != FTSupport.noLibrary && loadResult != FTSupport.badLibrary, "loadFreeType failed.");
-
-    FT_Library library = null;
-    enforce(FT_Init_FreeType(&library) == 0, "FT_Init_FreeType failed.");
-    scope (exit)
-        if (library !is null)
-            FT_Done_FreeType(library);
-
-    FT_Face face = null;
-    enforce(FT_New_Face(library, fontPath.toStringz, 0, &face) == 0, "FT_New_Face failed for font path: " ~ fontPath);
-    scope (exit)
-        if (face !is null)
-            FT_Done_Face(face);
-
-    enforce(FT_Set_Pixel_Sizes(face, 0, pixelHeight) == 0, "FT_Set_Pixel_Sizes failed.");
-
-    const normalizedGlyphSet = normalizeGlyphSetForAtlas(glyphSet);
-    uint maxGlyphWidth = 1;
-    uint maxGlyphHeight = 1;
-
-    foreach (ch; normalizedGlyphSet)
-    {
-        enforce(FT_Load_Char(face, ch, FT_LOAD_DEFAULT) == 0, "FT_Load_Char failed while verifying glyph metrics.");
-        enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while verifying glyph metrics.");
-        maxGlyphWidth = max(maxGlyphWidth, cast(uint)face.glyph.bitmap.width);
-        maxGlyphHeight = max(maxGlyphHeight, cast(uint)face.glyph.bitmap.rows);
-    }
-
-    const columns = cast(uint)ceil(sqrt(cast(double)normalizedGlyphSet.length));
-    const cellWidth = maxGlyphWidth + 2;
-    const cellHeight = maxGlyphHeight + 2;
-
-    foreach (index, ch; normalizedGlyphSet)
-    {
-        enforce(FT_Load_Char(face, ch, FT_LOAD_DEFAULT) == 0, "FT_Load_Char failed while verifying atlas bitmap.");
-        enforce(FT_Render_Glyph(face.glyph, FT_Render_Mode.normal) == 0, "FT_Render_Glyph failed while verifying atlas bitmap.");
-
-        const bitmap = face.glyph.bitmap;
-        const glyphColumn = cast(uint)index % columns;
-        const glyphRow = cast(uint)index / columns;
-        const atlasX = glyphColumn * cellWidth + 1;
-        const atlasY = glyphRow * cellHeight + 1;
-
-        const glyphPtr = ch in atlas.glyphs;
-        assert(glyphPtr !is null, format("atlas is missing glyph %s", ch));
-        const glyph = *glyphPtr;
-
-        assert(abs(glyph.advance - cast(float)face.glyph.advance.x / 64.0f) <= 0.01f, format("glyph %s advance mismatch: atlas=%s freetype=%s", ch, glyph.advance, cast(float)face.glyph.advance.x / 64.0f));
-        assert(abs(glyph.bearingX - cast(float)face.glyph.bitmapLeft) <= 0.01f, format("glyph %s bearingX mismatch: atlas=%s freetype=%s", ch, glyph.bearingX, cast(float)face.glyph.bitmapLeft));
-        assert(abs(glyph.bearingY - cast(float)face.glyph.bitmapTop) <= 0.01f, format("glyph %s bearingY mismatch: atlas=%s freetype=%s", ch, glyph.bearingY, cast(float)face.glyph.bitmapTop));
-        assert(abs(glyph.width - cast(float)bitmap.width) <= 0.01f, format("glyph %s width mismatch: atlas=%s freetype=%s", ch, glyph.width, cast(float)bitmap.width));
-        assert(abs(glyph.height - cast(float)bitmap.rows) <= 0.01f, format("glyph %s height mismatch: atlas=%s freetype=%s", ch, glyph.height, cast(float)bitmap.rows));
-
-        const pitch = bitmap.pitch;
-        const rowStride = cast(uint)(pitch < 0 ? -pitch : pitch);
-        const sourceStart = pitch < 0 ? bitmap.buffer + (bitmap.rows - 1) * rowStride : bitmap.buffer;
-
-        foreach (row; 0 .. bitmap.rows)
-        {
-            const sourceRow = pitch < 0 ? sourceStart - cast(ptrdiff_t)row * rowStride : sourceStart + row * rowStride;
-            foreach (column; 0 .. bitmap.width)
-            {
-                const sourceValue = sourceRow[column];
-                const destinationIndex = ((atlasY + row) * atlas.width + (atlasX + column)) * 4;
-                assert(atlas.pixels[destinationIndex + 3] == sourceValue, format("glyph %s alpha mismatch at row=%s column=%s: atlas=%s freetype=%s", ch, row, column, atlas.pixels[destinationIndex + 3], sourceValue));
-            }
-        }
-    }
-
-    foreach (leftChar; normalizedGlyphSet)
-    {
-        const leftGlyphIndex = FT_Get_Char_Index(face, leftChar);
-        foreach (rightChar; normalizedGlyphSet)
-        {
-            const rightGlyphIndex = FT_Get_Char_Index(face, rightChar);
-
-            FT_Vector kerningVector;
-            const hasFreeTypeKerning = FT_Get_Kerning(face, leftGlyphIndex, rightGlyphIndex, 0, &kerningVector) == 0 && kerningVector.x != 0;
-            const(float)* kerningPtr = null;
-            const leftKerningPtr = leftChar in atlas.kerning;
-            if (leftKerningPtr !is null)
-                kerningPtr = rightChar in *leftKerningPtr;
-
-            if (hasFreeTypeKerning)
-            {
-                assert(kerningPtr !is null, format("missing kerning entry for %s -> %s", leftChar, rightChar));
-                assert(abs(*kerningPtr - cast(float)kerningVector.x / 64.0f) <= 0.01f, format("kerning mismatch for %s -> %s: atlas=%s freetype=%s", leftChar, rightChar, *kerningPtr, cast(float)kerningVector.x / 64.0f));
-            }
-            else
-            {
-                assert(kerningPtr is null, format("unexpected kerning entry for %s -> %s", leftChar, rightChar));
-            }
-        }
-    }
-}
-
 /** Pixel-space bounds of rendered text geometry. */
 private struct RenderBounds
 {
@@ -852,6 +1022,19 @@ private void appendTexturedQuad(ref Vertex[] vertices, float left, float top, fl
     vertices ~= Vertex([x0, y1, z], color, [0.0f, 0.0f, 1.0f], [u0, v1]);
 }
 
+
+/* The unittests for our font implementation
+ *
+ * These tests are designed to verify the core assumptions of our font system
+ * and catch any regressions in the FreeType integration or atlas generation.
+ * They do not cover the UI layer's text layout or rendering, which is tested
+ * separately in the UI unit tests.
+ *
+ * The tests use a default glyph set that includes the fallback character and
+ * space, so they can be run without relying on specific translation files.
+ */
+
+
 @("default glyph set includes fallback characters")
 unittest
 {
@@ -903,9 +1086,11 @@ unittest
 
     const measuredWidth = measureTextWidth(atlas, "A");
     const freetypeWidth = freeTypeMeasureTextWidth(fontPath, 20, "A");
+    const freetypeBounds = freeTypeMeasureTextBounds(fontPath, 20, "A");
     const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
     assert(abs(measuredWidth - freetypeWidth) <= 0.01f, format("measured width %s should match FreeType width %s", measuredWidth, freetypeWidth));
     assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
+    assert(abs(renderedBounds.height - freetypeBounds.height) <= 0.75f, format("rendered height %s should match FreeType height %s", renderedBounds.height, freetypeBounds.height));
     assert(renderedBounds.width > 0.0f);
 }
 
@@ -921,6 +1106,7 @@ unittest
     const singleVWidth = measureTextWidth(atlas, "V");
     const pairWidth = measureTextWidth(atlas, "AV");
     const freetypePairWidth = freeTypeMeasureTextWidth(fontPath, 20, "AV");
+    const freetypePairBounds = freeTypeMeasureTextBounds(fontPath, 20, "AV");
 
     Vertex[] vertices;
     appendText(vertices, atlas, "AV", 20.0f, 40.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
@@ -928,6 +1114,7 @@ unittest
     const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
     assert(abs(pairWidth - freetypePairWidth) <= 0.01f, format("measured width %s should match FreeType width %s", pairWidth, freetypePairWidth));
     assert(abs(pairWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", pairWidth, renderedBounds.width));
+    assert(abs(renderedBounds.height - freetypePairBounds.height) <= 0.75f, format("rendered height %s should match FreeType height %s", renderedBounds.height, freetypePairBounds.height));
     assert(pairWidth <= singleAWidth + singleVWidth + 0.75f, format("kerning pair width %s should not exceed isolated widths %s + %s", pairWidth, singleAWidth, singleVWidth));
 
     const leftKerningPtr = 'A' in atlas.kerning;
@@ -953,12 +1140,94 @@ unittest
     const firstLineWidth = measureTextWidth(atlas, "Hi");
     const secondLineWidth = measureTextWidth(atlas, "There");
     const freetypeWidth = freeTypeMeasureTextWidth(fontPath, 18, "Hi\nThere");
+    const freetypeBounds = freeTypeMeasureTextBounds(fontPath, 18, "Hi\nThere");
     const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
     assert(measuredWidth >= firstLineWidth);
     assert(measuredWidth >= secondLineWidth);
     assert(abs(measuredWidth - freetypeWidth) <= 0.01f, format("measured width %s should match FreeType width %s", measuredWidth, freetypeWidth));
     assert(abs(measuredWidth - renderedBounds.width) <= 0.75f, format("measured width %s should match rendered width %s", measuredWidth, renderedBounds.width));
+    assert(abs(renderedBounds.height - freetypeBounds.height) <= 0.75f, format("rendered height %s should match FreeType height %s", renderedBounds.height, freetypeBounds.height));
     assert(renderedBounds.height >= atlas.lineHeight, format("rendered multiline height %s should be at least one line height %s", renderedBounds.height, atlas.lineHeight));
+}
+
+@("system fonts cover ligatures and specials")
+unittest
+{
+    // Iterate actual system fonts and exercise the ones that can cover the
+    // requested ligature and special-character samples.
+    const texts = [
+        "\uFB00",
+        "\uFB01",
+        "\uFB02",
+        "\uFB03",
+        "\uFB04",
+        "™",
+        "©",
+        "€",
+        "✓",
+        "Ångström",
+        "naïve",
+        "coöperate",
+        "office",
+        "AV",
+        "To",
+    ];
+
+    const candidateFonts = collectSystemFontPaths();
+    size_t testedFonts;
+    bool sawLigatureText;
+    bool sawSpecialText;
+
+    foreach (fontPath; candidateFonts)
+    {
+        foreach (pixelHeight; [16u, 20u])
+        {
+            string[] supportedTexts;
+            foreach (text; texts)
+            {
+                if (fontSupportsText(fontPath, text, pixelHeight))
+                    supportedTexts ~= text;
+            }
+
+            if (supportedTexts.length < 4)
+                continue;
+
+            const glyphSet = collectGlyphSet(supportedTexts);
+            auto atlas = buildFontAtlas(fontPath, pixelHeight, glyphSet);
+            verifyAtlasBitmapMatchesFreeType(fontPath, pixelHeight, glyphSet, atlas);
+
+            foreach (text; supportedTexts)
+            {
+                const freetypeBounds = freeTypeMeasureTextBounds(fontPath, pixelHeight, text);
+                const freetypeWidth = freeTypeMeasureTextWidth(fontPath, pixelHeight, text);
+                Vertex[] vertices;
+                appendText(vertices, atlas, text, 12.0f, 24.0f, 0.0f, [1.0f, 1.0f, 1.0f, 1.0f], 1000.0f, 1000.0f);
+
+                const measuredWidth = measureTextWidth(atlas, text);
+                const renderedBounds = measureRenderedBounds(vertices, 1000.0f, 1000.0f);
+
+                assert(abs(measuredWidth - freetypeWidth) <= 0.01f, format("measured width %s should match FreeType width %s for %s", measuredWidth, freetypeWidth, text));
+                assert(abs(renderedBounds.width - freetypeBounds.width) <= 1.0f, format("rendered width %s should match FreeType width %s for %s", renderedBounds.width, freetypeBounds.width, text));
+                assert(abs(renderedBounds.height - freetypeBounds.height) <= 1.0f, format("rendered height %s should match FreeType height %s for %s", renderedBounds.height, freetypeBounds.height, text));
+
+                if (text.indexOf("\uFB00") >= 0 || text.indexOf("\uFB01") >= 0 || text.indexOf("\uFB02") >= 0 || text.indexOf("\uFB03") >= 0 || text.indexOf("\uFB04") >= 0)
+                    sawLigatureText = true;
+                if (text.indexOf("™") >= 0 || text.indexOf("©") >= 0 || text.indexOf("€") >= 0 || text.indexOf("✓") >= 0)
+                    sawSpecialText = true;
+            }
+
+            testedFonts++;
+            if (testedFonts >= 3)
+                break;
+        }
+
+        if (testedFonts >= 3)
+            break;
+    }
+
+    assert(testedFonts > 0, "No system font with enough glyph coverage was found for the ligature and special-character tests.");
+    assert(sawLigatureText, "No tested system font exposed the requested ligature glyphs.");
+    assert(sawSpecialText, "No tested system font exposed the requested special glyphs.");
 }
 
 @("atlas bitmap and kerning match FreeType")
