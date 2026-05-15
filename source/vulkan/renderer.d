@@ -34,7 +34,7 @@ import math.matrix;
 import window;
 import vulkan.device;
 import vulkan.instance;
-import vulkan.polyhedra : MeshData, buildPlatonicSolids;
+import vulkan.models.polyhedra : MeshData, buildPlatonicSolids;
 import vulkan.pipeline;
 import vulkan.swapchain;
 

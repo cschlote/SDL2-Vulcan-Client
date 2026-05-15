@@ -13,7 +13,7 @@
  * Copyright: Carsten Schlote, Released under CC-BY-NC-SA 4.0 license, 2018-2026
  * License: CC-BY-NC-SA 4.0
  */
-module vulkan.polyhedra;
+module vulkan.models.polyhedra;
 
 import std.algorithm : sort;
 import std.math : abs, atan2, sqrt;
