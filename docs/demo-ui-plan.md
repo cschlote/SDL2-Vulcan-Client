@@ -69,7 +69,7 @@ The demo should evolve from a test shell into a small application with clear win
 - Main/demo control window: opens tools, exits the app, and exposes common demo actions.
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
 - Widget demo window: interactive examples for buttons, toggles, sliders, dropdowns, and text fields.
-- Chrome demo window: runtime toggles for sizeable, closable, and dragable window chrome so content-root insets can be checked against active chrome elements.
+- Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
 - Settings window: display, controls, gameplay, audio, and UI options.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
@@ -86,7 +86,7 @@ Interactive controls that drag, such as sliders, need local pointer capture afte
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
 
-`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
+`UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary stackable window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. This stacking behavior is independent of the dragable header flag. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
 ## Settings Policy
 

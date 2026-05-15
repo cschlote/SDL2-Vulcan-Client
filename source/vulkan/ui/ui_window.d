@@ -36,6 +36,7 @@ final class UiWindow : UiWidget
     bool sizeable;                                  ///< True when the window can be resized from its corners.
     bool closable;                                  ///< True when the window exposes a close button in the header.
     bool dragable;                                  ///< True when the header indicates drag support and accepts drag gestures.
+    bool stackable = true;                          ///< True when middle-clicking chrome toggles front/back stacking.
     bool dragTracking;                              ///< True while a drag gesture is active.
     bool resizeTracking;                            ///< True while a resize gesture is active.
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
@@ -54,7 +55,7 @@ final class UiWindow : UiWidget
     void delegate(UiResizeHandle) onResizeStart;                ///< Notified when a resize gesture starts.
     void delegate(UiResizeHandle, float, float) onResizeMove;   ///< Notified while a resize gesture is running.
     void delegate(UiResizeHandle) onResizeEnd;                  ///< Notified when a resize gesture ends.
-    void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks the header.
+    void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks free window chrome.
     void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
 
     /**
@@ -132,9 +133,25 @@ final class UiWindow : UiWidget
      */
     void setChromeFlags(bool sizeable, bool closable, bool dragable)
     {
+        setChromeFlags(sizeable, closable, dragable, stackable);
+    }
+
+    /** Updates the interactive chrome flags at runtime.
+     *
+     * Params:
+     *   sizeable = Enables the resize ring and resize hit testing.
+     *   closable = Enables the close button in the header.
+     *   dragable = Enables drag hit testing and drag header styling.
+     *   stackable = Enables middle-click front/back stacking on free chrome.
+     * Returns:
+     *   Nothing.
+     */
+    void setChromeFlags(bool sizeable, bool closable, bool dragable, bool stackable)
+    {
         this.sizeable = sizeable;
         this.closable = closable;
         this.dragable = dragable;
+        this.stackable = stackable;
         if (closable)
             ensureCloseButton();
         updateChromeLayout();
@@ -237,7 +254,7 @@ final class UiWindow : UiWidget
                     return true;
             }
 
-            if (event.button == 2 && dragable && isInWindowChrome(event.x, event.y))
+            if (event.button == 2 && stackable && isInWindowChrome(event.x, event.y))
             {
                 if (onHeaderMiddleClick !is null)
                     onHeaderMiddleClick();

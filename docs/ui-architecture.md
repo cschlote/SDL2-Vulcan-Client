@@ -79,7 +79,7 @@ Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific s
 
 Window content should be ordinary widgets. Application code should build a window body with layout containers and controls, then hand it to `UiWindow`.
 
-Window chrome owns the resize ring and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. The content root is inset away from this chrome ring so application widgets do not overlap resize affordances.
+Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from this chrome ring so application widgets do not overlap resize affordances.
 
 ## Current Widget Set
 

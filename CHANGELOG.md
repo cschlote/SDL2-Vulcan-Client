@@ -6,6 +6,7 @@
 - Improved `UiWindow` chrome with edge resize grips, smaller corner markers, larger title text, and content-root insets that avoid the resize ring.
 - Refined `UiWindow` title and resize-ring layout and added a Chrome Demo window for toggling sizeable, closable, and dragable flags at runtime.
 - Reduced the resize-ring opacity so the window chrome reads more subtly.
+- Split middle-click window stacking from the dragable chrome flag and exposed the stackable flag in the Chrome Demo.
 
 ## Release 26.20.7022
 

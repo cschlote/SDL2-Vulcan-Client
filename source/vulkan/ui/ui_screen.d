@@ -536,7 +536,7 @@ unittest
     auto screen = new UiScreen();
     screen.initialize([]);
 
-    auto first = new UiWindow("first", 0.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, true);
+    auto first = new UiWindow("first", 0.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, false);
     auto second = new UiWindow("second", 100.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, true);
     screen.registerWindowInteractionHandlers(first);
     screen.registerWindowInteractionHandlers(second);
@@ -558,6 +558,10 @@ unittest
 
     event.y = 78.0f;
     assert(screen.dispatchPointerEvent(event));
+    assert(screen.windowsInFrontToBack()[0] is first);
+
+    first.stackable = false;
+    assert(!screen.dispatchPointerEvent(event));
     assert(screen.windowsInFrontToBack()[0] is first);
 }
 
