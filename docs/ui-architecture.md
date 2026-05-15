@@ -98,13 +98,13 @@ The reusable UI package currently provides these retained widgets:
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
 - `UiDropdown`: compact option selector that cycles values until popup menus exist
-- `UiTextField`: single-line text value field with focus state; keyboard editing is still planned
+- `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
 ## UiWidget Box Model
 
-`UiWidget` is the smallest retained UI object: a rectangular box with local coordinates, layout hints, children, and optional input handling.
+`UiWidget` is the smallest retained UI object: a rectangular box with local coordinates, layout hints, children, optional focusability, and optional input handling.
 
 The widget model should continue toward a clear box model:
 
@@ -114,8 +114,11 @@ The widget model should continue toward a clear box model:
 - optional surface/background behavior in specialized widgets
 - padding and spacing in layout containers
 - children positioned in local coordinates
+- optional focus ownership for controls that consume keyboard or text input
 
 Children should receive a well-defined content area. Chrome, border, and gutter decisions should be owned by the widget or layout container that introduces them.
+
+`UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes.
 
 ## Font-Sensitive Layout
 
@@ -189,7 +192,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - Should UI signals stay as delegates or become typed event objects?
 - Should there be a generic `UiOverlayGeometry` type in `vulkan.ui`?
 - Should `UiScreen` expose a render method that builds geometry, or should rendering stay in app-specific screen classes for now?
-- How should focus, keyboard navigation, and modal windows be represented?
+- How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Which UI pieces are stable enough for the first public engine module?
 

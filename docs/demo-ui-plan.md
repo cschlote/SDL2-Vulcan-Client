@@ -26,12 +26,13 @@ Implemented or partially implemented:
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
 - D-key debug bounds overlay with color-coded widget and layout outlines
+- generic keyboard focus dispatch, SDL text input routing, and editable single-line text fields
 
 Remaining migration debt:
 
 - `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the type names are generic.
-- keyboard focus and text editing are not yet implemented for retained controls.
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
+- keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
 
 ## UI Design Direction
@@ -88,6 +89,8 @@ Settings-style dialogs should split the window body into a growable content area
 
 `UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary stackable window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. This stacking behavior is independent of the dragable header flag. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
+`UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
+
 ## Settings Policy
 
 Settings are loaded from `~/.config/sdl2-vulcan-demo/config`.
@@ -133,7 +136,9 @@ Use `UiScreen` properly:
 8. Rework demo windows into clear app roles. Done.
 9. Review which modules are reusable enough for the first Engine-only package boundary. Done.
 10. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
-11. Add keyboard focus, text editing, and popup/menu infrastructure for retained controls.
+11. Add keyboard focus and single-line text editing for retained controls. Done.
+12. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+13. Add keyboard navigation, tab traversal, and modal focus behavior.
 
 ## Public Package Preparation
 

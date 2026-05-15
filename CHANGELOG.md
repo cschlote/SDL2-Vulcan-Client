@@ -7,6 +7,8 @@
 - Refined `UiWindow` title and resize-ring layout and added a Chrome Demo window for toggling sizeable, closable, and dragable flags at runtime.
 - Reduced the resize-ring opacity so the window chrome reads more subtly.
 - Split middle-click window stacking from the dragable chrome flag and exposed the stackable flag in the Chrome Demo.
+- Added generic retained UI keyboard focus routing, SDL text input forwarding, and editable `UiTextField` cursor/key handling.
+- Updated the UI architecture and demo plan for focus ownership, text editing, and the next popup/menu work.
 
 ## Release 26.20.7022
 
