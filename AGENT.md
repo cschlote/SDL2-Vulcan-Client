@@ -24,6 +24,9 @@ This repository is a D codebase. Make changes in an idiomatic D style and keep t
 - For every documented function, method, or helper, include a `Params:` section for arguments and a `Returns:` section for the result, even when the return value is `void`.
 - Document private types, methods, functions, and other meaningful helpers with DDoc.
 - Place a `unittest` directly after the function it tests when the target is a free function; for methods, place the `unittest` after the class definition so the object and its methods are tested together.
+- Use `logLine`, `logFLine`, `log`, or `logF` for user-visible state changes and important one-line progress updates that should always be visible.
+- Use `logLineVerbose`, `logFLineVerbose`, `logVerbose`, or `logFVerbose` for debugging detail, trace output, and extra diagnostics that should only appear when verbose logging is enabled.
+- Prefer concise log messages that describe what changed, which path was chosen, or which measurement was produced; keep verbose helpers for extra context rather than replacing normal status logging.
 
 ## Resource management
 
