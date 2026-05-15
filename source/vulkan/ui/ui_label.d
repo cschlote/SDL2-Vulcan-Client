@@ -22,7 +22,12 @@ final class UiLabel : UiWidget
 
     this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
-        super(x, y, 0, height);
+        this(text, x, y, style, color, 0.0f, height);
+    }
+
+    this(string text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    {
+        super(x, y, width, height);
         this.text = text;
         this.style = style;
         this.color = color;
@@ -44,7 +49,12 @@ final class UiTextBlock : UiWidget
 
     this(string text, float x, float y, UiTextStyle style, float[4] color, float height = 0.0f)
     {
-        super(x, y, 0, height);
+        this(text, x, y, style, color, 0.0f, height);
+    }
+
+    this(string text, float x, float y, UiTextStyle style, float[4] color, float width, float height)
+    {
+        super(x, y, width, height);
         this.text = text;
         this.style = style;
         this.color = color;

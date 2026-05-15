@@ -19,6 +19,14 @@ abstract class UiWidget
     float y;
     float width;
     float height;
+    float minimumWidth;
+    float minimumHeight;
+    float preferredWidth;
+    float preferredHeight;
+    float maximumWidth;
+    float maximumHeight;
+    float flexGrowX;
+    float flexGrowY;
     float childOffsetX;
     float childOffsetY;
     bool visible = true;
@@ -30,6 +38,14 @@ abstract class UiWidget
         this.y = y;
         this.width = width;
         this.height = height;
+        minimumWidth = width;
+        minimumHeight = height;
+        preferredWidth = width;
+        preferredHeight = height;
+        maximumWidth = float.max;
+        maximumHeight = float.max;
+        flexGrowX = 0.0f;
+        flexGrowY = 0.0f;
         childOffsetX = 0.0f;
         childOffsetY = 0.0f;
     }
@@ -38,6 +54,19 @@ abstract class UiWidget
     void add(UiWidget child)
     {
         children ~= child;
+    }
+
+    /** Updates the widget's layout hint independently from its final frame. */
+    void setLayoutHint(float minimumWidth, float minimumHeight, float preferredWidth, float preferredHeight, float maximumWidth = float.max, float maximumHeight = float.max, float flexGrowX = 0.0f, float flexGrowY = 0.0f)
+    {
+        this.minimumWidth = minimumWidth;
+        this.minimumHeight = minimumHeight;
+        this.preferredWidth = preferredWidth;
+        this.preferredHeight = preferredHeight;
+        this.maximumWidth = maximumWidth;
+        this.maximumHeight = maximumHeight;
+        this.flexGrowX = flexGrowX;
+        this.flexGrowY = flexGrowY;
     }
 
     /** Routes a pointer event through the widget tree. */
@@ -88,7 +117,6 @@ protected:
         return false;
     }
 
-protected:
     /** Returns whether the event hits the widget body in parent space. */
     bool contains(float localX, float localY) const
     {

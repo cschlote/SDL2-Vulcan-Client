@@ -214,7 +214,7 @@ HudOverlayGeometry buildHudOverlayVertices(
 {
     HudOverlayGeometry geometry;
 
-    const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, layoutState, fontAtlases, smallFont, mediumFont, largeFont);
+    const layout = buildHudLayout(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, layoutState, fontAtlases, smallFont, mediumFont, largeFont);
     UiWindow[] windows;
     if (layoutState.statusVisible)
         windows ~= buildStatusWindow(layout.status, layoutState, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, smallFont, mediumFont);
@@ -281,10 +281,10 @@ HudOverlayGeometry buildHudOverlayVertices(
  * This layout is shared by hit testing, dragging, and rendering so the HUD
  * stays consistent across the input and draw paths.
  */
-HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref HudLayoutState layoutState, const(FontAtlas)[] fontAtlases, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
+HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref HudLayoutState layoutState, const(FontAtlas)[] fontAtlases, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont, ref const(FontAtlas) largeFont)
 {
     HudLayout layout;
-    layout.status = buildStatusRect(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, smallFont, mediumFont);
+    layout.status = buildStatusRect(extentWidth, extentHeight, fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, smallFont, mediumFont);
     layout.modes = buildModesRect(extentWidth, extentHeight, mediumFont);
     layout.sample = buildSampleRect(extentWidth, extentHeight, fontAtlases);
     layout.input = buildInputRect(extentWidth, extentHeight, smallFont, mediumFont);
@@ -292,25 +292,63 @@ HudLayout buildHudLayout(float extentWidth, float extentHeight, float fps, float
     return layout;
 }
 
+private struct StatusWindowMetrics
+{
+    float labelWidth;
+    float valueWidth;
+    float rowHeight;
+    float rowSpacing;
+    float contentWidth;
+    float contentHeight;
+}
+
+private StatusWindowMetrics measureStatusWindow(float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) mediumFont)
+{
+    StatusWindowMetrics metrics;
+    const valueTextHeight = textBlockHeight(mediumFont);
+    metrics.rowHeight = valueTextHeight;
+    metrics.rowSpacing = 4.0f;
+
+    const labelTexts = ["PLATFORM:", "VULKAN API:", "FRAME RATE:", "CAMERA YAW:", "CAMERA PITCH:", "ACTIVE SHAPE:", "CURRENT MODE:", "BUILD:"];
+    const valueTexts = [
+        platformName,
+        format("%u.%u.%u", cast(uint)(vulkanApiVersion >> 22), cast(uint)((vulkanApiVersion >> 12) & 0x3ff), cast(uint)(vulkanApiVersion & 0xfff)),
+        format("%.0f FPS", fps),
+        format("%.1f DEGREES", yawAngle * 180.0f / cast(float)PI),
+        format("%.1f DEGREES", pitchAngle * 180.0f / cast(float)PI),
+        shapeName,
+        renderModeName,
+        buildVersion,
+    ];
+
+    foreach (labelText; labelTexts)
+        metrics.labelWidth = max(metrics.labelWidth, textBlockWidth(mediumFont, labelText));
+    foreach (valueText; valueTexts)
+        metrics.valueWidth = max(metrics.valueWidth, textBlockWidth(mediumFont, valueText));
+
+    metrics.contentWidth = metrics.labelWidth + 10.0f + metrics.valueWidth;
+    const rowCount = labelTexts.length;
+    metrics.contentHeight = cast(float)rowCount * metrics.rowHeight + cast(float)(rowCount > 0 ? rowCount - 1 : 0) * metrics.rowSpacing;
+    return metrics;
+}
+
+/** Builds the retained STATUS HUD window for the current frame. */
 private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layoutState, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     const titleText = "STATUS";
-    const platformText = format("PLATFORM: %s", platformName);
-    const vulkanVersionText = format("VULKAN API: %u.%u.%u", cast(uint)(vulkanApiVersion >> 22), cast(uint)((vulkanApiVersion >> 12) & 0x3ff), cast(uint)(vulkanApiVersion & 0xfff));
-    const buildText = format("BUILD: %s", buildVersion);
-    const firstBodyWidth = textBlockWidth(mediumFont, platformText);
-    const secondBodyWidth = textBlockWidth(mediumFont, vulkanVersionText);
-    const thirdBodyWidth = textBlockWidth(mediumFont, format("FRAME RATE: %.0f FPS", fps));
-    const fourthBodyWidth = textBlockWidth(mediumFont, format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI));
-    const fifthBodyWidth = textBlockWidth(mediumFont, format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI));
-    const sixthBodyWidth = textBlockWidth(mediumFont, format("ACTIVE SHAPE: %s", shapeName));
-    const seventhBodyWidth = textBlockWidth(mediumFont, format("CURRENT MODE: %s", renderModeName));
-    const contentWidth = max(max(max(max(max(max(firstBodyWidth, secondBodyWidth), max(thirdBodyWidth, fourthBodyWidth)), max(fifthBodyWidth, sixthBodyWidth)), seventhBodyWidth), textBlockWidth(mediumFont, buildText)), textBlockWidth(mediumFont, "MODEL / CAMERA / API / BUILD"));
-    const titleWidth = textBlockWidth(mediumFont, titleText);
-    const width = max(titleWidth + 28.0f, contentWidth + 40.0f);
-    const mediumTextHeight = textBlockHeight(mediumFont);
-    const contentBottom = max(max(max(max(max(max(mediumTextHeight, 18.0f + mediumTextHeight), 34.0f + mediumTextHeight), 52.0f + mediumTextHeight), 76.0f + mediumTextHeight), 98.0f + mediumTextHeight), 120.0f + mediumTextHeight);
-    const height = 28.0f + contentBottom + 12.0f;
+    const metrics = measureStatusWindow(fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, mediumFont);
+    const rowLabels = ["PLATFORM:", "VULKAN API:", "FRAME RATE:", "CAMERA YAW:", "CAMERA PITCH:", "ACTIVE SHAPE:", "CURRENT MODE:", "BUILD:"];
+    const rowValues = [
+        platformName,
+        format("%u.%u.%u", cast(uint)(vulkanApiVersion >> 22), cast(uint)((vulkanApiVersion >> 12) & 0x3ff), cast(uint)(vulkanApiVersion & 0xfff)),
+        format("%.0f FPS", fps),
+        format("%.1f DEGREES", yawAngle * 180.0f / cast(float)PI),
+        format("%.1f DEGREES", pitchAngle * 180.0f / cast(float)PI),
+        shapeName,
+        renderModeName,
+        buildVersion,
+    ];
+
     auto window = new UiWindow(titleText, rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.96f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], false, true, false);
     window.visible = layoutState.statusVisible;
     window.onClose = ()
@@ -318,22 +356,43 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
         logLine("UiWindow close: STATUS");
         layoutState.statusVisible = false;
     };
-    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f));
-    content.add(new UiLabel(platformText, 0.0f, 0.0f, UiTextStyle.medium, [0.72f, 0.96f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(vulkanVersionText, 0.0f, 0.0f, UiTextStyle.medium, [0.72f, 0.96f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(format("FRAME RATE: %.0f FPS", fps), 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(format("CAMERA YAW: %.1f DEGREES", yawAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.medium, [0.40f, 1.00f, 0.70f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(format("CAMERA PITCH: %.1f DEGREES", pitchAngle * 180.0f / cast(float)PI), 0.0f, 0.0f, UiTextStyle.medium, [0.50f, 0.86f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(format("ACTIVE SHAPE: %s", shapeName), 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 1.00f, 1.00f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(format("CURRENT MODE: %s", renderModeName), 0.0f, 0.0f, UiTextStyle.medium, [1.00f, 0.90f, 0.45f, 1.00f], mediumTextHeight));
-    content.add(new UiSpacer(0.0f, 4.0f));
-    content.add(new UiLabel(buildText, 0.0f, 0.0f, UiTextStyle.medium, [0.86f, 0.96f, 1.00f, 1.00f], mediumTextHeight));
+
+    auto content = new UiVBox(0.0f, 0.0f, max(rect.width - 28.0f, 0.0f), max(rect.height - 28.0f, 0.0f), metrics.rowSpacing);
+    content.setLayoutHint(0.0f, metrics.contentHeight, metrics.contentWidth, metrics.contentHeight, float.max, metrics.contentHeight, 1.0f, 0.0f);
+
+    foreach (index; 0 .. rowLabels.length)
+    {
+        auto row = new UiHBox(0.0f, 0.0f, 0.0f, metrics.rowHeight, 8.0f);
+        row.setLayoutHint(0.0f, metrics.rowHeight, metrics.contentWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
+
+        auto label = new UiLabel(rowLabels[index], 0.0f, 0.0f, UiTextStyle.medium, [0.72f, 0.96f, 1.00f, 1.00f], metrics.rowHeight);
+        label.width = metrics.labelWidth;
+        label.height = metrics.rowHeight;
+        label.setLayoutHint(metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, metrics.labelWidth, metrics.rowHeight, 0.0f, 0.0f);
+        row.add(label);
+
+        float[4] valueColor;
+        switch (index)
+        {
+            case 0: valueColor = [0.72f, 0.96f, 1.00f, 1.00f]; break;
+            case 1: valueColor = [0.72f, 0.96f, 1.00f, 1.00f]; break;
+            case 2: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
+            case 3: valueColor = [0.40f, 1.00f, 0.70f, 1.00f]; break;
+            case 4: valueColor = [0.50f, 0.86f, 1.00f, 1.00f]; break;
+            case 5: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
+            case 6: valueColor = [1.00f, 0.90f, 0.45f, 1.00f]; break;
+            case 7: valueColor = [0.86f, 0.96f, 1.00f, 1.00f]; break;
+            default: valueColor = [1.00f, 1.00f, 1.00f, 1.00f]; break;
+        }
+
+        auto value = new UiLabel(rowValues[index], 0.0f, 0.0f, UiTextStyle.medium, valueColor, metrics.rowHeight);
+        value.width = metrics.valueWidth;
+        value.height = metrics.rowHeight;
+        value.setLayoutHint(metrics.valueWidth, metrics.rowHeight, metrics.valueWidth, metrics.rowHeight, float.max, metrics.rowHeight, 1.0f, 0.0f);
+        row.add(value);
+        content.add(row);
+    }
+
     window.add(content);
     return window;
 }
@@ -767,19 +826,12 @@ HudWindowRect buildSettingsRect(float extentWidth, float extentHeight, ref HudLa
     return HudWindowRect(layoutState.settingsLeft, layoutState.settingsTop, layoutState.settingsWidth, layoutState.settingsHeight);
 }
 
-private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
+private HudWindowRect buildStatusRect(float extentWidth, float extentHeight, float fps, float yawAngle, float pitchAngle, string shapeName, string renderModeName, string buildVersion, string platformName, uint vulkanApiVersion, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
+    const metrics = measureStatusWindow(fps, yawAngle, pitchAngle, shapeName, renderModeName, buildVersion, platformName, vulkanApiVersion, mediumFont);
     const titleWidth = textBlockWidth(mediumFont, "STATUS");
-    const contentWidth = max(
-        max(
-            max(textBlockWidth(mediumFont, "PLATFORM: X"), textBlockWidth(mediumFont, "VULKAN API: 1.3.0")),
-            max(textBlockWidth(mediumFont, "FRAME RATE: 999 FPS"), textBlockWidth(mediumFont, "CAMERA PITCH: 999.9 DEGREES"))),
-        max(
-            max(textBlockWidth(mediumFont, "CAMERA YAW: 999.9 DEGREES"), textBlockWidth(mediumFont, "ACTIVE SHAPE: ICOSAHEDRON")),
-            max(textBlockWidth(mediumFont, "CURRENT MODE: HIDDEN LINE"), textBlockWidth(mediumFont, "BUILD: X"))));
-    const width = max(titleWidth + 24.0f, contentWidth + 32.0f);
-    const mediumTextHeight = textBlockHeight(mediumFont);
-    const height = 32.0f + (mediumTextHeight * 8.0f + 6.0f * 7.0f) + 16.0f;
+    const width = max(titleWidth + 24.0f, metrics.contentWidth + 32.0f);
+    const height = 32.0f + metrics.contentHeight + 16.0f;
     return HudWindowRect(18.0f, 18.0f, width, height);
 }
 

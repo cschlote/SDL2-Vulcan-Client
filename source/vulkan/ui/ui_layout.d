@@ -10,6 +10,7 @@
  */
 module vulkan.ui.ui_layout;
 
+import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
@@ -34,6 +35,94 @@ protected:
     }
 }
 
+private float clampFloat(float value, float minimum, float maximum)
+{
+    return value < minimum ? minimum : (value > maximum ? maximum : value);
+}
+
+private struct AxisHint
+{
+    float minimum;
+    float preferred;
+    float maximum;
+    float grow;
+}
+
+private AxisHint horizontalHint(UiWidget child)
+{
+    AxisHint hint;
+    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.maximum = child.maximumWidth > 0.0f ? child.maximumWidth : float.max;
+    hint.grow = child.flexGrowX;
+    return hint;
+}
+
+private AxisHint verticalHint(UiWidget child)
+{
+    AxisHint hint;
+    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.maximum = child.maximumHeight > 0.0f ? child.maximumHeight : float.max;
+    hint.grow = child.flexGrowY;
+    return hint;
+}
+
+private float[] resolveSizes(UiWidget[] children, float availableSpace, bool horizontal)
+{
+    float[] sizes;
+    sizes.length = children.length;
+
+    float preferredTotal = 0.0f;
+    float minimumTotal = 0.0f;
+    float growTotal = 0.0f;
+
+    foreach (index, child; children)
+    {
+        const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+        const minimum = hint.minimum > 0.0f ? hint.minimum : 0.0f;
+        const preferred = hint.preferred > 0.0f ? hint.preferred : minimum;
+        sizes[index] = clampFloat(preferred, minimum, hint.maximum);
+        preferredTotal += sizes[index];
+        minimumTotal += minimum;
+        if (hint.grow > 0.0f)
+            growTotal += hint.grow;
+    }
+
+    if (availableSpace > preferredTotal && growTotal > 0.0f)
+    {
+        const extraSpace = availableSpace - preferredTotal;
+        foreach (index, child; children)
+        {
+            const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+            if (hint.grow <= 0.0f)
+                continue;
+
+            const grown = sizes[index] + extraSpace * (hint.grow / growTotal);
+            sizes[index] = clampFloat(grown, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
+        }
+    }
+    else if (availableSpace < preferredTotal && preferredTotal > minimumTotal)
+    {
+        const shortage = preferredTotal - availableSpace;
+        const shrinkableTotal = preferredTotal - minimumTotal;
+
+        foreach (index, child; children)
+        {
+            const hint = horizontal ? horizontalHint(child) : verticalHint(child);
+            const minimum = hint.minimum > 0.0f ? hint.minimum : 0.0f;
+            const shrinkable = sizes[index] - minimum;
+            if (shrinkable <= 0.0f)
+                continue;
+
+            const shrunken = sizes[index] - shortage * (shrinkable / shrinkableTotal);
+            sizes[index] = clampFloat(shrunken, minimum, hint.maximum);
+        }
+    }
+
+    return sizes;
+}
+
 /** Shared base for retained layout containers. */
 abstract class UiLayoutContainer : UiWidget
 {
@@ -45,6 +134,8 @@ abstract class UiLayoutContainer : UiWidget
     this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
     {
         super(x, y, width, height);
+        flexGrowX = 1.0f;
+        flexGrowY = 0.0f;
         this.paddingLeft = paddingLeft;
         this.paddingTop = paddingTop;
         this.paddingRight = paddingRight;
@@ -119,13 +210,18 @@ protected:
     {
         float cursorY = paddingTop;
         const availableWidth = innerWidth();
+        const childCount = children.length;
+        const availableHeight = max(innerHeight() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childHeights = resolveSizes(children, availableHeight, false);
 
-        foreach (child; children)
+        foreach (index, child; children)
         {
-            if (child.width <= 0.0f)
-                child.width = availableWidth;
+            const hint = horizontalHint(child);
+            const childWidth = hint.grow > 0.0f ? clampFloat(availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableWidth, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
             child.x = paddingLeft;
             child.y = cursorY;
+            child.width = childWidth;
+            child.height = childHeights[index];
             cursorY += child.height;
             cursorY += spacing;
         }
@@ -148,13 +244,18 @@ protected:
     {
         float cursorX = paddingLeft;
         const availableHeight = innerHeight();
+        const childCount = children.length;
+        const availableWidth = max(innerWidth() - spacing * cast(float)(childCount > 0 ? childCount - 1 : 0), 0.0f);
+        auto childWidths = resolveSizes(children, availableWidth, true);
 
-        foreach (child; children)
+        foreach (index, child; children)
         {
-            if (child.height <= 0.0f)
-                child.height = availableHeight;
+            const hint = verticalHint(child);
+            const childHeight = hint.grow > 0.0f ? clampFloat(availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum) : clampFloat(hint.preferred > 0.0f ? hint.preferred : availableHeight, hint.minimum > 0.0f ? hint.minimum : 0.0f, hint.maximum);
             child.x = cursorX;
             child.y = paddingTop;
+            child.width = childWidths[index];
+            child.height = childHeight;
             cursorX += child.width;
             cursorX += spacing;
         }
