@@ -367,6 +367,15 @@ private StatusWindowMetrics measureStatusWindow(float fps, float yawAngle, float
     return metrics;
 }
 
+/** Builds a layout-time font context for retained UI measurement.
+ *
+ * Params:
+ *   fontSmall = Font atlas used for compact body copy and monospace samples.
+ *   fontMedium = Font atlas used for labels, buttons, and window titles.
+ *
+ * Returns:
+ *   A context that widgets can use during explicit measurement and layout.
+ */
 private UiLayoutContext buildLayoutContext(ref const(FontAtlas) fontSmall, ref const(FontAtlas) fontMedium)
 {
     UiLayoutContext layoutContext;
@@ -447,6 +456,26 @@ private UiWindow buildStatusWindow(HudWindowRect rect, ref HudLayoutState layout
     return window;
 }
 
+/** Builds the retained render-mode control window.
+ *
+ * Params:
+ *   rect = Final window rectangle in pixels.
+ *   mediumFont = Font atlas used to size the mode buttons.
+ *   onFlatColor = Callback for the flat-color render mode button.
+ *   onLitTextured = Callback for the lit/textured render mode button.
+ *   onWireframe = Callback for the wireframe render mode button.
+ *   onHiddenLine = Callback for the hidden-line render mode button.
+ *   onPreviousShape = Callback for the previous-shape button.
+ *   onNextShape = Callback for the next-shape button.
+ *   onSettings = Callback for the settings button.
+ *   onToggleStatus = Callback for the status-window toggle button.
+ *   onToggleSample = Callback for the sample-window toggle button.
+ *   onToggleInput = Callback for the input-window toggle button.
+ *   onToggleCenter = Callback for the center-window toggle button.
+ *
+ * Returns:
+ *   A retained window tree for the render-mode buttons.
+ */
 private UiWindow buildModeWindow(HudWindowRect rect, ref const(FontAtlas) mediumFont, void delegate() onFlatColor = null, void delegate() onLitTextured = null, void delegate() onWireframe = null, void delegate() onHiddenLine = null, void delegate() onPreviousShape = null, void delegate() onNextShape = null, void delegate() onSettings = null, void delegate() onToggleStatus = null, void delegate() onToggleSample = null, void delegate() onToggleInput = null, void delegate() onToggleCenter = null)
 {
     const mediumTextHeight = textBlockHeight(mediumFont);
@@ -537,6 +566,21 @@ private float measuredButtonHeight(ref const(FontAtlas) font, float padding, flo
     return max(measuredTextHeight(font) + padding, minimumHeight);
 }
 
+/** Builds the retained settings dialog window.
+ *
+ * Params:
+ *   rect = Final window rectangle in pixels.
+ *   layoutState = Persistent dialog placement and drag state.
+ *   extentWidth = Swapchain width in pixels.
+ *   extentHeight = Swapchain height in pixels.
+ *   settingsDraft = Mutable draft settings edited by the dialog.
+ *   onApplySettings = Callback invoked when Apply is pressed.
+ *   smallFont = Font atlas used for smaller layout measurements.
+ *   mediumFont = Font atlas used for labels and buttons.
+ *
+ * Returns:
+ *   A retained settings window tree.
+ */
 private UiWindow buildSettingsWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref DemoSettings settingsDraft, void delegate() onApplySettings, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     float[4] labelColor = [1.00f, 1.00f, 1.00f, 1.00f];
@@ -725,6 +769,15 @@ bool hudDispatchStatusWindowPointer(HudWindowRect rect, ref HudLayoutState layou
     return window.dispatchPointerEvent(event);
 }
 
+/** Builds the retained font-sample window.
+ *
+ * Params:
+ *   rect = Final window rectangle in pixels.
+ *   fontAtlases = Font atlases indexed by sample text size.
+ *
+ * Returns:
+ *   A retained sample window tree.
+ */
 private UiWindow buildSampleWindow(HudWindowRect rect, const(FontAtlas)[] fontAtlases)
 {
     const sample7Width = textBlockWidth(fontAtlases[0], "7 PX  THE QUICK BROWN FOX");
@@ -775,6 +828,15 @@ private UiWindow buildSampleWindow(HudWindowRect rect, const(FontAtlas)[] fontAt
     return window;
 }
 
+/** Builds the retained log/input window.
+ *
+ * Params:
+ *   rect = Final window rectangle in pixels.
+ *   mediumFont = Font atlas used for the multiline text block.
+ *
+ * Returns:
+ *   A retained log window tree.
+ */
 private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) mediumFont)
 {
     auto window = new UiWindow("LOG", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f]);
@@ -786,6 +848,19 @@ private UiWindow buildInputWindow(HudWindowRect rect, ref const(FontAtlas) mediu
     return window;
 }
 
+/** Builds the draggable center test window.
+ *
+ * Params:
+ *   rect = Final window rectangle in pixels.
+ *   layoutState = Persistent drag and resize state.
+ *   extentWidth = Swapchain width in pixels.
+ *   extentHeight = Swapchain height in pixels.
+ *   smallFont = Font atlas used for small-body measurements.
+ *   mediumFont = Font atlas used for labels and text blocks.
+ *
+ * Returns:
+ *   A retained center-window tree.
+ */
 private UiWindow buildCenterWindow(HudWindowRect rect, ref HudLayoutState layoutState, float extentWidth, float extentHeight, ref const(FontAtlas) smallFont, ref const(FontAtlas) mediumFont)
 {
     auto window = new UiWindow("DRAG ME", rect.left, rect.top, rect.width, rect.height, [0.10f, 0.12f, 0.16f, 0.92f], [0.14f, 0.16f, 0.20f, 0.96f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true);
