@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Release 26.20.8493
+
 - Removed the obsolete Demo Control window; the sidebar now toggles singleton windows and spawns repeatable demo windows.
 - Expanded the Widget Demo into an initial control gallery with content/frame boxes and current retained controls.
 - Added an initial `UiScrollArea` with retained scroll offsets, content bounds, clamped wheel scrolling, and UI wheel-event routing.
