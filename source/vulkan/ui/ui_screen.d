@@ -14,7 +14,9 @@ module vulkan.ui.ui_screen;
 import std.algorithm : max;
 
 import vulkan.font.font_legacy : FontAtlas;
+import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
+import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
@@ -153,6 +155,49 @@ class UiScreen
         layoutWindows();
         anchorWindows();
         clampWindowsToViewport();
+    }
+
+    /** Builds renderer-facing overlay geometry for all visible windows.
+     *
+     * Params:
+     *   debugWidgetBounds = Draws per-widget debug outlines when enabled.
+     *   windowDepth = Base depth used by top-level window rendering.
+     *
+     * Returns:
+     *   UI panel, text-layer, and draw-range geometry in retained window order.
+     */
+    UiOverlayGeometry buildOverlayGeometry(bool debugWidgetBounds = false, float windowDepth = 0.10f)
+    {
+        UiOverlayGeometry geometry;
+        geometry.panels = [];
+        foreach (layerIndex; 0 .. geometry.textLayers.length)
+            geometry.textLayers[layerIndex] = [];
+
+        auto context = buildRenderContext(geometry, debugWidgetBounds, windowDepth);
+        UiWindowDrawRange[] drawRanges;
+
+        foreach (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            UiWindowDrawRange range;
+            range.panelsStart = cast(uint)geometry.panels.length;
+            foreach (layerIndex; 0 .. geometry.textLayers.length)
+                range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
+
+            context.depthBase = windowDepth;
+            window.render(context);
+
+            range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
+            foreach (layerIndex; 0 .. geometry.textLayers.length)
+                range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
+
+            drawRanges ~= range;
+        }
+
+        geometry.windows = drawRanges;
+        return geometry;
     }
 
 protected:
@@ -365,6 +410,33 @@ protected:
         UiLayoutContext context;
         foreach (index; 0 .. context.fonts.length)
             context.fonts[index] = index < liveFonts.length ? &liveFonts[index] : null;
+        return context;
+    }
+
+    /** Builds a render context targeting the provided overlay geometry.
+     *
+     * Params:
+     *   geometry = Overlay geometry that receives emitted panel and text vertices.
+     *   debugWidgetBounds = Draws per-widget debug outlines when enabled.
+     *   windowDepth = Initial base depth used for window rendering.
+     *
+     * Returns:
+     *   Render context bound to this screen's viewport and font atlases.
+     */
+    UiRenderContext buildRenderContext(ref UiOverlayGeometry geometry, bool debugWidgetBounds, float windowDepth) const
+    {
+        UiRenderContext context = UiRenderContext.init;
+        context.extentWidth = viewportWidth_;
+        context.extentHeight = viewportHeight_;
+        context.originX = 0.0f;
+        context.originY = 0.0f;
+        context.depthBase = windowDepth;
+        context.debugWidgetBounds = debugWidgetBounds;
+        foreach (index; 0 .. context.fonts.length)
+            context.fonts[index] = index < fontAtlases_.length ? &fontAtlases_[index] : null;
+        context.panels = &geometry.panels;
+        foreach (index; 0 .. context.textLayers.length)
+            context.textLayers[index] = &geometry.textLayers[index];
         return context;
     }
 
@@ -651,6 +723,26 @@ unittest
     first.stackable = false;
     assert(!screen.dispatchPointerEvent(event));
     assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen builds overlay geometry in retained window order")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto hidden = new UiWindow("hidden", 10.0f, 10.0f, 70.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto visible = new UiWindow("visible", 90.0f, 10.0f, 70.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    hidden.visible = false;
+    screen.addWindow(hidden);
+    screen.addWindow(visible);
+
+    auto geometry = screen.buildOverlayGeometry();
+    assert(geometry.windows.length == 1);
+    assert(geometry.panels.length > 0);
+    assert(geometry.windows[0].panelsStart == 0);
+    assert(geometry.windows[0].panelsCount == geometry.panels.length);
 }
 
 @("UiScreen resizes windows from edge grips with non-primary buttons")

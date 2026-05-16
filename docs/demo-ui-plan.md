@@ -31,7 +31,7 @@ Implemented or partially implemented:
 
 Remaining migration debt:
 
-- `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the draw data types are generic.
+- The renderer still imports `DemoUiScreen`, even though renderer-facing UI draw data and traversal are generic.
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
@@ -142,14 +142,14 @@ Use `UiScreen` properly:
 
 - demo windows are registered through generic `UiScreen` helpers
 - `registerWindowInteractionHandlers` owns common drag/resize wiring
-- `UiScreen` owns generic window iteration, hit testing, layout, and viewport clamping
+- `UiScreen` owns generic window iteration, hit testing, layout, viewport clamping, and overlay geometry traversal
 - demo-specific window creation, text, and callbacks stay in `DemoUiScreen`
 
 ## Planned Class And Module Order
 
 The next work should continue from reusable engine foundations toward demo polish. A useful order is:
 
-1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. The data-type move is done; generic traversal is still open.
+1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, and SDL cursor handle ownership in the window layer.
 3. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
 4. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
@@ -175,16 +175,17 @@ The next work should continue from reusable engine foundations toward demo polis
 10. Add keyboard focus and single-line text editing for retained controls. Done.
 11. Correct documentation and package metadata for the CC-BY-NC-SA 4.0 license, current controls, and current UI/debug behavior. Done.
 12. Move renderer-facing UI geometry types from the demo module into `vulkan.ui`. Done.
-13. Move generic overlay traversal from `DemoUiScreen` into `UiScreen` when the screen API is ready for it.
-14. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
-15. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-16. Turn the current layout probe into a real widget demo/control gallery.
-17. Add keyboard navigation, tab traversal, and modal focus behavior.
-18. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-19. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-20. Add UI and demo audio events, such as button click feedback and settings volume preview.
-21. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-22. Review package boundaries again after UI cursors and the first audio service exist.
+13. Move generic overlay traversal from `DemoUiScreen` into `UiScreen`. Done.
+14. Remove the renderer's direct dependency on `DemoUiScreen` when a reusable app/screen boundary is ready.
+15. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
+16. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+17. Turn the current layout probe into a real widget demo/control gallery.
+18. Add keyboard navigation, tab traversal, and modal focus behavior.
+19. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+20. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+21. Add UI and demo audio events, such as button click feedback and settings volume preview.
+22. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+23. Review package boundaries again after UI cursors and the first audio service exist.
 
 ## Public Package Preparation
 

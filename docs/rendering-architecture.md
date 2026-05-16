@@ -44,7 +44,7 @@ The ownership split is:
 - [source/demo/demo_ui.d](../source/demo/demo_ui.d) contains the current demo-specific screen construction.
 - [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d) consumes the generated overlay geometry and draw ranges.
 
-The renderer should know only generic UI render output names. `UiOverlayGeometry` and `UiWindowDrawRange` live in `vulkan.ui.ui_geometry` as the current renderer-facing names. Overlay geometry now comes from the retained `DemoUiScreen` window stack rather than from the old stateless HUD builder path.
+The renderer should know only generic UI render output names. `UiOverlayGeometry` and `UiWindowDrawRange` live in `vulkan.ui.ui_geometry` as the current renderer-facing names. Overlay geometry now comes from generic `UiScreen` retained-window traversal after `DemoUiScreen` updates demo-specific labels and settings state.
 
 ## Frame Order
 
@@ -85,7 +85,7 @@ The next architecture decisions are:
 
 - decide how far renderer ownership should be split before publishing a first package
 - decide which settings belong to the engine and which belong only to the demo application
-- decide whether generic overlay construction should move from `DemoUiScreen` into `UiScreen`
+- decide how to remove the renderer's direct import of the demo screen class
 - decide whether the current `VulkanRenderer` becomes an engine renderer plus a smaller demo scene controller
 
 ## Related Files

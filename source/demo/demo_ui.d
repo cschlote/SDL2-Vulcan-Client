@@ -29,7 +29,7 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
 import vulkan.ui.ui_event : UiResizeHandle;
-import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
+import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
@@ -330,51 +330,10 @@ final class DemoUiScreen : UiScreen
         ensureWindowLayout();
     }
 
-    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts, bool debugWidgetBounds = false)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, bool debugWidgetBounds = false)
     {
         syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion);
-
-        UiOverlayGeometry geometry;
-        geometry.panels = [];
-        foreach (layerIndex; 0 .. geometry.textLayers.length)
-            geometry.textLayers[layerIndex] = [];
-
-        UiWindowDrawRange[] drawRanges;
-        UiRenderContext context = UiRenderContext.init;
-        context.extentWidth = extentWidth;
-        context.extentHeight = extentHeight;
-        context.originX = 0.0f;
-        context.originY = 0.0f;
-        context.depthBase = 0.10f;
-        context.debugWidgetBounds = debugWidgetBounds;
-        foreach (index; 0 .. context.fonts.length)
-            context.fonts[index] = index < liveFonts.length ? &liveFonts[index] : null;
-        context.panels = &geometry.panels;
-        foreach (index; 0 .. context.textLayers.length)
-            context.textLayers[index] = &geometry.textLayers[index];
-
-        foreach (window; windowsInFrontToBack())
-        {
-            if (!window.visible)
-                continue;
-
-            UiWindowDrawRange range;
-            range.panelsStart = cast(uint)geometry.panels.length;
-            foreach (layerIndex; 0 .. geometry.textLayers.length)
-                range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
-
-            context.depthBase = overlayWindowDepth;
-            window.render(context);
-
-            range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
-            foreach (layerIndex; 0 .. geometry.textLayers.length)
-                range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
-
-            drawRanges ~= range;
-        }
-
-        geometry.windows = drawRanges;
-        return geometry;
+        return buildOverlayGeometry(debugWidgetBounds, overlayWindowDepth);
     }
 
     void toggleHelpWindow()

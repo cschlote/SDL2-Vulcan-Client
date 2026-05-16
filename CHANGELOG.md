@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Moved generic retained UI overlay traversal into `UiScreen`.
 - Moved renderer-facing retained UI geometry range types into the reusable `vulkan.ui` package.
 - Corrected documentation and package metadata around the CC-BY-NC-SA 4.0 license, current UI controls, cursor planning, and planned audio architecture.
 - Fixed middle-click window chrome stacking so retained UI windows can be brought to the front or sent to the back outside their content area.

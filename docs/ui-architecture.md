@@ -181,14 +181,15 @@ The renderer should not know widget internals. It should receive generated UI ge
 Current boundary:
 
 - `UiOverlayGeometry` and `UiWindowDrawRange` live in `vulkan.ui.ui_geometry` as generic renderer-facing data types.
-- The renderer still imports `DemoUiScreen` because the demo currently owns overlay construction.
+- `UiScreen.buildOverlayGeometry` owns generic retained window traversal and emits renderer-facing overlay geometry.
+- The renderer still imports `DemoUiScreen` because the current application screen owns demo windows, labels, settings drafts, and callbacks.
 
 Target direction:
 
 - keep renderer-facing UI geometry named generically
 - keep demo-specific screen construction in `source/demo/`
 - keep reusable widget and screen code in `source/vulkan/ui/`
-- move generic overlay construction into `UiScreen` once it owns enough render traversal
+- split renderer ownership so reusable engine rendering no longer imports a demo screen class
 
 ## Persistence Policy
 
@@ -206,7 +207,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 ## Open Questions
 
 - Should UI signals stay as delegates or become typed event objects?
-- Should `UiScreen` expose a render method that builds generic `UiOverlayGeometry`, or should rendering stay in app-specific screen classes for now?
+- Should `UiScreen.buildOverlayGeometry` stay as the final render traversal API, or should it become part of a separate UI renderer object?
 - Should cursor intent be queried every frame from hit tests, cached on pointer move, or emitted as part of pointer event routing?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?

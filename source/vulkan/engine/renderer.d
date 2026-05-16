@@ -1174,7 +1174,6 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             buildVersion,
-            fontAtlases[],
             uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
