@@ -28,6 +28,7 @@ Reusable UI engine code lives in [source/vulkan/ui/](../source/vulkan/ui):
 - [ui_label.d](../source/vulkan/ui/ui_label.d): text widgets
 - [ui_button.d](../source/vulkan/ui/ui_button.d): button widget
 - [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, and text field controls
+- [ui_geometry.d](../source/vulkan/ui/ui_geometry.d): renderer-facing UI overlay geometry and draw ranges
 - [ui_image.d](../source/vulkan/ui/ui_image.d): small image/icon placeholder widget
 - [ui_context.d](../source/vulkan/ui/ui_context.d): renderer-facing UI render context
 - [ui_widget_helpers.d](../source/vulkan/ui/ui_widget_helpers.d): geometry helper functions
@@ -179,15 +180,15 @@ The renderer should not know widget internals. It should receive generated UI ge
 
 Current boundary:
 
-- `UiOverlayGeometry` and `UiWindowDrawRange` are the current generic renderer-facing data types.
-- The renderer imports `DemoUiScreen` because the demo currently owns overlay construction.
+- `UiOverlayGeometry` and `UiWindowDrawRange` live in `vulkan.ui.ui_geometry` as generic renderer-facing data types.
+- The renderer still imports `DemoUiScreen` because the demo currently owns overlay construction.
 
 Target direction:
 
 - keep renderer-facing UI geometry named generically
 - keep demo-specific screen construction in `source/demo/`
 - keep reusable widget and screen code in `source/vulkan/ui/`
-- move renderer-facing UI geometry types into `vulkan.ui` once `UiScreen` owns enough generic render traversal
+- move generic overlay construction into `UiScreen` once it owns enough render traversal
 
 ## Persistence Policy
 
@@ -205,8 +206,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 ## Open Questions
 
 - Should UI signals stay as delegates or become typed event objects?
-- Should there be a generic `UiOverlayGeometry` type in `vulkan.ui`?
-- Should `UiScreen` expose a render method that builds geometry, or should rendering stay in app-specific screen classes for now?
+- Should `UiScreen` expose a render method that builds generic `UiOverlayGeometry`, or should rendering stay in app-specific screen classes for now?
 - Should cursor intent be queried every frame from hit tests, cached on pointer move, or emitted as part of pointer event routing?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?

@@ -24,12 +24,12 @@ import std.conv : ConvException, to;
 
 import demo.demo_settings : DemoSettings;
 import logging : logLine;
-import vulkan.engine.pipeline : Vertex;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
 import vulkan.ui.ui_event : UiResizeHandle;
+import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
@@ -37,38 +37,6 @@ import vulkan.ui.ui_screen : UiScreen;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_window : UiWindow;
-
-/** Describes one contiguous draw block inside the overlay buffers.
- *
- * Each range maps one logical window to a contiguous set of panel and text
- * vertices so the renderer can preserve the intended stacking order.
- */
-struct UiWindowDrawRange
-{
-    /** Start index for panel vertices. */
-    uint panelsStart;
-    /** Vertex count for panel geometry. */
-    uint panelsCount;
-    /** Start indices for text vertices, indexed by UiTextStyle. */
-    uint[7] textStarts;
-    /** Vertex counts for text geometry, indexed by UiTextStyle. */
-    uint[7] textCounts;
-}
-
-/** Holds the panel and text geometry for the UI overlay.
- *
- * The renderer uploads each vertex list independently and uses the draw ranges
- * to emit one logical window at a time.
- */
-struct UiOverlayGeometry
-{
-    /** Window body and header quads. */
-    Vertex[] panels;
-    /** Text quads indexed by UiTextStyle. */
-    Vertex[][7] textLayers;
-    /** Draw ranges that keep each window's render calls contiguous. */
-    UiWindowDrawRange[] windows;
-}
 
 private final class LayoutDemoProbeBox : UiWidget
 {

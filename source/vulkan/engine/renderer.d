@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import demo.demo_settings : DemoSettings, saveDemoSettings;
-import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
+import demo.demo_ui : DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.engine.device;
@@ -35,6 +35,7 @@ import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
+import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
 
 private enum maxFramesInFlight = 2;

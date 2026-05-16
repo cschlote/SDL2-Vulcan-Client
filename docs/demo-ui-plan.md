@@ -24,14 +24,14 @@ Implemented or partially implemented:
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
 - INI settings load/save model
-- generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
+- generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data in `vulkan.ui`
 - D-key debug bounds overlay with color-coded widget and layout outlines
 - generic keyboard focus dispatch, SDL text input routing, and editable single-line text fields
 - audio settings data for master, music, and effects volumes
 
 Remaining migration debt:
 
-- `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the type names are generic.
+- `DemoUiScreen` still owns renderer-facing overlay geometry construction, even though the draw data types are generic.
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
@@ -129,7 +129,7 @@ This keeps temporary experimentation local until the user explicitly saves.
 
 ## Cleanup Plan
 
-Renderer-facing draw data now uses generic UI names. The old stateless HUD construction path has been removed from the demo UI module, so `demo_ui.d` now builds overlay geometry from retained `UiScreen`/`UiWindow` state only.
+Renderer-facing draw data now uses generic UI names and lives in `vulkan.ui`. The old stateless HUD construction path has been removed from the demo UI module, so `demo_ui.d` now builds overlay geometry from retained `UiScreen`/`UiWindow` state only.
 
 Completed legacy cleanup:
 
@@ -149,7 +149,7 @@ Use `UiScreen` properly:
 
 The next work should continue from reusable engine foundations toward demo polish. A useful order is:
 
-1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal.
+1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. The data-type move is done; generic traversal is still open.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, and SDL cursor handle ownership in the window layer.
 3. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
 4. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
@@ -174,16 +174,17 @@ The next work should continue from reusable engine foundations toward demo polis
 9. Review which modules are reusable enough for the first Engine-only package boundary. Done.
 10. Add keyboard focus and single-line text editing for retained controls. Done.
 11. Correct documentation and package metadata for the CC-BY-NC-SA 4.0 license, current controls, and current UI/debug behavior. Done.
-12. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
-13. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
-14. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-15. Turn the current layout probe into a real widget demo/control gallery.
-16. Add keyboard navigation, tab traversal, and modal focus behavior.
-17. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-18. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-19. Add UI and demo audio events, such as button click feedback and settings volume preview.
-20. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-21. Review package boundaries again after UI cursors and the first audio service exist.
+12. Move renderer-facing UI geometry types from the demo module into `vulkan.ui`. Done.
+13. Move generic overlay traversal from `DemoUiScreen` into `UiScreen` when the screen API is ready for it.
+14. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
+15. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+16. Turn the current layout probe into a real widget demo/control gallery.
+17. Add keyboard navigation, tab traversal, and modal focus behavior.
+18. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+19. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+20. Add UI and demo audio events, such as button click feedback and settings volume preview.
+21. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+22. Review package boundaries again after UI cursors and the first audio service exist.
 
 ## Public Package Preparation
 
