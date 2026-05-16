@@ -66,6 +66,7 @@ Common use cases:
 - dispatch pointer and keyboard events
 - resolve top-most hit targets
 - block background routing while a modal window is active
+- route modal Enter/Escape keys to a window's configured default or cancel button
 - build renderer-facing overlay geometry
 - clamp and place windows in the SDL viewport
 
@@ -84,7 +85,7 @@ Demo coverage:
 Planned work:
 
 - widget-level popup root ownership
-- default/cancel button policy for modal dialogs
+- cursor feedback for blocked modal background regions
 - animation tick dispatch and transition cleanup
 - optional dock/sidebar placement helpers
 
@@ -93,6 +94,8 @@ Planned work:
 Status: Implemented, with additional planned window roles.
 
 `UiWindow` is the top-level retained UI container. It owns frame rendering, content root placement, close button behavior, dragging, resizing, stacking, and window-level hit testing.
+
+For modal use cases, `UiWindow` can mark one body `UiButton` as the default action and one as the cancel action. `UiScreen` activates those buttons for Enter and Escape while the window is the active modal window. The callbacks remain ordinary button callbacks, so a cancel action may close the modal, and a default action may apply, validate, or keep the dialog open.
 
 Common use cases:
 

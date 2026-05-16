@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added modal default and cancel button handling for Enter and Escape on active `UiWindow` dialogs.
 - Added `UiScreen` modal window routing with background input blocking, modal stack priority, and modal focus containment.
 - Added screen-level Tab and Shift-Tab focus traversal plus Enter/arrow keyboard handling for focused buttons, toggles, and sliders.
 - Added focused keyboard handling for `UiTabBar` and `UiListBox`, including SDL up/down key mapping.

@@ -46,6 +46,8 @@ final class UiWindow : UiWidget
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
     float headerHeight = 30.0f;                     ///< Height of the decorative header bar.
     float borderThickness = windowContentMargin;    ///< Content inset and draw thickness for the simple outer border.
+    UiButton defaultButton;                         ///< Optional button activated by Enter while this window is modal.
+    UiButton cancelButton;                          ///< Optional button activated by Escape while this window is modal.
 
     private UiContentBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
     private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
@@ -123,6 +125,38 @@ final class UiWindow : UiWidget
     void addHeaderButton(UiWidget child)
     {
         addHeaderWidget(child);
+    }
+
+    /** Marks a body button as the default action for modal Enter handling. */
+    void setDefaultButton(UiButton button)
+    {
+        defaultButton = button;
+    }
+
+    /** Marks a body button as the cancel action for modal Escape handling. */
+    void setCancelButton(UiButton button)
+    {
+        cancelButton = button;
+    }
+
+    /** Activates the configured default action, if it is currently visible. */
+    bool activateDefaultButton()
+    {
+        if (defaultButton is null || !defaultButton.visible)
+            return false;
+
+        defaultButton.activate();
+        return true;
+    }
+
+    /** Activates the configured cancel action, if it is currently visible. */
+    bool activateCancelButton()
+    {
+        if (cancelButton is null || !cancelButton.visible)
+            return false;
+
+        cancelButton.activate();
+        return true;
     }
 
     /** Updates the interactive chrome flags at runtime.

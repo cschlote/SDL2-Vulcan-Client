@@ -51,7 +51,7 @@ Generic responsibilities belong in `UiScreen`:
 - move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
 - own transient popup window placement, stack priority, and outside-click/Escape dismissal
-- own active modal window routing, background blocking, and modal focus containment
+- own active modal window routing, background blocking, modal focus containment, and modal Enter/Escape action dispatch
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
@@ -88,6 +88,8 @@ Window content should be ordinary widgets. Application code should build a windo
 Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from active chrome, border, and resize ring so application widgets do not overlap window affordances.
 
 `UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
+
+Modal dialog conventions are attached to `UiWindow` through optional default and cancel buttons. `UiScreen` keeps the modal routing policy, while the window owns which button represents Enter or Escape. The button callback still decides what the action means, such as applying a dialog, dismissing the modal window, or showing validation feedback.
 
 ## Current Widget Set
 

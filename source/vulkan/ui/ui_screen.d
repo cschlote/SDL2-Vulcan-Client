@@ -23,6 +23,8 @@ import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
 
 version (unittest)
+    import vulkan.ui.ui_button : UiButton;
+version (unittest)
     import vulkan.ui.ui_controls : UiTextField;
 
 /** Screen-level coordinator for retained UI windows. */
@@ -142,16 +144,26 @@ class UiScreen
             return true;
         }
 
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && hasActiveModal())
+        {
+            if (!activeModalWindow.activateCancelButton())
+                dismissActiveModal();
+            return true;
+        }
+
+        if (focusedWidget !is null && focusedWidget.dispatchKeyEvent(event))
+            return true;
+
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.enter && hasActiveModal())
+            return activeModalWindow.activateDefaultButton();
+
         if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && focusedWidget !is null)
         {
             setFocusedWidget(null);
             return true;
         }
 
-        if (focusedWidget is null)
-            return false;
-
-        return focusedWidget.dispatchKeyEvent(event);
+        return false;
     }
 
     /** Routes UTF-8 text input to the focused widget. */
@@ -1181,6 +1193,45 @@ unittest
     assert(!screen.hasActiveModal());
     assert(!modal.visible);
     assert(screen.currentFocusedWidget() is null);
+}
+
+@("UiScreen routes modal default and cancel keys to configured buttons")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto modal = new UiWindow("modal", 40.0f, 20.0f, 180.0f, 100.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto okButton = new UiButton("OK", 8.0f, 8.0f, 60.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto cancelButton = new UiButton("Cancel", 76.0f, 8.0f, 80.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    bool defaultClicked;
+    bool cancelClicked;
+    okButton.onClick = () { defaultClicked = true; };
+    cancelButton.onClick = ()
+    {
+        cancelClicked = true;
+        screen.dismissActiveModal();
+    };
+    modal.add(okButton);
+    modal.add(cancelButton);
+    modal.setDefaultButton(okButton);
+    modal.setCancelButton(cancelButton);
+
+    screen.showModalWindow(modal);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.enter;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(defaultClicked);
+    assert(screen.hasActiveModal());
+
+    keyEvent.key = UiKeyCode.escape;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(cancelClicked);
+    assert(!screen.hasActiveModal());
+    assert(!modal.visible);
 }
 
 @("UiScreen can place a window away from existing visible windows")

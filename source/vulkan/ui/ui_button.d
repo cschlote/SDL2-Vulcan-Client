@@ -133,6 +133,14 @@ final class UiButton : UiWidget
         minimumHeight = 0.0f;
     }
 
+    /** Activates the button from pointer, keyboard, or dialog conventions. */
+    void activate()
+    {
+        logLine("UiButton click: ", caption);
+        if (onClick !is null)
+            onClick();
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
@@ -181,10 +189,7 @@ protected:
         if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
             return false;
 
-        logLine("UiButton click: ", caption);
-        if (onClick !is null)
-            onClick();
-
+        activate();
         return true;
     }
 
@@ -193,10 +198,7 @@ protected:
         if (event.kind != UiKeyEventKind.keyDown || event.key != UiKeyCode.enter)
             return false;
 
-        logLine("UiButton key click: ", caption);
-        if (onClick !is null)
-            onClick();
-
+        activate();
         return true;
     }
 }
