@@ -42,25 +42,26 @@ Planned extensions:
 
 ## UI Sidebar
 
-The UI Sidebar is a persistent left-edge launcher for demo windows. It is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. The compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode with text labels beside icons remains planned, similar to a desktop dock or EVE Online-style side panel.
+The UI Sidebar is a persistent left-edge launcher for demo windows. It is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
 
 Current behavior:
 
 - anchors to the left edge of the SDL window
 - shows or raises singleton windows such as Controls / Log, Status, and Settings
 - spawns repeatable windows such as Widget Demo and Chrome Demo when that action policy is useful
+- toggles between compact and expanded label modes
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
 
 - content root really fills the chrome-less window
 - icon slots stay stable at compact width
+- expanding the sidebar updates the reserved left edge for demo windows
 - viewport resizing keeps the bar attached to the left edge
 - modals and popups layer above the sidebar when needed
 
 Planned extensions:
 
-- expanded icon-plus-text mode
 - active or visible-state markers for target windows
 - tooltips for collapsed icon-only actions
 - texture-backed icons or placeholder icon widgets

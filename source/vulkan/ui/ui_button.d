@@ -121,6 +121,17 @@ final class UiButton : UiWidget
         super.add(contentRow);
     }
 
+    /** Updates the visible caption and remeasures on the next layout pass. */
+    void setCaption(string caption)
+    {
+        this.caption = caption;
+        captionLabel.text = caption;
+        preferredWidth = 0.0f;
+        preferredHeight = 0.0f;
+        minimumWidth = 0.0f;
+        minimumHeight = 0.0f;
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {

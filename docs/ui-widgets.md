@@ -132,7 +132,7 @@ Demo coverage:
 
 Status: Partial as demo composition; reusable class planned.
 
-`UiSidebar` is the planned reusable left-edge UI bar inspired by application launchers such as EVE Online side panels or the Ubuntu GNOME dock. The current demo implements the first version as a chrome-less `UiWindow` whose content root fills the window. The content stacks compact text-placeholder actions vertically and can show, raise, or spawn demo windows.
+`UiSidebar` is the planned reusable left-edge UI bar inspired by application launchers such as EVE Online side panels or the Ubuntu GNOME dock. The current demo implements the first version as a chrome-less `UiWindow` whose content root fills the window. The content stacks compact text-placeholder actions vertically, can expand to show text labels, and can show, raise, or spawn demo windows.
 
 Common use cases:
 
@@ -166,7 +166,7 @@ Implementation direction:
 Demo coverage:
 
 - The demo sidebar mirrors key Demo Control actions.
-- The sidebar launches or reveals Controls / Log, Status, Settings, Widget Demo, and Chrome Demo.
+- The sidebar launches or reveals Controls / Log, Status, Settings, Widget Demo, and Chrome Demo, with compact and expanded labels.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
 Open questions:
