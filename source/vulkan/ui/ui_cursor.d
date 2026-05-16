@@ -23,6 +23,8 @@ enum UiCursorKind
     pointer,
     /** Move or drag cursor. */
     move,
+    /** Precision or inspect cursor. */
+    crosshair,
     /** Horizontal resize cursor. */
     resizeHorizontal,
     /** Vertical resize cursor. */

@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a demo custom inspect cursor for Widget Demo probe boxes.
 - Added optional bitmap cursor definitions and SDL custom cursor registration hooks.
 - Added retained UI cursor intent and SDL system cursor updates for controls and window chrome.
 - Moved generic retained UI overlay traversal into `UiScreen`.

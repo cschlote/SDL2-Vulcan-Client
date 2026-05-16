@@ -35,7 +35,7 @@ Remaining migration debt:
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
-- context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides.
+- context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
 - audio output, audio events, and music playback are still planned engine work.
 
 ## UI Design Direction

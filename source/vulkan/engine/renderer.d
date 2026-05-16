@@ -40,6 +40,42 @@ import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
 
 private enum maxFramesInFlight = 2;
+private immutable ubyte[32] demoInspectCursorData = [
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+];
+private immutable ubyte[32] demoInspectCursorMask = [
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+];
 
 private enum RenderMode
 {
@@ -271,6 +307,7 @@ class VulkanRenderer
         uiScreen.initialize(fontAtlases[]);
         uiScreen.setSettingsDraft(demoSettings);
         uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
+        registerDemoCursors();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -313,6 +350,17 @@ class VulkanRenderer
             return;
 
         window.clearCustomSystemCursor(sdlCursorFor(cursor));
+    }
+
+    /** Registers demo-owned cursor artwork used to exercise custom cursor hooks.
+     *
+     * Returns:
+     *   Nothing.
+     */
+    void registerDemoCursors()
+    {
+        auto inspectCursor = UiCursorBitmap(UiCursorKind.crosshair, 16, 16, 7, 7, demoInspectCursorData[], demoInspectCursorMask[]);
+        registerCustomCursor(inspectCursor);
     }
 
     /** Destroys all renderer-owned Vulkan resources and the SDL surface. */
@@ -1340,6 +1388,8 @@ class VulkanRenderer
                         return SDL_SystemCursor.pointer;
                     case UiCursorKind.move:
                         return SDL_SystemCursor.move;
+                    case UiCursorKind.crosshair:
+                        return SDL_SystemCursor.crosshair;
                     case UiCursorKind.resizeHorizontal:
                         return SDL_SystemCursor.ewResize;
                     case UiCursorKind.resizeVertical:

@@ -28,6 +28,7 @@ import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
@@ -59,6 +60,11 @@ private final class LayoutDemoProbeBox : UiWidget
     override void renderSelf(ref UiRenderContext context)
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.crosshair;
     }
 }
 
