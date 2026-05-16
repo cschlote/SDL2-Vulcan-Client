@@ -106,13 +106,14 @@ The reusable UI package currently provides these retained widgets:
 - `UiScrollArea`: partial viewport for oversized content with retained scroll offsets and wheel handling
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
+- `UiTabBar`: horizontal page selector for grouped settings and future inspectors
 - `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
 - `UiListBox`: selectable text-row list used by popup-backed dropdowns
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, full scrollbar-backed `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, richer `UiListBox` variants, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
+Planned widgets and widget variants include reusable `UiSidebar`, full scrollbar-backed `UiScrollArea`, `UiIconButton`, `UiProgressBar`, richer `UiTabBar` and `UiListBox` variants, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
 
 `UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
 

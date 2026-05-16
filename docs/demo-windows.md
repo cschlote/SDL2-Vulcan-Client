@@ -102,21 +102,23 @@ Useful regression checks:
 Planned extensions:
 
 - add optional frame-time and draw-count lines
-- add compact mode after settings tabs exist
+- wire compact mode into real window/theme behavior
 - add renderer and UI diagnostics once a small metrics model exists
 
 ## Settings Window
 
-The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, and a fixed action row.
+The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiContentBox`, `UiLabel`, `UiTabBar`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, grouped pages, and a fixed action row.
 
 Current behavior:
 
 - edits display window mode
 - edits window width and height with focused text fields
 - toggles VSync
+- switches between Display, UI, and Audio pages
 - adjusts UI scale with a slider
 - selects a theme placeholder
 - toggles compact-window placeholder behavior
+- adjusts persisted master, music, and effects volume settings
 - applies settings to the running application
 - saves settings only through an explicit Save action
 
@@ -124,16 +126,17 @@ Useful regression checks:
 
 - `UiTextField` keeps focus and caret behavior while global renderer shortcuts stay blocked
 - slider dragging keeps pointer capture until button-up
+- tab switching changes only the active settings page
 - dropdown popups open, stay above normal windows, and close through the screen popup policy
 - the action row stays attached below the growable settings body
 - Apply and Save remain separate persistence concepts
 
 Planned extensions:
 
-- split content into Display, Controls, Gameplay, Audio, and UI pages when tabs exist
+- add Controls and Gameplay pages once those settings become editable
 - place oversized page content into `UiScrollArea` instead of forcing the window to grow
 - extract the current popup option rows into a reusable list/selection widget
-- add audio bus volume sliders for master, music, effects, and UI sound
+- add UI sound volume once an audio bus exists
 - add validation feedback for invalid numeric fields
 
 ## Widget Demo Window

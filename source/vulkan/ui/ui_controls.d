@@ -283,6 +283,108 @@ protected:
     }
 }
 
+/** Horizontal tab selector for switching between related pages. */
+final class UiTabBar : UiWidget
+{
+    /** Tab labels in display order. */
+    string[] tabs;
+    /** Index into `tabs` for the currently active page. */
+    size_t selectedIndex;
+    /** Font style used for tab labels. */
+    UiTextStyle style;
+    /** Tab bar fill color. */
+    float[4] fillColor;
+    /** Tab bar border color. */
+    float[4] borderColor;
+    /** Active tab fill color. */
+    float[4] selectedColor;
+    /** Tab text color. */
+    float[4] textColor;
+    /** Called after user interaction selects a different tab. */
+    void delegate(size_t, string) onChanged;
+
+    /** Creates a retained horizontal tab bar. */
+    this(string[] tabs, size_t selectedIndex = 0, float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = controlHeight, UiTextStyle style = UiTextStyle.medium)
+    {
+        super(x, y, width, height);
+        this.tabs = tabs.dup;
+        this.selectedIndex = tabs.length == 0 ? 0 : selectedIndex % tabs.length;
+        this.style = style;
+        fillColor = cast(float[4])defaultFillColor;
+        borderColor = cast(float[4])defaultBorderColor;
+        selectedColor = cast(float[4])defaultAccentColor;
+        textColor = cast(float[4])defaultTextColor;
+    }
+
+    /** Selects a tab by index and emits `onChanged` when the active tab changes. */
+    void selectIndex(size_t index)
+    {
+        if (tabs.length == 0)
+            return;
+
+        const normalizedIndex = index % tabs.length;
+        if (selectedIndex == normalizedIndex)
+            return;
+
+        selectedIndex = normalizedIndex;
+        if (onChanged !is null)
+            onChanged(selectedIndex, tabs[selectedIndex]);
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float totalWidth = 0.0f;
+        foreach (tab; tabs)
+            totalWidth += textWidth(context, style, tab) + controlPaddingX * 2.0f;
+
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : totalWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : controlHeight;
+        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, float.max, measuredHeight, 1.0f, 0.0f);
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
+    override void renderSelf(ref UiRenderContext context)
+    {
+        appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
+        if (tabs.length == 0)
+            return;
+
+        const tabWidth = width / cast(float)tabs.length;
+        foreach (index, tab; tabs)
+        {
+            const left = cast(float)index * tabWidth;
+            const right = index + 1 == tabs.length ? width : left + tabWidth;
+            if (index == selectedIndex)
+                appendQuad(context, left + 1.0f, 1.0f, right - 1.0f, height - 1.0f, context.depthBase - 0.001f, selectedColor);
+            appendTextLine(context, style, tab, left + controlPaddingX, centeredTextY(height, fallbackTextHeight), textColor, context.depthBase - 0.002f);
+        }
+    }
+
+    override bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1 || tabs.length == 0)
+            return false;
+
+        const localX = event.x - x;
+        if (localX < 0.0f)
+            return false;
+
+        const tabWidth = width / cast(float)tabs.length;
+        const index = cast(size_t)(localX / tabWidth);
+        if (index >= tabs.length)
+            return false;
+
+        selectIndex(index);
+        return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return tabs.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
+    }
+}
+
 /** Compact option selector that requests a transient popup list on click. */
 final class UiDropdown : UiWidget
 {
@@ -786,6 +888,30 @@ unittest
     assert(anchorY == 60.0f);
     dropdown.selectIndex(1);
     assert(dropdown.selectedText() == "classic");
+}
+
+@("UiTabBar selects clicked tabs")
+unittest
+{
+    auto tabBar = new UiTabBar(["Display", "UI", "Audio"], 0, 0.0f, 0.0f, 240.0f, 28.0f);
+    size_t changedIndex;
+    string changedValue;
+    tabBar.onChanged = (index, value)
+    {
+        changedIndex = index;
+        changedValue = value;
+    };
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 120.0f;
+    event.y = 12.0f;
+
+    assert(tabBar.dispatchPointerEvent(event));
+    assert(tabBar.selectedIndex == 1);
+    assert(changedIndex == 1);
+    assert(changedValue == "UI");
 }
 
 @("UiListBox selects clicked rows")

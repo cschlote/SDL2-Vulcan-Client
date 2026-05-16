@@ -37,7 +37,7 @@ Remaining migration debt:
 - The renderer still imports `DemoUiScreen`, even though renderer-facing UI draw data and traversal are generic.
 - popup-backed dropdown behavior exists in the demo; reusable list-box extraction and keyboard selection are still planned.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
-- settings tabs and broader settings categories are still planned demo work.
+- settings tabs exist for Display, UI, and Audio; Controls and Gameplay pages are still planned once those settings are editable.
 - reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
 - audio output, audio events, and music playback are still planned engine work.
@@ -189,7 +189,7 @@ The next work should continue from reusable engine foundations toward demo polis
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Partial: dropdown popup behavior and reusable `UiListBox` text-row selection are implemented; keyboard selection and scroll-backed long lists are still planned.
-9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
+9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages. Partial: Display, UI, and Audio pages are implemented; Controls and Gameplay remain planned.
 10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
 12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
@@ -227,7 +227,7 @@ The next work should continue from reusable engine foundations toward demo polis
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
 26. Add keyboard navigation, tab traversal, and modal focus behavior.
-27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio.
 28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
 30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.

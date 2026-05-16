@@ -27,7 +27,7 @@ import logging : logLine;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiSlider, UiTextField, UiToggle;
+import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiSlider, UiTabBar, UiTextField, UiToggle;
 import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
@@ -245,7 +245,8 @@ private enum float helpHeight = 214.0f;
 private enum float statusWidth = 348.0f;
 private enum float statusHeight = 184.0f;
 private enum float settingsWidth = 372.0f;
-private enum float settingsHeight = 188.0f;
+private enum float settingsHeight = 282.0f;
+private enum float settingsPageHeight = 138.0f;
 private enum float dropdownPopupRowHeight = 28.0f;
 private enum float testWindowWidth = 560.0f;
 private enum float testWindowHeight = 440.0f;
@@ -342,6 +343,11 @@ final class DemoUiScreen : UiScreen
     private UiLabel settingsTitleLabel;
     private UiLabel settingsIntroLabel;
     private UiLabel settingsProfileLabel;
+    private UiTabBar settingsTabBar;
+    private UiContentBox settingsPageBox;
+    private UiVBox settingsDisplayPage;
+    private UiVBox settingsUiPage;
+    private UiVBox settingsAudioPage;
     private UiDropdown settingsWindowModeDropdown;
     private UiTextField settingsWidthField;
     private UiTextField settingsHeightField;
@@ -349,6 +355,9 @@ final class DemoUiScreen : UiScreen
     private UiSlider settingsScaleSlider;
     private UiDropdown settingsThemeDropdown;
     private UiToggle settingsCompactToggle;
+    private UiSlider settingsMasterVolumeSlider;
+    private UiSlider settingsMusicVolumeSlider;
+    private UiSlider settingsEffectsVolumeSlider;
     private UiButton settingsApplyButton;
     private UiButton settingsSaveButton;
 
@@ -646,6 +655,7 @@ final class DemoUiScreen : UiScreen
         settingsTitleLabel = new UiLabel("Runtime configuration", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsAccentColor);
         settingsIntroLabel = new UiLabel("Apply changes this run. Save writes the config file.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
         settingsProfileLabel = new UiLabel("Profile: default", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])settingsTextColor);
+        settingsTabBar = new UiTabBar(["Display", "UI", "Audio"], 0, 0.0f, 0.0f, 300.0f, 28.0f);
         settingsWindowModeDropdown = new UiDropdown("Window Mode", ["windowed", "fullscreen", "borderless"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
         settingsWidthField = new UiTextField("", "Width", 0.0f, 0.0f, 104.0f, 28.0f);
         settingsHeightField = new UiTextField("", "Height", 0.0f, 0.0f, 104.0f, 28.0f);
@@ -653,9 +663,13 @@ final class DemoUiScreen : UiScreen
         settingsScaleSlider = new UiSlider("UI Scale", 0.50f, 2.00f, 1.00f, 0.0f, 0.0f, 220.0f, 32.0f);
         settingsThemeDropdown = new UiDropdown("Theme", ["midnight", "classic", "contrast"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
         settingsCompactToggle = new UiToggle("Compact Windows", false, 0.0f, 0.0f, 220.0f, 28.0f);
+        settingsMasterVolumeSlider = new UiSlider("Master", 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 220.0f, 32.0f);
+        settingsMusicVolumeSlider = new UiSlider("Music", 0.0f, 1.0f, 0.8f, 0.0f, 0.0f, 220.0f, 32.0f);
+        settingsEffectsVolumeSlider = new UiSlider("Effects", 0.0f, 1.0f, 0.8f, 0.0f, 0.0f, 220.0f, 32.0f);
         settingsApplyButton = new UiButton("Apply", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         settingsSaveButton = new UiButton("Save", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
 
+        settingsTabBar.onChanged = (index, value) { updateSettingsPageVisibility(); };
         settingsWindowModeDropdown.onChanged = (index, value) { settingsDraft.display.windowMode = value; updateSettingsSummary(); };
         settingsWindowModeDropdown.onOpenRequested = &openDropdownPopup;
         settingsWidthField.onChanged = (value) { settingsDraft.display.windowWidth = parseUintSetting(value, settingsDraft.display.windowWidth); updateSettingsSummary(); };
@@ -665,6 +679,9 @@ final class DemoUiScreen : UiScreen
         settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
         settingsThemeDropdown.onOpenRequested = &openDropdownPopup;
         settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
+        settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; updateSettingsSummary(); };
+        settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; updateSettingsSummary(); };
+        settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; updateSettingsSummary(); };
         settingsApplyButton.onClick = &applySettingsFromDialog;
         settingsSaveButton.onClick = &saveSettingsFromDialog;
 
@@ -674,15 +691,35 @@ final class DemoUiScreen : UiScreen
 
         settingsBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         settingsBody.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        settingsDisplayPage = new UiVBox(0.0f, 0.0f, 0.0f, settingsPageHeight, contentSpacing);
+        settingsDisplayPage.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
+        settingsDisplayPage.add(settingsWindowModeDropdown);
+        settingsDisplayPage.add(sizeRow);
+        settingsDisplayPage.add(settingsVsyncToggle);
+
+        settingsUiPage = new UiVBox(0.0f, 0.0f, 0.0f, settingsPageHeight, contentSpacing);
+        settingsUiPage.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
+        settingsUiPage.add(settingsScaleSlider);
+        settingsUiPage.add(settingsThemeDropdown);
+        settingsUiPage.add(settingsCompactToggle);
+
+        settingsAudioPage = new UiVBox(0.0f, 0.0f, 0.0f, settingsPageHeight, contentSpacing);
+        settingsAudioPage.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
+        settingsAudioPage.add(settingsMasterVolumeSlider);
+        settingsAudioPage.add(settingsMusicVolumeSlider);
+        settingsAudioPage.add(settingsEffectsVolumeSlider);
+
+        settingsPageBox = new UiContentBox(0.0f, 0.0f, 0.0f, settingsPageHeight);
+        settingsPageBox.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
+        settingsPageBox.add(settingsDisplayPage);
+        settingsPageBox.add(settingsUiPage);
+        settingsPageBox.add(settingsAudioPage);
+
         settingsBody.add(settingsTitleLabel);
         settingsBody.add(settingsIntroLabel);
         settingsBody.add(settingsProfileLabel);
-        settingsBody.add(settingsWindowModeDropdown);
-        settingsBody.add(sizeRow);
-        settingsBody.add(settingsVsyncToggle);
-        settingsBody.add(settingsScaleSlider);
-        settingsBody.add(settingsThemeDropdown);
-        settingsBody.add(settingsCompactToggle);
+        settingsBody.add(settingsTabBar);
+        settingsBody.add(settingsPageBox);
 
         settingsActionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         settingsActionRow.add(settingsApplyButton);
@@ -699,6 +736,7 @@ final class DemoUiScreen : UiScreen
         };
         registerWindowInteractionHandlers(settingsWindow);
         addWindow(settingsWindow);
+        updateSettingsPageVisibility();
         refreshSettingsControls();
     }
 
@@ -714,6 +752,9 @@ final class DemoUiScreen : UiScreen
         settingsScaleSlider.value = settingsDraft.display.scale;
         settingsThemeDropdown.selectedIndex = optionIndex(settingsThemeDropdown.options, settingsDraft.ui.theme);
         settingsCompactToggle.checked = settingsDraft.ui.compactWindows;
+        settingsMasterVolumeSlider.value = settingsDraft.audio.masterVolume;
+        settingsMusicVolumeSlider.value = settingsDraft.audio.musicVolume;
+        settingsEffectsVolumeSlider.value = settingsDraft.audio.effectsVolume;
         updateSettingsSummary();
     }
 
@@ -743,7 +784,20 @@ final class DemoUiScreen : UiScreen
         settingsDraft.display.scale = settingsScaleSlider.value;
         settingsDraft.ui.theme = settingsThemeDropdown.selectedText();
         settingsDraft.ui.compactWindows = settingsCompactToggle.checked;
+        settingsDraft.audio.masterVolume = settingsMasterVolumeSlider.value;
+        settingsDraft.audio.musicVolume = settingsMusicVolumeSlider.value;
+        settingsDraft.audio.effectsVolume = settingsEffectsVolumeSlider.value;
         updateSettingsSummary();
+    }
+
+    void updateSettingsPageVisibility()
+    {
+        if (settingsDisplayPage is null)
+            return;
+
+        settingsDisplayPage.visible = settingsTabBar.selectedIndex == 0;
+        settingsUiPage.visible = settingsTabBar.selectedIndex == 1;
+        settingsAudioPage.visible = settingsTabBar.selectedIndex == 2;
     }
 
     void openDropdownPopup(UiDropdown dropdown, float anchorX, float anchorY, float anchorWidth, float anchorHeight)
@@ -1048,6 +1102,27 @@ unittest
     assert(screen.settingsDraft.ui.theme == "midnight");
 
     assert(!screen.hasActivePopup());
+}
+
+@("DemoUiScreen switches settings pages with tabs")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    assert(screen.settingsDisplayPage.visible);
+    assert(!screen.settingsUiPage.visible);
+    assert(!screen.settingsAudioPage.visible);
+
+    screen.settingsTabBar.selectIndex(2);
+    assert(!screen.settingsDisplayPage.visible);
+    assert(!screen.settingsUiPage.visible);
+    assert(screen.settingsAudioPage.visible);
+
+    screen.settingsMasterVolumeSlider.setValue(0.42f);
+    screen.syncSettingsDraftFromControls();
+    assert(screen.settingsDraft.audio.masterVolume > 0.41f && screen.settingsDraft.audio.masterVolume < 0.43f);
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")

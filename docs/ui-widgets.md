@@ -635,9 +635,9 @@ Demo coverage:
 
 ### UiTabBar
 
-Status: Planned.
+Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages.
+`UiTabBar` selects one visible page from several related content pages. It currently supports pointer selection and is used by the Settings window.
 
 Common use cases:
 
@@ -647,14 +647,14 @@ Common use cases:
 
 Required behavior:
 
-- active tab state
-- changed callback
+- active tab state. Implemented.
+- changed callback. Implemented.
 - keyboard navigation later
-- compact label measurement
+- compact label measurement. Implemented.
 
 Demo coverage:
 
-- Settings window after grouped pages exist.
+- Settings window for Display, UI, and Audio pages.
 - Widget Demo.
 
 ### UiProgressBar
