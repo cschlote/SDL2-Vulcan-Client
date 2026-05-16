@@ -23,21 +23,20 @@ import std.algorithm : max;
 import std.conv : ConvException, to;
 
 import demo.demo_settings : DemoSettings;
-import vulkan.font.font_legacy : FontAtlas;
+import logging : logLine;
 import vulkan.engine.pipeline : Vertex;
-import vulkan.ui.ui_event : UiResizeHandle;
-import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
+import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
+import vulkan.ui.ui_event : UiResizeHandle;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
-import vulkan.ui.ui_layout_context : UiLayoutContext;
-import vulkan.ui.ui_layout_context : UiLayoutSize;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
-import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
-import logging : logLine;
+import vulkan.ui.ui_window : UiWindow;
 
 /** Describes one contiguous draw block inside the overlay buffers.
  *
