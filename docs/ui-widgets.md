@@ -272,17 +272,20 @@ Demo coverage:
 
 - Demo Control, Controls / Log, Widget Demo, and Chrome Demo.
 
-### UiSurfaceBox
+### UiSurfaceBox / UiContentBox / UiFrameBox
 
-Status: Implemented.
+Status: Implemented as `UiSurfaceBox`; rename planned.
 
-`UiSurfaceBox` provides optional background and border rendering around a child content area.
+`UiSurfaceBox` provides optional background and border rendering around a child content area. The current name is too technical and does not describe the role well enough. The better long-term names are `UiContentBox` for a padded content root or `UiFrameBox` for a visible framed panel.
+
+This widget should stay simple. It should not grow into a scrolling container. Its purpose is to frame, pad, and assign a useful inner rectangle to content.
 
 Common use cases:
 
 - framed panels
 - content-root surfaces
 - visual grouping without creating a top-level window
+- chrome-less window content roots
 - future card-like repeated items where a card is a genuine item, not a page section
 
 Required behavior:
@@ -290,11 +293,65 @@ Required behavior:
 - assign child to the padded content area
 - render background and border before child content
 - keep debug bounds distinct from generic widgets
+- remain non-scrollable and non-interactive by default
+- keep clipping and scroll state out of this class
 
 Demo coverage:
 
 - current window content roots use surface-style behavior internally.
 - Widget Demo should gain explicit panel examples.
+
+Planned work:
+
+- rename to `UiContentBox` or `UiFrameBox` once the public widget naming pass starts
+- keep `UiWindow.contentRoot` semantically aligned with this role
+- use `UiScrollArea` when content can exceed the visible area
+
+### UiScrollArea
+
+Status: Planned.
+
+`UiScrollArea` is the planned widget for content that can be larger than the visible region. It should own a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
+
+Common use cases:
+
+- settings pages that can become taller than the window
+- long help or log content
+- widget galleries with more controls than fit on screen
+- scrollable lists before or alongside dedicated list widgets
+- smaller windows that can still expose oversized content
+
+Required behavior:
+
+- own `scrollX` and `scrollY`
+- expose a visible viewport rectangle
+- clip child rendering to that viewport
+- translate pointer events by the current scroll offset
+- support mouse wheel scrolling
+- show horizontal and vertical scrollbars when content exceeds viewport size
+- let scrollbars be dragged directly
+- clamp scroll offsets to the content bounds
+- preserve keyboard focus for children inside the scrolled content
+- provide debug bounds for viewport, content extent, and scrollbar regions
+
+Implementation direction:
+
+- model the public widget as `UiScrollArea`
+- use an internal `UiViewport` concept if the implementation benefits from naming the clipped visible rectangle separately
+- allow one child content root first, then decide whether multiple children are useful
+- keep visual framing optional so it can be combined with `UiContentBox` or used directly inside `UiWindow`
+
+Demo coverage:
+
+- planned Widget Demo gallery should use it once the gallery grows beyond one window.
+- Controls / Log should use it for long logs after text-block and log widgets exist.
+- Settings should use it when tab pages or grouped settings exceed the current window height.
+
+Open questions:
+
+- Should scrollbars be ordinary widgets or private parts of `UiScrollArea`?
+- Should content measurement happen before or during scroll-area layout?
+- Should the first version support both axes immediately, or vertical first with horizontal later?
 
 ## Text Widgets
 

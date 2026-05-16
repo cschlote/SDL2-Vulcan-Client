@@ -20,7 +20,7 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface/content boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
 - widget documentation that covers existing widgets and planned widgets
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
@@ -58,7 +58,7 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, surface/content boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
 
 Next widgets:
 
@@ -69,6 +69,7 @@ Next widgets:
 - left-edge sidebar or dock bar
 - icon button for sidebar and toolbar actions
 - tooltip for collapsed icon-only controls
+- scroll area with viewport, clipping, and horizontal/vertical scrollbars
 - icon/image widget backed by real texture data
 - menu or popup list backing for dropdowns
 
@@ -101,6 +102,8 @@ Detailed per-window maintenance notes live in [Demo Windows](demo-windows.md). E
 The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
 
 `UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space. The content root must stay clear of chrome controls and the resize ring so window grips never overlap application widgets.
+
+The current `UiSurfaceBox` name should be treated as provisional. Its actual role is a simple padded content/frame box, so a later naming pass should rename it to `UiContentBox` or `UiFrameBox`. It should not absorb scrolling behavior. Oversized content should use a dedicated `UiScrollArea` with a viewport, clipping, `scrollX`, `scrollY`, and optional horizontal and vertical scrollbars.
 
 The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant first. Required window attributes include independent header visibility, title visibility, close-button visibility, resize-ring visibility, border thickness, and content padding. With header and resize chrome disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
 
@@ -174,17 +177,19 @@ The next work should continue from reusable engine foundations toward demo polis
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`.
 4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode.
-5. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
-6. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
-7. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
-8. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
-9. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
-10. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress.
-11. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
-12. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data.
-13. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
-14. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
-15. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
+5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
+6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
+7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
+8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
+9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
+10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
+11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
+12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress.
+13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
+14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data.
+15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
+16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
+17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
 ## Implementation Order
 
@@ -207,17 +212,19 @@ The next work should continue from reusable engine foundations toward demo polis
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions.
-20. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-21. Turn the current layout probe into a real widget demo/control gallery.
-22. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
-23. Add keyboard navigation, tab traversal, and modal focus behavior.
-24. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-25. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
-26. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
-27. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-28. Add UI and demo audio events, such as button click feedback and settings volume preview.
-29. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-30. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
+20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
+21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
+22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+23. Turn the current layout probe into a real widget demo/control gallery.
+24. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
+25. Add keyboard navigation, tab traversal, and modal focus behavior.
+26. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+27. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
+28. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
+29. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+30. Add UI and demo audio events, such as button click feedback and settings volume preview.
+31. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+32. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
 
 ## Public Package Preparation
 

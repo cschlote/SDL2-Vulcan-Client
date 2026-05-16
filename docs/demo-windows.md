@@ -90,6 +90,7 @@ Useful regression checks:
 Planned extensions:
 
 - add a scrolling log region after list or text-area widgets exist
+- use `UiScrollArea` once long text and log content exceed the visible window body
 - add filter controls for input, UI, renderer, and audio messages
 - add a copy/export command after clipboard support exists
 
@@ -145,6 +146,7 @@ Useful regression checks:
 Planned extensions:
 
 - split content into Display, Controls, Gameplay, Audio, and UI pages when tabs exist
+- place oversized page content into `UiScrollArea` instead of forcing the window to grow
 - use popup-backed dropdown lists instead of click-to-cycle dropdowns
 - add audio bus volume sliders for master, music, effects, and UI sound
 - add validation feedback for invalid numeric fields
@@ -173,6 +175,7 @@ Useful regression checks:
 Planned extensions:
 
 - turn the probe area into a gallery with buttons, toggles, sliders, text fields, dropdowns, image widgets, and future controls
+- wrap the gallery in `UiScrollArea` when the number of examples exceeds the visible window body
 - add list, progress, tab, and popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
