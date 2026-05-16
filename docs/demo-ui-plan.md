@@ -82,8 +82,7 @@ Detailed widget notes live in [UI Widgets](ui-widgets.md). Each existing or plan
 
 The demo should evolve from a test shell into a small application with clear windows:
 
-- Main/demo control window: opens tools, exits the app, and exposes common demo actions.
-- UI sidebar: a left-edge icon launcher that shows or raises demo windows and can optionally expand to show text labels next to the icons.
+- UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
 - Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
@@ -185,7 +184,7 @@ The next work should continue from reusable engine foundations toward demo polis
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
-4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
+4. UI sidebar: add a left-edge icon launcher that can toggle singleton windows, spawn repeatable demo windows, exit the app, and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
@@ -220,7 +219,7 @@ The next work should continue from reusable engine foundations toward demo polis
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
-19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, window show/raise/spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
+19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, singleton toggle actions, repeatable spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets and wheel handling.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.

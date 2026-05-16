@@ -174,8 +174,8 @@ Implementation direction:
 
 Demo coverage:
 
-- The demo sidebar mirrors key Demo Control actions.
-- The sidebar launches or reveals Help Desk, Status, Settings, Widget Demo, and Chrome Demo, with compact and expanded labels.
+- The demo sidebar replaces the old Demo Control launcher.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo and Chrome Demo, with compact and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Settings, and Exit actions to the bottom.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
@@ -211,7 +211,7 @@ Required behavior:
 
 Demo coverage:
 
-- Demo Control, Help Desk, Status, Settings, Widget Demo, and Chrome Demo.
+- Help Desk, Status, Settings, Widget Demo, and Chrome Demo.
 
 ### UiHBox
 
@@ -288,7 +288,7 @@ Required behavior:
 
 Demo coverage:
 
-- Demo Control, Help Desk, Widget Demo, and Chrome Demo.
+- Help Desk, Widget Demo, and Chrome Demo.
 
 ### UiContentBox
 
@@ -471,7 +471,7 @@ Required behavior:
 
 Demo coverage:
 
-- Demo Control and Settings.
+- Settings and Widget Demo.
 - Widget Demo includes button examples in the retained-controls section.
 - Sidebar currently reuses `UiButton` as a temporary text-placeholder row.
 - Sidebar should later use `UiIconButton`, `UiSidebarAction`, or a specialized derivative.
@@ -724,7 +724,7 @@ Required behavior:
 
 Demo coverage:
 
-- Demo Control or Sidebar after grouped launcher sections exist.
+- Sidebar after grouped launcher sections exist.
 - Settings after tabs/grouped panels exist.
 
 ### UiPopupRoot

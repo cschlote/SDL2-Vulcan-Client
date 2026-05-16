@@ -13,43 +13,16 @@ The implementation lives in [source/demo/demo_ui.d](../source/demo/demo_ui.d). R
 - The `D` debug overlay should remain useful for every window by showing widget nesting, padding, content roots, and resize behavior.
 - Demo-specific labels, sample values, and callbacks should stay out of reusable `vulkan.ui` modules.
 
-## Demo Control Window
-
-The Demo Control window is the small always-visible launcher for the rest of the UI. It currently exercises `UiWindow`, `UiVBox`, `UiButton`, `UiSpacer`, click callbacks, close handling, and window visibility toggling.
-
-Current behavior:
-
-- toggles the Help Desk window
-- toggles the Status window
-- opens the Settings window
-- spawns independent Widget Demo windows
-- spawns independent Chrome Demo windows
-- requests application shutdown when the launcher itself is closed
-
-Useful regression checks:
-
-- button labels still determine useful minimum widths
-- button hover and pointer cursors remain consistent
-- repeated show/hide actions do not duplicate singleton windows
-- close behavior is distinct from hide behavior for application-owned windows
-
-Planned extensions:
-
-- add launch buttons for the future Input Demo, Selection Demo, Media Demo, Animation Demo, and Audio Demo windows
-- group launcher actions once tabs or grouped panels exist
-- expose reset-layout and preset-layout actions after a presets window exists
-- keep launcher actions mirrored in the left-edge UI sidebar while both launch surfaces exist
-
 ## UI Sidebar
 
-The UI Sidebar is a persistent left-edge launcher for demo windows. It is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
+The UI Sidebar is the persistent left-edge launcher for demo windows. It replaces the old Demo Control window and is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
 
 The sidebar actions currently reuse `UiButton`, whose internal content row centers the label with flexible spacers on both sides. This keeps the bootstrap implementation small, but it is only a placeholder for the final launcher-row design. A later `UiIconButton` or `UiSidebarAction` should keep a fixed icon slot on the left and place expanded text in a separate label region.
 
 Current behavior:
 
 - anchors to the left edge of the SDL window
-- shows or raises singleton windows such as Help Desk, Status, and Settings
+- toggles singleton windows such as Help Desk, Status, and Settings
 - spawns repeatable windows such as Widget Demo and Chrome Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
@@ -70,6 +43,7 @@ Useful regression checks:
 
 Planned extensions:
 
+- decide whether dragging ordinary windows into the reserved sidebar strip should be blocked immediately or only corrected by relayout after sidebar expand/shrink
 - scroll the upper launcher action group with the mouse wheel once the number of demo entries exceeds the available height
 - show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
 - active or visible-state markers for target windows
