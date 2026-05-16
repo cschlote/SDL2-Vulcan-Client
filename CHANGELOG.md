@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Split the old content/frame box role into `UiContentBox` for padded content roots and `UiFrameBox` for visible framed groups.
 - Renamed the Controls / Log window to Help Desk and documented the later searchable help and AI-agent direction.
 - Fixed growable `UiSpacer` measurement so an expanded sidebar spacer does not prevent later vertical shrink.
 - Documented the current sidebar entry limit and the later scrollable launcher group with fade-out indicators.

@@ -97,7 +97,8 @@ The reusable UI package currently provides these retained widgets:
 - `UiButton`: framed button with optional icon and label content row
 - `UiImage`: compact framed image/icon placeholder
 - `UiSpacer`: invisible layout spacer
-- `UiSurfaceBox`: current name for a simple padded content/frame box; planned rename candidate for `UiContentBox` or `UiFrameBox`
+- `UiContentBox`: padded content root used by windows and other containers
+- `UiFrameBox`: visible framed content box for grouping content
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
@@ -106,11 +107,11 @@ The reusable UI package currently provides these retained widgets:
 - `UiDropdown`: compact option selector that cycles values until popup menus exist
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
-The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
+The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
 Planned widgets and widget variants include reusable `UiSidebar`, `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
 
-`UiSurfaceBox` should not become the scrollable content solution. It should remain a simple content/frame box and probably be renamed. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars.
+`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars.
 
 ## Context-Sensitive Cursors
 
@@ -235,7 +236,6 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Should the left-edge UI sidebar reserve viewport space, overlay the scene, or support both modes?
-- Should the simple content box be renamed to `UiContentBox`, `UiFrameBox`, or split into both concepts?
 - Should `UiScrollArea` support both axes in the first version, or should vertical scrolling land first?
 - Which UI pieces are stable enough for the first public engine module?
 

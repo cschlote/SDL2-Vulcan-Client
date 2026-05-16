@@ -86,7 +86,7 @@ Current behavior:
 
 - lists keyboard and mouse controls
 - displays the number of spawned demo windows
-- documents debug bounds colors for `UiWindow`, `UiSurfaceBox`, `UiVBox`, `UiHBox`, `UiGrid`, `UiSpacer`, and generic controls
+- documents debug bounds colors for `UiWindow`, `UiContentBox`, `UiFrameBox`, `UiVBox`, `UiHBox`, `UiGrid`, `UiSpacer`, and generic controls
 - hides itself when closed instead of being destroyed
 
 Useful regression checks:

@@ -14,7 +14,7 @@ import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_cursor : UiCursorKind, cursorForResizeHandle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
-import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox, UiVBox;
+import vulkan.ui.ui_layout : UiContentBox, UiHBox, UiVBox;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendQuad, appendTextLine, appendTriangle, appendWindowBorder, appendWindowFrame;
 import logging : logLine;
@@ -47,7 +47,7 @@ final class UiWindow : UiWidget
     float headerHeight = 30.0f;                     ///< Height of the decorative header bar.
     float borderThickness = windowContentMargin;    ///< Content inset and draw thickness for the simple outer border.
 
-    private UiSurfaceBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
+    private UiContentBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
     private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
     private UiButton closeButton;                   ///< Optional close button rendered in the header.
     private float headerExtrasWidth;                ///< Cached width of all extra header widgets.
@@ -94,9 +94,7 @@ final class UiWindow : UiWidget
         this.closable = closable;
         this.dragable = dragable;
 
-        contentRoot = new UiSurfaceBox(0.0f, headerHeight + borderThickness, width, max(height - headerHeight - borderThickness, 0.0f), [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], contentPaddingLeft, contentPaddingTop, contentPaddingRight, contentPaddingBottom);
-        contentRoot.drawBackground = false;
-        contentRoot.drawBorder = false;
+        contentRoot = new UiContentBox(0.0f, headerHeight + borderThickness, width, max(height - headerHeight - borderThickness, 0.0f), contentPaddingLeft, contentPaddingTop, contentPaddingRight, contentPaddingBottom);
         super.add(contentRoot);
 
         headerExtras = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 4.0f);

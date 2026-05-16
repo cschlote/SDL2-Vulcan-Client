@@ -17,7 +17,7 @@ import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
-private immutable float[4] surfaceDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
+private immutable float[4] contentBoxDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
 private immutable float[4] verticalLayoutDebugBoundsColor = [0.20f, 1.00f, 0.35f, 0.65f];
 private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.00f, 0.65f];
 private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
@@ -224,19 +224,21 @@ protected:
     }
 }
 
-/** Box-style layout container with optional background and border. */
-final class UiSurfaceBox : UiLayoutContainer
+/** Shared implementation for content and framed layout boxes. */
+abstract class UiBoxBase : UiLayoutContainer
 {
     float[4] backgroundColor;
     float[4] borderColor;
-    bool drawBorder = true;
-    bool drawBackground = true;
+    bool drawBorder;
+    bool drawBackground;
 
-    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f, bool drawBackground = false, bool drawBorder = false)
     {
         super(x, y, width, height, paddingLeft, paddingTop, paddingRight, paddingBottom);
         this.backgroundColor = backgroundColor;
         this.borderColor = borderColor;
+        this.drawBackground = drawBackground;
+        this.drawBorder = drawBorder;
     }
 
 protected:
@@ -283,8 +285,53 @@ protected:
 
     override float[4] debugBoundsColor() const
     {
-        return cast(float[4])surfaceDebugBoundsColor;
+        return cast(float[4])contentBoxDebugBoundsColor;
     }
+}
+
+/** Padded content root that assigns one useful inner rectangle to its children. */
+final class UiContentBox : UiBoxBase
+{
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], paddingLeft, paddingTop, paddingRight, paddingBottom, false, false);
+    }
+}
+
+/** Visible framed box for grouping content with an optional background. */
+final class UiFrameBox : UiBoxBase
+{
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, backgroundColor, borderColor, paddingLeft, paddingTop, paddingRight, paddingBottom, true, true);
+    }
+}
+
+@("UiContentBox lays out children inside padding")
+unittest
+{
+    auto box = new UiContentBox(0.0f, 0.0f, 100.0f, 80.0f, 4.0f, 5.0f, 6.0f, 7.0f);
+    auto child = new UiSpacer();
+    box.add(child);
+
+    UiLayoutContext context;
+    box.layout(context);
+
+    assert(child.x == 4.0f);
+    assert(child.y == 5.0f);
+    assert(child.width == 90.0f);
+    assert(child.height == 68.0f);
+    assert(!box.drawBackground);
+    assert(!box.drawBorder);
+}
+
+@("UiFrameBox renders as visible framed content container")
+unittest
+{
+    auto box = new UiFrameBox(0.0f, 0.0f, 100.0f, 80.0f, [0.1f, 0.2f, 0.3f, 1.0f], [0.4f, 0.5f, 0.6f, 1.0f]);
+
+    assert(box.drawBackground);
+    assert(box.drawBorder);
 }
 
 /** Vertical stack container. */

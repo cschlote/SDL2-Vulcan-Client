@@ -590,7 +590,7 @@ final class DemoUiScreen : UiScreen
         helpCloseLabel = new UiLabel("F/T/W/H switch render modes, D toggles UI bounds, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendTitleLabel = new UiLabel("Debug bounds colors:", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
         helpDebugLegendWindowLabel = new UiLabel("Orange: UiWindow", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiSurfaceBox / content root", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiContentBox / UiFrameBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendVBoxLabel = new UiLabel("Green: UiVBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendHBoxLabel = new UiLabel("Blue: UiHBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendGridLabel = new UiLabel("Purple: UiGrid", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);

@@ -290,20 +290,42 @@ Demo coverage:
 
 - Demo Control, Help Desk, Widget Demo, and Chrome Demo.
 
-### UiSurfaceBox / UiContentBox / UiFrameBox
+### UiContentBox
 
-Status: Implemented as `UiSurfaceBox`; rename planned.
+Status: Implemented.
 
-`UiSurfaceBox` provides optional background and border rendering around a child content area. The current name is too technical and does not describe the role well enough. The better long-term names are `UiContentBox` for a padded content root or `UiFrameBox` for a visible framed panel.
+`UiContentBox` is a padded content-root container. It assigns its children to a useful inner rectangle and does not draw a visible background or border by default. `UiWindow` uses this for its internal body content root so window chrome stays separate from application widgets.
 
-This widget should stay simple. It should not grow into a scrolling container. Its purpose is to frame, pad, and assign a useful inner rectangle to content.
+This widget should stay simple. It should not grow into a scrolling container. Its purpose is to pad and assign a useful inner rectangle to content.
+
+Common use cases:
+
+- window content roots
+- chrome-less window content roots
+- visual grouping without creating a top-level window
+
+Required behavior:
+
+- assign child to the padded content area
+- keep debug bounds distinct from generic widgets
+- remain non-scrollable and non-interactive by default
+- keep clipping and scroll state out of this class
+
+Demo coverage:
+
+- current window content roots use `UiContentBox` internally.
+- Widget Demo should gain explicit panel examples.
+
+### UiFrameBox
+
+Status: Implemented.
+
+`UiFrameBox` is the visible sibling of `UiContentBox`. It uses the same padding and child-layout behavior, but draws a background and border before child content. It is intended for framed groups and future repeated item cards where a visible frame is semantically useful.
 
 Common use cases:
 
 - framed panels
-- content-root surfaces
-- visual grouping without creating a top-level window
-- chrome-less window content roots
+- visible groups inside windows
 - future card-like repeated items where a card is a genuine item, not a page section
 
 Required behavior:
@@ -316,14 +338,7 @@ Required behavior:
 
 Demo coverage:
 
-- current window content roots use surface-style behavior internally.
-- Widget Demo should gain explicit panel examples.
-
-Planned work:
-
-- rename to `UiContentBox` or `UiFrameBox` once the public widget naming pass starts
-- keep `UiWindow.contentRoot` semantically aligned with this role
-- use `UiScrollArea` when content can exceed the visible area
+- Widget Demo should gain explicit framed panel examples.
 
 ### UiScrollArea
 

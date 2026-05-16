@@ -20,7 +20,7 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface/content boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
 - widget documentation that covers existing widgets and planned widgets
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
@@ -59,7 +59,7 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, surface/content boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
 
 Next widgets:
 
@@ -100,11 +100,11 @@ The four corner windows should serve different roles so the UI reads like a real
 
 Detailed per-window maintenance notes live in [Demo Windows](demo-windows.md). Every visible demo window should have documented purpose, covered UI classes, regression checks, and planned extensions there.
 
-The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
+The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, content/frame boxes, grids, and spacers.
 
 `UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space. The content root must stay clear of chrome controls and the resize ring so window grips never overlap application widgets.
 
-The current `UiSurfaceBox` name should be treated as provisional. Its actual role is a simple padded content/frame box, so a later naming pass should rename it to `UiContentBox` or `UiFrameBox`. It should not absorb scrolling behavior. Oversized content should use a dedicated `UiScrollArea` with a viewport, clipping, `scrollX`, `scrollY`, and optional horizontal and vertical scrollbars.
+The former `UiSurfaceBox` role is now split into clearer `UiContentBox` and `UiFrameBox` names. `UiContentBox` is the padded content-root container used by `UiWindow`, while `UiFrameBox` is the visible framed variant for grouping content. Neither should absorb scrolling behavior. Oversized content should use a dedicated `UiScrollArea` with a viewport, clipping, `scrollX`, `scrollY`, and optional horizontal and vertical scrollbars.
 
 The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant first. `UiWindow` now supports independent header visibility, title visibility, border visibility/thickness, and content padding. Close and resize chrome are controlled by `closable` and `sizeable`; programmatic close, move, and resize remain ordinary API operations. With header, resize chrome, and border disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. If a border is enabled, the content root starts inside that border. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
 
@@ -186,7 +186,7 @@ The next work should continue from reusable engine foundations toward demo polis
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
 4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
-5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
+5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
@@ -221,7 +221,7 @@ The next work should continue from reusable engine foundations toward demo polis
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, window show/raise/spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
-20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
+20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
 23. Turn the current layout probe into a real widget demo/control gallery.
