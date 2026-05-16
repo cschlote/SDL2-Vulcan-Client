@@ -45,22 +45,30 @@ void appendWindowFrame(ref UiRenderContext context, float left, float top, float
 
     appendQuad(context, left, top, right, bottom, z, bodyColor);
 
-    // const headerLeft = left + headerLeftInset;
-    // const headerRight = right - headerRightInset;
-    // if (headerRight > headerLeft)
-    //     appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
+    if (headerHeight <= 0.0f)
+        return;
+
+    const headerLeft = left + headerLeftInset;
+    const headerRight = right - headerRightInset;
+    if (headerRight > headerLeft)
+        appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
 
     appendQuad(context, left, top + headerHeight - 2.0f, right, top + headerHeight - 1.0f, z - 0.002f, [0.10f, 0.10f, 0.12f, 0.70f]);
     appendQuad(context, left, top + headerHeight - 1.0f, right, top + headerHeight, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.48f]);
 }
 
 /** Appends the outer border quads for a retained window frame. */
-void appendWindowBorder(ref UiRenderContext context, float left, float top, float right, float bottom, float z)
+void appendWindowBorder(ref UiRenderContext context, float left, float top, float right, float bottom, float z, float thickness = 1.0f)
 {
-    appendQuad(context, left, top, right, top + 2.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.34f]);
-    appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, left, top, left + 1.0f, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, right - 1.0f, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    if (right <= left || bottom <= top || thickness <= 0.0f)
+        return;
+
+    const clampedThickness = thickness < (right - left) * 0.5f ? thickness : (right - left) * 0.5f;
+    const verticalThickness = clampedThickness < (bottom - top) * 0.5f ? clampedThickness : (bottom - top) * 0.5f;
+    appendQuad(context, left, top, right, top + verticalThickness, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.34f]);
+    appendQuad(context, left, bottom - verticalThickness, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, left, top, left + clampedThickness, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, right - clampedThickness, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
 }
 
 /** Appends the button body and border quads for the retained UI style. */

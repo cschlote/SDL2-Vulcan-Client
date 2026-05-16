@@ -147,24 +147,33 @@ final class ChromeDemoWindow
     private UiToggle closableToggle;
     private UiToggle dragableToggle;
     private UiToggle stackableToggle;
+    private UiToggle headerToggle;
+    private UiToggle titleToggle;
+    private UiToggle borderToggle;
 
     this(uint serial)
     {
         const windowTitle = format("Chrome Demo #%u", serial);
-        window = new UiWindow(windowTitle, 54.0f, 54.0f, 360.0f, 210.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        window = new UiWindow(windowTitle, 54.0f, 54.0f, 360.0f, 320.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
         summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        sizeableToggle = new UiToggle("Resize ring", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        sizeableToggle = new UiToggle("Resize grips", true, 0.0f, 0.0f, 220.0f, 28.0f);
         closableToggle = new UiToggle("Close button", true, 0.0f, 0.0f, 220.0f, 28.0f);
         dragableToggle = new UiToggle("Drag header", true, 0.0f, 0.0f, 220.0f, 28.0f);
         stackableToggle = new UiToggle("MMB stacking", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        headerToggle = new UiToggle("Header band", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        titleToggle = new UiToggle("Title text", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        borderToggle = new UiToggle("Outer border", true, 0.0f, 0.0f, 220.0f, 28.0f);
 
         sizeableToggle.onChanged = (value) { updateWindowChrome(); };
         closableToggle.onChanged = (value) { updateWindowChrome(); };
         dragableToggle.onChanged = (value) { updateWindowChrome(); };
         stackableToggle.onChanged = (value) { updateWindowChrome(); };
+        headerToggle.onChanged = (value) { updateWindowChrome(); };
+        titleToggle.onChanged = (value) { updateWindowChrome(); };
+        borderToggle.onChanged = (value) { updateWindowChrome(); };
 
         content.add(summaryLabel);
         content.add(new UiSpacer(0.0f, sectionSpacing));
@@ -172,6 +181,9 @@ final class ChromeDemoWindow
         content.add(closableToggle);
         content.add(dragableToggle);
         content.add(stackableToggle);
+        content.add(headerToggle);
+        content.add(titleToggle);
+        content.add(borderToggle);
         window.add(content);
         window.visible = true;
         updateWindowChrome();
@@ -180,7 +192,8 @@ final class ChromeDemoWindow
     void updateWindowChrome()
     {
         window.setChromeFlags(sizeableToggle.checked, closableToggle.checked, dragableToggle.checked, stackableToggle.checked);
-        summaryLabel.text = format("resize %s, close %s, drag %s, stack %s", sizeableToggle.checked ? "on" : "off", closableToggle.checked ? "on" : "off", dragableToggle.checked ? "on" : "off", stackableToggle.checked ? "on" : "off");
+        window.setChromeVisibility(headerToggle.checked, titleToggle.checked, borderToggle.checked);
+        summaryLabel.text = format("resize %s, close %s, header %s, border %s", sizeableToggle.checked ? "on" : "off", closableToggle.checked && headerToggle.checked ? "on" : "off", headerToggle.checked ? "on" : "off", borderToggle.checked ? "on" : "off");
     }
 }
 
@@ -746,7 +759,7 @@ final class DemoUiScreen : UiScreen
         const cascadeIndex = cast(float)(nextChromeWindowSerial - 2);
         demoWindow.window.x += cascadeIndex * 28.0f;
         demoWindow.window.y += cascadeIndex * 24.0f;
-        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, 360.0f, 210.0f);
+        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, 360.0f, 320.0f);
         demoWindow.window.onClose = ()
         {
             demoWindow.window.visible = false;

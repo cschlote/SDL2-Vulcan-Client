@@ -88,7 +88,7 @@ Planned work:
 
 ### UiWindow
 
-Status: Implemented, with planned chrome variants.
+Status: Implemented, with additional planned window roles.
 
 `UiWindow` is the top-level retained UI container. It owns frame rendering, content root placement, close button behavior, dragging, resizing, stacking, and window-level hit testing.
 
@@ -105,24 +105,26 @@ Required behavior:
 - content root stays clear of active chrome, close controls, and resize grips
 - direct content widgets receive the useful body area
 - chrome flags can independently control sizeability, closability, draggability, and stackability
+- chrome visibility can independently control header, title, and border
 - cursor regions match resize, move, action, and blocked states
 - close/hide/destroy behavior remains distinguishable
 
-Planned chrome attributes:
+Implemented chrome attributes:
 
 - header visibility
 - title visibility
-- close-button visibility independent from closability policy
-- resize-ring visibility and thickness
 - border visibility and thickness
 - content padding per side
+
+Planned chrome attributes:
+
 - window role such as normal, tool, dialog, popup, dock, or sidebar
 - optional transition preset for open and close animation
 
 Demo coverage:
 
 - all current UI windows are `UiWindow` instances.
-- Chrome Demo toggles current chrome flags.
+- Chrome Demo toggles current behavior and visibility flags.
 - planned Sidebar Demo should exercise chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
 

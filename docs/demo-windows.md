@@ -182,7 +182,7 @@ Planned extensions:
 
 ## Chrome Demo Window
 
-The Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` chrome flags, `UiToggle`, `UiLabel`, callbacks, close controls, resize rings, header dragging, and middle-click stacking.
+The Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, `UiToggle`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
 
 Current behavior:
 
@@ -190,6 +190,7 @@ Current behavior:
 - toggles the close button
 - toggles header dragging
 - toggles middle-click front/back stacking
+- toggles header, title, and border visibility
 - updates a summary label from toggle callbacks
 - spawns as independent windows and removes itself when closed
 
@@ -197,7 +198,8 @@ Useful regression checks:
 
 - disabling header drag does not disable middle-click stacking
 - disabling close hides or blocks only close behavior, not window visibility management elsewhere
-- disabling the resize ring removes resize cursor regions and resize gestures
+- disabling the resize grips removes resize cursor regions and resize gestures
+- disabling the header moves content to the top chrome inset, while disabling the border lets content fill the full window area
 - chrome controls receive pointer buttons before generic window stacking fallback
 - content remains inset away from resize grips when sizeability changes
 

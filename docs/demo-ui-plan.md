@@ -105,7 +105,7 @@ The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible
 
 The current `UiSurfaceBox` name should be treated as provisional. Its actual role is a simple padded content/frame box, so a later naming pass should rename it to `UiContentBox` or `UiFrameBox`. It should not absorb scrolling behavior. Oversized content should use a dedicated `UiScrollArea` with a viewport, clipping, `scrollX`, `scrollY`, and optional horizontal and vertical scrollbars.
 
-The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant first. Required window attributes include independent header visibility, title visibility, close-button visibility, resize-ring visibility, border thickness, and content padding. With header and resize chrome disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
+The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant first. `UiWindow` now supports independent header visibility, title visibility, border visibility/thickness, and content padding. Close and resize chrome are controlled by `closable` and `sizeable`; programmatic close, move, and resize remain ordinary API operations. With header, resize chrome, and border disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. If a border is enabled, the content root starts inside that border. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
 
 Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
 
@@ -175,7 +175,7 @@ The next work should continue from reusable engine foundations toward demo polis
 
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
-3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`.
+3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
 4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
@@ -210,7 +210,7 @@ The next work should continue from reusable engine foundations toward demo polis
 15. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer. Done for SDL system cursors.
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
-18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles.
+18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.

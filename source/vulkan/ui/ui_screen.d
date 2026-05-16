@@ -471,7 +471,7 @@ protected:
         auto sizeContext = buildLayoutContext(fontAtlases_);
         const contentSize = content.measure(sizeContext);
         const desiredWidth = contentSize.width + paddingLeft + paddingRight;
-        const desiredHeight = contentSize.height + paddingTop + paddingBottom + window.headerHeight;
+        const desiredHeight = contentSize.height + paddingTop + paddingBottom + window.verticalChromeExtent();
         const effectiveMinimumWidth = max(minimumWidth, window.minimumWidth);
         const effectiveMinimumHeight = max(minimumHeight, window.minimumHeight);
         const minimumWindowWidth = max(effectiveMinimumWidth, desiredWidth);

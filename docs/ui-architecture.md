@@ -83,9 +83,9 @@ Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific s
 
 Window content should be ordinary widgets. Application code should build a window body with layout containers and controls, then hand it to `UiWindow`.
 
-Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from this chrome ring so application widgets do not overlap resize affordances.
+Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from active chrome, border, and resize ring so application widgets do not overlap window affordances.
 
-The next window variant is a chrome-less dock/sidebar window. It should allow the header, title, close button, resize ring, border thickness, and content padding to be configured independently. In that mode the content root fills the usable window rectangle, making a left-edge launcher bar possible without inventing a separate top-level owner.
+`UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
 
 ## Current Widget Set
 
