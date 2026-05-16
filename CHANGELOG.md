@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added focused keyboard handling for `UiTabBar` and `UiListBox`, including SDL up/down key mapping.
 - Reduced the expanded demo sidebar width to match the current text-placeholder actions more closely.
 - Added `UiTabBar` and split Settings into Display, UI, and Audio pages with persisted audio volume sliders.
 - Added a reusable `UiListBox` text-row selection control and switched dropdown popups to use it instead of demo-local button rows.

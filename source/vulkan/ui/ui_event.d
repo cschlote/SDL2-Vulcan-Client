@@ -68,6 +68,8 @@ enum UiKeyCode
     delete_,
     left,
     right,
+    up,
+    down,
     home,
     end,
     enter,

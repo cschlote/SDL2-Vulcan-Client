@@ -379,6 +379,38 @@ protected:
         return true;
     }
 
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown || tabs.length == 0)
+            return false;
+
+        final switch (event.key)
+        {
+            case UiKeyCode.left:
+                selectIndex(selectedIndex == 0 ? tabs.length - 1 : selectedIndex - 1);
+                return true;
+            case UiKeyCode.right:
+                selectIndex(selectedIndex + 1);
+                return true;
+            case UiKeyCode.up:
+            case UiKeyCode.down:
+                return false;
+            case UiKeyCode.home:
+                selectIndex(0);
+                return true;
+            case UiKeyCode.end:
+                selectIndex(tabs.length - 1);
+                return true;
+            case UiKeyCode.backspace:
+            case UiKeyCode.delete_:
+            case UiKeyCode.enter:
+            case UiKeyCode.escape:
+            case UiKeyCode.tab:
+            case UiKeyCode.unknown:
+                return false;
+        }
+    }
+
     override UiCursorKind cursorSelf(float localX, float localY)
     {
         return tabs.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
@@ -605,6 +637,40 @@ protected:
         return true;
     }
 
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown || options.length == 0)
+            return false;
+
+        final switch (event.key)
+        {
+            case UiKeyCode.left:
+            case UiKeyCode.up:
+                selectIndex(selectedIndex == 0 ? options.length - 1 : selectedIndex - 1);
+                return true;
+            case UiKeyCode.right:
+            case UiKeyCode.down:
+                selectIndex(selectedIndex + 1);
+                return true;
+            case UiKeyCode.home:
+                selectIndex(0);
+                return true;
+            case UiKeyCode.end:
+                selectIndex(options.length - 1);
+                return true;
+            case UiKeyCode.enter:
+                if (onActivated !is null)
+                    onActivated(selectedIndex, selectedText());
+                return true;
+            case UiKeyCode.backspace:
+            case UiKeyCode.delete_:
+            case UiKeyCode.escape:
+            case UiKeyCode.tab:
+            case UiKeyCode.unknown:
+                return false;
+        }
+    }
+
     override UiCursorKind cursorSelf(float localX, float localY)
     {
         return options.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
@@ -755,6 +821,9 @@ protected:
             case UiKeyCode.right:
                 cursorIndex = nextUtf8Boundary(text, cursorIndex);
                 return true;
+            case UiKeyCode.up:
+            case UiKeyCode.down:
+                return false;
             case UiKeyCode.home:
                 cursorIndex = 0;
                 return true;
@@ -912,6 +981,16 @@ unittest
     assert(tabBar.selectedIndex == 1);
     assert(changedIndex == 1);
     assert(changedValue == "UI");
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.right;
+    assert(tabBar.dispatchKeyEvent(keyEvent));
+    assert(tabBar.selectedIndex == 2);
+
+    keyEvent.key = UiKeyCode.home;
+    assert(tabBar.dispatchKeyEvent(keyEvent));
+    assert(tabBar.selectedIndex == 0);
 }
 
 @("UiListBox selects clicked rows")
@@ -921,6 +1000,8 @@ unittest
     size_t changedIndex;
     string changedValue;
     bool activated;
+    size_t activatedIndex;
+    string activatedValue;
     list.onChanged = (index, value)
     {
         changedIndex = index;
@@ -929,8 +1010,8 @@ unittest
     list.onActivated = (index, value)
     {
         activated = true;
-        assert(index == 1);
-        assert(value == "Beta");
+        activatedIndex = index;
+        activatedValue = value;
     };
 
     UiPointerEvent event;
@@ -945,6 +1026,19 @@ unittest
     assert(changedIndex == 1);
     assert(changedValue == "Beta");
     assert(activated);
+    assert(activatedIndex == 1);
+    assert(activatedValue == "Beta");
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.down;
+    assert(list.dispatchKeyEvent(keyEvent));
+    assert(list.selectedIndex == 2);
+
+    keyEvent.key = UiKeyCode.enter;
+    assert(list.dispatchKeyEvent(keyEvent));
+    assert(activatedIndex == 2);
+    assert(activatedValue == "Gamma");
 }
 
 @("UiTextField focuses and accepts programmatic text")

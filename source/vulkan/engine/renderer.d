@@ -529,6 +529,10 @@ class VulkanRenderer
                 return UiKeyCode.left;
             case SDL_Scancode.right:
                 return UiKeyCode.right;
+            case SDL_Scancode.up:
+                return UiKeyCode.up;
+            case SDL_Scancode.down:
+                return UiKeyCode.down;
             case SDL_Scancode.home:
                 return UiKeyCode.home;
             case SDL_Scancode.end:

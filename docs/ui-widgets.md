@@ -637,7 +637,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently supports pointer selection and is used by the Settings window.
+`UiTabBar` selects one visible page from several related content pages. It currently supports pointer and direct key selection and is used by the Settings window.
 
 Common use cases:
 
@@ -649,7 +649,7 @@ Required behavior:
 
 - active tab state. Implemented.
 - changed callback. Implemented.
-- keyboard navigation later
+- keyboard navigation. Implemented for Left, Right, Home, and End when focused.
 - compact label measurement. Implemented.
 
 Demo coverage:
@@ -699,9 +699,10 @@ Required behavior:
 - changed callback. Implemented.
 - activation callback for clicks on the already selected row. Implemented.
 - active row rendering. Implemented for the selected row.
+- keyboard selection. Implemented for Up, Down, Left, Right, Home, End, and Enter when focused.
 - hover row rendering later
 - scroll integration when content exceeds viewport
-- keyboard selection later
+- focus traversal integration later
 
 Demo coverage:
 
