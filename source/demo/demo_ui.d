@@ -528,7 +528,7 @@ final class DemoUiScreen : UiScreen
         sidebarWindow.minimumWidth = width;
         sidebarContent.setLayoutHint(width, sidebarFallbackHeight, width, sidebarFallbackHeight, width, float.max, 0.0f, 1.0f);
         sidebarExpandButton.setCaption(sidebarExpanded ? "<<" : ">>");
-        sidebarHelpButton.setCaption(sidebarExpanded ? "?  Help" : "?");
+        sidebarHelpButton.setCaption(sidebarExpanded ? "?  Help Desk" : "?");
         sidebarStatusButton.setCaption(sidebarExpanded ? "S  Status" : "S");
         sidebarSettingsButton.setCaption(sidebarExpanded ? "Cfg Settings" : "Cfg");
         sidebarWidgetButton.setCaption(sidebarExpanded ? "W  Widgets" : "W");
@@ -553,7 +553,7 @@ final class DemoUiScreen : UiScreen
         initWindow = new UiWindow("Demo Control", sidebarReservedLeft(), windowMargin, initWidth, initHeight, cast(float[4])initBodyColor, cast(float[4])initHeaderColor, cast(float[4])initTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         initContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
-        initHelpButton = new UiButton("Toggle Controls / Log", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+        initHelpButton = new UiButton("Toggle Help Desk", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         initHelpButton.onClick = &toggleHelpWindow;
         initStatusButton = new UiButton("Toggle Status", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
         initStatusButton.onClick = &toggleStatusWindow;
@@ -581,7 +581,7 @@ final class DemoUiScreen : UiScreen
 
     void buildHelpWindow()
     {
-        helpWindow = new UiWindow("Controls / Log", sidebarReservedLeft(), windowMargin + initHeight + windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        helpWindow = new UiWindow("Help Desk", sidebarReservedLeft(), windowMargin + initHeight + windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         helpContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         helpTitleLabel = new UiLabel("Keyboard and mouse controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
@@ -615,7 +615,7 @@ final class DemoUiScreen : UiScreen
         helpWindow.onClose = ()
         {
             helpWindow.visible = false;
-            logLine("UiWindow close: Controls / Log");
+            logLine("UiWindow close: Help Desk");
         };
         registerWindowInteractionHandlers(helpWindow);
         addWindow(helpWindow);
@@ -976,7 +976,7 @@ unittest
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
-    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
 
@@ -1022,12 +1022,12 @@ unittest
     assert(screen.sidebarWindow.width == sidebarExpandedWidth);
     assert(screen.sidebarReservedLeft() > collapsedReserved);
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
-    assert(screen.sidebarHelpButton.caption == "?  Help");
+    assert(screen.sidebarHelpButton.caption == "?  Help Desk");
     assert(screen.sidebarExitButton.caption == "X  Exit");
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarExpandedWidth - sidebarPadding * 2.0f);
-    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
 
     screen.sidebarExpandButton.onClick();
     assert(!screen.sidebarExpanded);
@@ -1036,5 +1036,22 @@ unittest
     assert(screen.sidebarExitButton.caption == "X");
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
-    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+}
+
+@("DemoUiScreen sidebar shrinks vertically after a larger layout")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(1024.0f, 720.0f, 0.0f, "test", "test", "test");
+
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+
+    screen.syncViewport(1024.0f, 576.0f, 0.0f, "test", "test", "test");
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarWindow.height == 576.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
 }

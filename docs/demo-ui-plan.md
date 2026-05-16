@@ -87,7 +87,7 @@ The demo should evolve from a test shell into a small application with clear win
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
 - Widget demo window: currently a layout probe window; it should become an interactive control gallery for buttons, toggles, sliders, dropdowns, text fields, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
-- Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
+- Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
 - Settings window: display, controls, gameplay, audio, and UI options.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
 - Input demo window: focus traversal, activation keys, pointer capture, disabled states, and modal focus behavior.
@@ -115,6 +115,8 @@ Size hints and grow policy should be treated as separate layout inputs. A widget
 The current sidebar still uses ordinary `UiButton` instances as temporary text-placeholder actions. Their centered internal label row is good enough for bootstrapping, but the planned launcher control should be a dedicated `UiIconButton`, `UiSidebarAction`, or equivalent row with a fixed 32 px icon slot and a separate expanded label region. That later widget should replace the current "icon marker plus label text in one centered caption" approach.
 
 The sidebar should use the layout system for grouping instead of manually placing buttons. Primary demo-window actions live at the top, then a vertically growable `UiSpacer` consumes the remaining height, and bottom system actions such as Help, Settings, and Exit stay attached to the lower edge. This keeps the sidebar responsive to viewport height changes and exercises the same flex layout model future toolbars and docks should use.
+
+The number of directly visible sidebar actions should stay limited while the minimum SDL window size is small. When the demo grows more windows than the sidebar can display comfortably, the upper launcher group should become scrollable by mouse wheel and use fade-out indicators to show that more entries exist above or below. The bottom system group should remain pinned and should not scroll with the launcher actions.
 
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 

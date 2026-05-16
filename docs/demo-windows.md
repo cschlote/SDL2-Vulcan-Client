@@ -19,7 +19,7 @@ The Demo Control window is the small always-visible launcher for the rest of the
 
 Current behavior:
 
-- toggles the Controls / Log window
+- toggles the Help Desk window
 - toggles the Status window
 - opens the Settings window
 - spawns independent Widget Demo windows
@@ -49,11 +49,12 @@ The sidebar actions currently reuse `UiButton`, whose internal content row cente
 Current behavior:
 
 - anchors to the left edge of the SDL window
-- shows or raises singleton windows such as Controls / Log, Status, and Settings
+- shows or raises singleton windows such as Help Desk, Status, and Settings
 - spawns repeatable windows such as Widget Demo and Chrome Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
 - exposes bottom system actions for Help, Settings, and Exit
+- keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
@@ -64,19 +65,22 @@ Useful regression checks:
 - the growable spacer keeps Help, Settings, and Exit aligned to the bottom edge after viewport resizing
 - expanding the sidebar updates the reserved left edge for demo windows
 - viewport resizing keeps the bar attached to the left edge
+- shrinking to the minimum SDL window height must shrink the growable spacer instead of clipping bottom actions
 - modals and popups layer above the sidebar when needed
 
 Planned extensions:
 
+- scroll the upper launcher action group with the mouse wheel once the number of demo entries exceeds the available height
+- show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
 - active or visible-state markers for target windows
 - tooltips for collapsed icon-only actions
 - texture-backed icons or placeholder icon widgets
 - `UiIconButton` or equivalent icon-plus-label action rows with fixed icon slot and separate label region
 - optional animation support for expand/collapse
 
-## Controls / Log Window
+## Help Desk Window
 
-The Controls / Log window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime.
+The Help Desk window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime. Later it should become the built-in help system with searchable documentation and an optional AI-agent interface for real questions about the demo and engine.
 
 Current behavior:
 
@@ -94,6 +98,8 @@ Useful regression checks:
 
 Planned extensions:
 
+- add search over built-in help topics and documentation snippets
+- add an AI-agent style question interface after the help data model and safety boundaries are clear
 - add a scrolling log region after list or text-area widgets exist
 - use `UiScrollArea` once long text and log content exceed the visible window body
 - add filter controls for input, UI, renderer, and audio messages

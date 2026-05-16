@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Renamed the Controls / Log window to Help Desk and documented the later searchable help and AI-agent direction.
+- Fixed growable `UiSpacer` measurement so an expanded sidebar spacer does not prevent later vertical shrink.
+- Documented the current sidebar entry limit and the later scrollable launcher group with fade-out indicators.
 - Added bottom-aligned Help, Settings, and Exit actions to the demo sidebar using a vertically growable spacer.
 - Documented that the sidebar currently uses temporary `UiButton` rows and should later move to a dedicated icon/action row widget.
 - Allowed `UiButton` to stretch horizontally when layout hints request growth, and documented size hints versus layout policy.
@@ -42,7 +45,7 @@
 - Fixed layout measurement so arranged widget sizes do not become new intrinsic sizes, and improved slider dragging.
 - Anchored the settings Apply and Save buttons in a fixed bottom action row below the growable settings body.
 - Added UiScreen window stacking and non-overlap placement helpers; middle-clicking a window header toggles that window between front and back.
-- Added the UI debug bounds color legend to the Controls / Log window.
+- Added the UI debug bounds color legend to the Help Desk window.
 - Removed stale layout-demo color literals, expanded DDoc for the retained controls and `UiScreen`, and refreshed the UI plan to match the current widget set.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.

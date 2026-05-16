@@ -78,7 +78,7 @@ Required behavior:
 Demo coverage:
 
 - all current demo windows are owned by `DemoUiScreen`, which derives from `UiScreen`.
-- Status and Controls / Log windows expose live screen state indirectly.
+- Status and Help Desk windows expose live screen state indirectly.
 
 Planned work:
 
@@ -154,6 +154,7 @@ Required behavior:
 - action widgets fill the available sidebar width in compact and expanded modes
 - support a growable spacer between primary launcher actions and bottom system actions
 - bottom system actions should include Help, Settings, and Exit in the demo sidebar
+- keep the visible action count limited until the upper action group can scroll
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
 - optional tooltip when collapsed and labels are hidden
@@ -168,12 +169,13 @@ Implementation direction:
 - use `UiVBox` for vertical stacking
 - replace temporary `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once texture-backed icons exist
 - give the replacement row a fixed icon slot and a separate label region instead of centering the combined text label with symmetric spacers
+- add mouse-wheel scrolling and fade-out indicators for the upper launcher group before adding many more sidebar entries
 - allow the expanded state to be a normal retained boolean, later animated by the UI animation scheduler
 
 Demo coverage:
 
 - The demo sidebar mirrors key Demo Control actions.
-- The sidebar launches or reveals Controls / Log, Status, Settings, Widget Demo, and Chrome Demo, with compact and expanded labels.
+- The sidebar launches or reveals Help Desk, Status, Settings, Widget Demo, and Chrome Demo, with compact and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Settings, and Exit actions to the bottom.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
@@ -209,7 +211,7 @@ Required behavior:
 
 Demo coverage:
 
-- Demo Control, Controls / Log, Status, Settings, Widget Demo, and Chrome Demo.
+- Demo Control, Help Desk, Status, Settings, Widget Demo, and Chrome Demo.
 
 ### UiHBox
 
@@ -282,10 +284,11 @@ Required behavior:
 - draw no normal content
 - expose debug bounds when the bounds overlay is enabled
 - participate in layout without becoming an interactive hit target
+- keep intrinsic spacer size separate from the arranged size assigned by a growable layout
 
 Demo coverage:
 
-- Demo Control, Controls / Log, Widget Demo, and Chrome Demo.
+- Demo Control, Help Desk, Widget Demo, and Chrome Demo.
 
 ### UiSurfaceBox / UiContentBox / UiFrameBox
 
@@ -359,7 +362,7 @@ Implementation direction:
 Demo coverage:
 
 - planned Widget Demo gallery should use it once the gallery grows beyond one window.
-- Controls / Log should use it for long logs after text-block and log widgets exist.
+- Help Desk should use it for long help content after text-block and log widgets exist.
 - Settings should use it when tab pages or grouped settings exceed the current window height.
 
 Open questions:
@@ -392,7 +395,7 @@ Required behavior:
 
 Demo coverage:
 
-- Controls / Log, Status, Settings, and Chrome Demo.
+- Help Desk, Status, Settings, and Chrome Demo.
 
 ### UiTextBlock
 
@@ -416,7 +419,7 @@ Required behavior:
 
 Demo coverage:
 
-- Controls / Log should use it once multi-line rendering is complete.
+- Help Desk should use it once multi-line rendering is complete.
 
 Planned work:
 

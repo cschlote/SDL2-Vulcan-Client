@@ -26,15 +26,22 @@ private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f]
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
 {
+    private float naturalWidth;
+    private float naturalHeight;
+
     this(float width = 0.0f, float height = 0.0f)
     {
         super(0.0f, 0.0f, width, height);
+        naturalWidth = width;
+        naturalHeight = height;
     }
 
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        return UiLayoutSize(width, height);
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : naturalWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : naturalHeight;
+        return UiLayoutSize(measuredWidth, measuredHeight);
     }
 
     override void renderSelf(ref UiRenderContext context)
@@ -69,6 +76,22 @@ unittest
     assert(child.height == 60.0f);
 }
 
+@("UiSpacer keeps its intrinsic size after grow layout")
+unittest
+{
+    auto column = new UiVBox(0.0f, 0.0f, 100.0f, 120.0f, 0.0f);
+    auto child = new UiSpacer();
+    child.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
+    column.add(child);
+
+    UiLayoutContext context;
+    column.layout(context);
+    assert(child.height == 120.0f);
+
+    const measured = child.measure(context);
+    assert(measured.height == 0.0f);
+}
+
 private float clampFloat(float value, float minimum, float maximum)
 {
     return value < minimum ? minimum : (value > maximum ? maximum : value);
@@ -85,8 +108,8 @@ private struct AxisHint
 private AxisHint horizontalHint(UiWidget child)
 {
     AxisHint hint;
-    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
-    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.flexGrowX > 0.0f ? 0.0f : child.width;
+    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.flexGrowX > 0.0f ? 0.0f : child.width;
     hint.maximum = child.maximumWidth > 0.0f ? child.maximumWidth : float.max;
     hint.grow = child.flexGrowX;
     return hint;
@@ -95,8 +118,8 @@ private AxisHint horizontalHint(UiWidget child)
 private AxisHint verticalHint(UiWidget child)
 {
     AxisHint hint;
-    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
-    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.flexGrowY > 0.0f ? 0.0f : child.height;
+    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.flexGrowY > 0.0f ? 0.0f : child.height;
     hint.maximum = child.maximumHeight > 0.0f ? child.maximumHeight : float.max;
     hint.grow = child.flexGrowY;
     return hint;
