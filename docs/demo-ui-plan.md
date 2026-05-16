@@ -194,7 +194,7 @@ The next work should continue from reusable engine foundations toward demo polis
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions. Done for `UiScreen` modal routing, blocked-background input, modal Enter/Escape button dispatch, and blocked background cursor feedback; concrete dialog widgets remain planned demo work.
 12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
-14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, and renderer frame dispatch.
+14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, and logical `UiWindow` transition states.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
 16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
@@ -228,7 +228,7 @@ The next work should continue from reusable engine foundations toward demo polis
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
 26. Add keyboard navigation, tab traversal, and modal focus behavior. Partial for traversal and modal focus containment.
 27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio.
-28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch and widget-local tick hooks.
+28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch, widget-local tick hooks, and window transition state/progress.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
 30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
 31. Add UI and demo audio events, such as button click feedback and settings volume preview.

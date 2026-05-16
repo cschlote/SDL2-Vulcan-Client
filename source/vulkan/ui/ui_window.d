@@ -26,6 +26,17 @@ private enum float resizeGripLineInset = 6.0f;
 private enum float fallbackTitleTextHeight = 16.0f;
 private enum float windowContentMargin = 3.0f;
 private enum float chromeTopInset = 7.0f;
+private enum float defaultOpenTransitionSeconds = 0.12f;
+private enum float defaultCloseTransitionSeconds = 0.10f;
+
+/** Logical top-level window presentation state for future visual transitions. */
+enum UiWindowTransitionState
+{
+    hidden,
+    opening,
+    visible,
+    closing,
+}
 
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
@@ -48,6 +59,8 @@ final class UiWindow : UiWidget
     float borderThickness = windowContentMargin;    ///< Content inset and draw thickness for the simple outer border.
     UiButton defaultButton;                         ///< Optional button activated by Enter while this window is modal.
     UiButton cancelButton;                          ///< Optional button activated by Escape while this window is modal.
+    UiWindowTransitionState transitionState = UiWindowTransitionState.visible; ///< Current presentation transition state.
+    float transitionProgress = 1.0f;                ///< Normalized progress from 0 to 1 for opening or closing.
 
     private UiContentBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
     private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
@@ -55,6 +68,8 @@ final class UiWindow : UiWidget
     private float headerExtrasWidth;                ///< Cached width of all extra header widgets.
     private float headerExtrasHeight;               ///< Cached height of all extra header widgets.
     private uint resizeButton;                      ///< Mouse button that owns the active resize gesture.
+    private float openTransitionDuration = defaultOpenTransitionSeconds;
+    private float closeTransitionDuration = defaultCloseTransitionSeconds;
 
     void delegate(float, float) onHeaderDragStart;              ///< Notified when a header drag starts.
     void delegate(float, float) onHeaderDragMove;               ///< Notified while a header drag is running.
@@ -156,6 +171,61 @@ final class UiWindow : UiWidget
             return false;
 
         cancelButton.activate();
+        return true;
+    }
+
+    /** Starts an opening transition and makes the window visible immediately. */
+    void beginOpenTransition(float durationSeconds = defaultOpenTransitionSeconds)
+    {
+        openTransitionDuration = max(durationSeconds, 0.0f);
+        visible = true;
+        transitionProgress = openTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        transitionState = transitionProgress >= 1.0f ? UiWindowTransitionState.visible : UiWindowTransitionState.opening;
+    }
+
+    /** Starts a closing transition. The window becomes hidden when it completes. */
+    void beginCloseTransition(float durationSeconds = defaultCloseTransitionSeconds)
+    {
+        closeTransitionDuration = max(durationSeconds, 0.0f);
+        transitionProgress = closeTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        if (transitionProgress >= 1.0f)
+        {
+            visible = false;
+            transitionState = UiWindowTransitionState.hidden;
+        }
+        else
+        {
+            transitionState = UiWindowTransitionState.closing;
+        }
+    }
+
+    /** Returns true while an opening or closing transition is active. */
+    bool hasActiveTransition() const
+    {
+        return transitionState == UiWindowTransitionState.opening || transitionState == UiWindowTransitionState.closing;
+    }
+
+    /** Advances the window transition state without applying visual transforms yet. */
+    bool tickTransition(float deltaSeconds)
+    {
+        if (!hasActiveTransition())
+            return false;
+
+        const duration = transitionState == UiWindowTransitionState.opening ? openTransitionDuration : closeTransitionDuration;
+        const step = duration <= 0.0f ? 1.0f : max(deltaSeconds, 0.0f) / duration;
+        transitionProgress = max(0.0f, transitionProgress + step);
+        if (transitionProgress < 1.0f)
+            return true;
+
+        transitionProgress = 1.0f;
+        if (transitionState == UiWindowTransitionState.opening)
+            transitionState = UiWindowTransitionState.visible;
+        else
+        {
+            transitionState = UiWindowTransitionState.hidden;
+            visible = false;
+        }
+
         return true;
     }
 
@@ -395,6 +465,11 @@ final class UiWindow : UiWidget
     }
 
 protected:
+    override bool tickSelf(float deltaSeconds)
+    {
+        return tickTransition(deltaSeconds);
+    }
+
     /** Draws the chrome and the title badge before the body children are rendered. */
     override void renderSelf(ref UiRenderContext context)
     {
@@ -739,4 +814,35 @@ unittest
 
     assert(window.cursorAt(12.0f, 22.0f) == UiCursorKind.default_);
     assert(window.cursorAt(40.0f, 32.0f) == UiCursorKind.default_);
+}
+
+@("UiWindow advances open and close transition states")
+unittest
+{
+    auto window = new UiWindow("Test", 10.0f, 20.0f, 240.0f, 180.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    window.visible = false;
+    window.beginOpenTransition(0.10f);
+    assert(window.visible);
+    assert(window.transitionState == UiWindowTransitionState.opening);
+    assert(window.hasActiveTransition());
+
+    assert(window.tickTransition(0.05f));
+    assert(window.transitionState == UiWindowTransitionState.opening);
+    assert(window.transitionProgress > 0.49f && window.transitionProgress < 0.51f);
+
+    assert(window.tickTransition(0.05f));
+    assert(window.transitionState == UiWindowTransitionState.visible);
+    assert(window.transitionProgress == 1.0f);
+    assert(window.visible);
+    assert(!window.hasActiveTransition());
+
+    window.beginCloseTransition(0.10f);
+    assert(window.transitionState == UiWindowTransitionState.closing);
+    assert(window.visible);
+
+    assert(window.tickTransition(0.10f));
+    assert(window.transitionState == UiWindowTransitionState.hidden);
+    assert(window.transitionProgress == 1.0f);
+    assert(!window.visible);
 }

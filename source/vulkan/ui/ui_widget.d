@@ -204,6 +204,9 @@ abstract class UiWidget
             return false;
 
         bool dirty = tickSelf(deltaSeconds);
+        if (!visible)
+            return dirty;
+
         foreach (child; children)
             dirty = child.tick(deltaSeconds) || dirty;
 

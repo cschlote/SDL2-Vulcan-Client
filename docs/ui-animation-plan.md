@@ -39,8 +39,8 @@ Expected first API shape:
 
 - `UiScreen.tickUi(float deltaSeconds)`. Implemented with delta clamping and dirty return.
 - `UiWidget.tick(float deltaSeconds)` for widgets with active local animation. Implemented as a recursive subtree hook.
-- `UiWindow.tickTransition(float deltaSeconds)` for top-level transition state
-- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle. Implemented for `UiScreen.tickUi` and `UiWidget.tick`.
+- `UiWindow.tickTransition(float deltaSeconds)` for top-level transition state. Implemented for logical open/close transition progress.
+- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle. Implemented for `UiScreen.tickUi`, `UiWidget.tick`, and `UiWindow.tickTransition`.
 
 The scheduler clamps large delta values after stalls or breakpoints so transitions do not jump through several visual states at once.
 
@@ -79,10 +79,10 @@ Top-level window transitions should be owned by `UiWindow` and coordinated by `U
 
 Common transition states:
 
-- hidden
-- opening
-- visible
-- closing
+- hidden. Implemented as `UiWindowTransitionState.hidden`.
+- opening. Implemented as `UiWindowTransitionState.opening`.
+- visible. Implemented as `UiWindowTransitionState.visible`.
+- closing. Implemented as `UiWindowTransitionState.closing`.
 
 Common transition properties:
 
@@ -91,7 +91,7 @@ Common transition properties:
 - translation offset
 - optional shadow or border emphasis
 
-Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. Close behavior should mirror the open transition and remove or hide the window only after the transition completes.
+Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes; visual alpha, scale, translation, and demo wiring are still planned.
 
 Input policy must be explicit:
 
