@@ -235,7 +235,7 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate(UiDropdown, fl
 
 private enum float windowMargin = 10.0f;
 private enum float sidebarCollapsedWidth = 44.0f;
-private enum float sidebarExpandedWidth = 168.0f;
+private enum float sidebarExpandedWidth = 124.0f;
 private enum float sidebarButtonSize = 32.0f;
 private enum float sidebarPadding = 5.0f;
 private enum float sidebarSpacing = 4.0f;

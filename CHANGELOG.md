@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reduced the expanded demo sidebar width to match the current text-placeholder actions more closely.
 - Added `UiTabBar` and split Settings into Display, UI, and Audio pages with persisted audio volume sliders.
 - Added a reusable `UiListBox` text-row selection control and switched dropdown popups to use it instead of demo-local button rows.
 - Fixed dropdown popup row selection so each option button selects its own option instead of the last option in the list.
