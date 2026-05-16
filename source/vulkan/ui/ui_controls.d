@@ -101,6 +101,7 @@ final class UiToggle : UiWidget
         this.label = label;
         this.checked = checked;
         this.style = style;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         accentColor = cast(float[4])defaultAccentColor;
@@ -135,6 +136,17 @@ protected:
     override bool handlePointerEvent(ref UiPointerEvent event)
     {
         if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
+            return false;
+
+        checked = !checked;
+        if (onChanged !is null)
+            onChanged(checked);
+        return true;
+    }
+
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown || event.key != UiKeyCode.enter)
             return false;
 
         checked = !checked;
@@ -200,6 +212,7 @@ final class UiSlider : UiWidget
         this.maximum = maximum > minimum ? maximum : minimum + 1.0f;
         this.value = clampFloat(value, this.minimum, this.maximum);
         this.style = style;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         accentColor = cast(float[4])defaultAccentColor;
@@ -281,6 +294,38 @@ protected:
         const ratio = width > 0.0f ? clampFloat(pointerX / width, 0.0f, 1.0f) : 0.0f;
         setValue(minimum + (maximum - minimum) * ratio);
     }
+
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown)
+            return false;
+
+        const step = (maximum - minimum) * 0.05f;
+        final switch (event.key)
+        {
+            case UiKeyCode.left:
+            case UiKeyCode.down:
+                setValue(value - step);
+                return true;
+            case UiKeyCode.right:
+            case UiKeyCode.up:
+                setValue(value + step);
+                return true;
+            case UiKeyCode.home:
+                setValue(minimum);
+                return true;
+            case UiKeyCode.end:
+                setValue(maximum);
+                return true;
+            case UiKeyCode.backspace:
+            case UiKeyCode.delete_:
+            case UiKeyCode.enter:
+            case UiKeyCode.escape:
+            case UiKeyCode.tab:
+            case UiKeyCode.unknown:
+                return false;
+        }
+    }
 }
 
 /** Horizontal tab selector for switching between related pages. */
@@ -310,6 +355,7 @@ final class UiTabBar : UiWidget
         this.tabs = tabs.dup;
         this.selectedIndex = tabs.length == 0 ? 0 : selectedIndex % tabs.length;
         this.style = style;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         selectedColor = cast(float[4])defaultAccentColor;
@@ -562,6 +608,7 @@ final class UiListBox : UiWidget
         this.selectedIndex = options.length == 0 ? 0 : selectedIndex % options.length;
         this.style = style;
         this.rowHeight = rowHeight > 0.0f ? rowHeight : controlHeight;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         selectedColor = cast(float[4])defaultAccentColor;
@@ -889,6 +936,12 @@ unittest
     assert(toggle.dispatchPointerEvent(event));
     assert(toggle.checked);
     assert(changed);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.enter;
+    assert(toggle.dispatchKeyEvent(keyEvent));
+    assert(!toggle.checked);
 }
 
 @("UiSlider maps pointer position to value")
@@ -904,6 +957,12 @@ unittest
 
     assert(slider.dispatchPointerEvent(event));
     assert(slider.value > 4.9f && slider.value < 5.1f);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.end;
+    assert(slider.dispatchKeyEvent(keyEvent));
+    assert(slider.value == 10.0f);
 }
 
 @("UiSlider drags while pointer is captured")

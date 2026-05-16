@@ -35,7 +35,7 @@ import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
 import vulkan.ui.ui_cursor : UiCursorBitmap, UiCursorKind;
-import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiKeyModifier, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
 
@@ -499,7 +499,7 @@ class VulkanRenderer
         uiEvent.kind = kind;
         uiEvent.key = mapUiKey(event.key.scancode);
         uiEvent.repeat = event.key.repeat;
-        uiEvent.modifiers = cast(uint)event.key.mod;
+        uiEvent.modifiers = ((event.key.mod & SDL_Keymod.shift) != 0) ? cast(uint)UiKeyModifier.shift : cast(uint)UiKeyModifier.none;
 
         if (uiScreen.dispatchKeyEvent(uiEvent))
             return true;

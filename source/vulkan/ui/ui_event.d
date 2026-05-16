@@ -77,6 +77,13 @@ enum UiKeyCode
     tab,
 }
 
+/** Generic key modifier bits used by retained UI widgets. */
+enum UiKeyModifier : uint
+{
+    none = 0,
+    shift = 1 << 0,
+}
+
 /** Describes one keyboard event routed through the UI focus owner. */
 struct UiKeyEvent
 {

@@ -16,7 +16,7 @@ import std.algorithm : max;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_cursor : UiCursorKind, cursorForResizeHandle;
-import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiKeyModifier, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
 import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
@@ -113,6 +113,12 @@ class UiScreen
     /** Routes a keyboard event to the focused widget. */
     bool dispatchKeyEvent(ref UiKeyEvent event)
     {
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.tab)
+        {
+            focusNextWidget((event.modifiers & cast(uint)UiKeyModifier.shift) != 0);
+            return true;
+        }
+
         if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && hasActivePopup())
         {
             dismissActivePopup();
@@ -144,6 +150,12 @@ class UiScreen
     bool hasKeyboardFocus() const
     {
         return focusedWidget !is null;
+    }
+
+    /** Returns the currently focused widget, or null when no widget owns focus. */
+    UiWidget currentFocusedWidget()
+    {
+        return focusedWidget;
     }
 
     /** Returns true when the point is inside any visible window. */
@@ -565,6 +577,61 @@ protected:
     }
 
 private:
+    void focusNextWidget(bool reverse)
+    {
+        auto widgets = focusableWidgetsInTraversalOrder();
+        if (widgets.length == 0)
+        {
+            setFocusedWidget(null);
+            return;
+        }
+
+        ptrdiff_t currentIndex = -1;
+        foreach (index, widget; widgets)
+        {
+            if (widget is focusedWidget)
+            {
+                currentIndex = cast(ptrdiff_t)index;
+                break;
+            }
+        }
+
+        size_t nextIndex;
+        if (currentIndex < 0)
+            nextIndex = reverse ? widgets.length - 1 : 0;
+        else if (reverse)
+            nextIndex = currentIndex == 0 ? widgets.length - 1 : cast(size_t)(currentIndex - 1);
+        else
+            nextIndex = (cast(size_t)currentIndex + 1) % widgets.length;
+
+        setFocusedWidget(widgets[nextIndex]);
+    }
+
+    UiWidget[] focusableWidgetsInTraversalOrder()
+    {
+        UiWidget[] widgets;
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            collectFocusableWidgets(window, widgets);
+        }
+        return widgets;
+    }
+
+    static void collectFocusableWidgets(UiWidget root, ref UiWidget[] widgets)
+    {
+        if (root is null || !root.visible)
+            return;
+
+        if (root.focusable)
+            widgets ~= root;
+
+        foreach (child; root.children)
+            collectFocusableWidgets(child, widgets);
+    }
+
     static bool windowContainsPointer(UiWindow window, float x, float y)
     {
         return window !is null && x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height;
@@ -957,6 +1024,36 @@ unittest
     assert(!screen.dispatchPointerEvent(event));
     assert(!field.focused);
     assert(!screen.hasKeyboardFocus());
+}
+
+@("UiScreen traverses focusable widgets with Tab")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("window", 0.0f, 0.0f, 220.0f, 120.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto first = new UiTextField("", "First", 8.0f, 8.0f, 120.0f, 28.0f);
+    auto second = new UiTextField("", "Second", 8.0f, 42.0f, 120.0f, 28.0f);
+    window.add(first);
+    window.add(second);
+    screen.addWindow(window);
+
+    UiKeyEvent event;
+    event.kind = UiKeyEventKind.keyDown;
+    event.key = UiKeyCode.tab;
+    assert(screen.dispatchKeyEvent(event));
+    assert(screen.currentFocusedWidget() is first);
+    assert(first.focused);
+
+    assert(screen.dispatchKeyEvent(event));
+    assert(screen.currentFocusedWidget() is second);
+    assert(!first.focused);
+    assert(second.focused);
+
+    event.modifiers = cast(uint)UiKeyModifier.shift;
+    assert(screen.dispatchKeyEvent(event));
+    assert(screen.currentFocusedWidget() is first);
 }
 
 @("UiScreen can place a window away from existing visible windows")

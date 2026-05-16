@@ -464,6 +464,7 @@ Common use cases:
 Required behavior:
 
 - emit click callback on primary activation
+- activate with Enter when focused
 - show pointer/action cursor
 - measure from label and optional icon content
 - stretch only when layout hints and grow policy explicitly allow it
@@ -493,7 +494,7 @@ Required behavior:
 
 - expose checked state
 - emit changed callback
-- support keyboard activation after navigation exists
+- activate with Enter when focused
 - show action cursor
 
 Demo coverage:
@@ -519,6 +520,7 @@ Required behavior:
 - capture pointer while dragging
 - clamp value to min/max
 - emit changed callback during updates
+- adjust with arrow keys, Home, and End when focused
 
 Demo coverage:
 
