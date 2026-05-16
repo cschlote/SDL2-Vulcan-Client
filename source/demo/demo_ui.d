@@ -299,6 +299,7 @@ final class DemoUiScreen : UiScreen
     private UiButton sidebarSettingsButton;
     private UiButton sidebarWidgetButton;
     private UiButton sidebarChromeButton;
+    private UiButton sidebarExitButton;
 
     private UiLabel helpTitleLabel;
     private UiLabel helpIntroLabel;
@@ -473,15 +474,19 @@ final class DemoUiScreen : UiScreen
         sidebarSettingsButton = buildSidebarButton("Cfg", () { showSettingsDialog(null); });
         sidebarWidgetButton = buildSidebarButton("W", &spawnLayoutTestWindow);
         sidebarChromeButton = buildSidebarButton("C", &spawnChromeDemoWindow);
+        sidebarExitButton = buildSidebarButton("X", &requestQuit);
+        auto sidebarBottomSpacer = new UiSpacer(0.0f, 0.0f);
+        sidebarBottomSpacer.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
 
         sidebarContent.add(sidebarExpandButton);
         sidebarContent.add(new UiSpacer(0.0f, sidebarSpacing));
-        sidebarContent.add(sidebarHelpButton);
         sidebarContent.add(sidebarStatusButton);
-        sidebarContent.add(sidebarSettingsButton);
-        sidebarContent.add(new UiSpacer(0.0f, sidebarSpacing));
         sidebarContent.add(sidebarWidgetButton);
         sidebarContent.add(sidebarChromeButton);
+        sidebarContent.add(sidebarBottomSpacer);
+        sidebarContent.add(sidebarHelpButton);
+        sidebarContent.add(sidebarSettingsButton);
+        sidebarContent.add(sidebarExitButton);
         sidebarWindow.add(sidebarContent);
         sidebarWindow.visible = true;
         refreshSidebarLabels();
@@ -523,17 +528,19 @@ final class DemoUiScreen : UiScreen
         sidebarWindow.minimumWidth = width;
         sidebarContent.setLayoutHint(width, sidebarFallbackHeight, width, sidebarFallbackHeight, width, float.max, 0.0f, 1.0f);
         sidebarExpandButton.setCaption(sidebarExpanded ? "<<" : ">>");
-        sidebarHelpButton.setCaption(sidebarExpanded ? "?  Controls" : "?");
+        sidebarHelpButton.setCaption(sidebarExpanded ? "?  Help" : "?");
         sidebarStatusButton.setCaption(sidebarExpanded ? "S  Status" : "S");
         sidebarSettingsButton.setCaption(sidebarExpanded ? "Cfg Settings" : "Cfg");
         sidebarWidgetButton.setCaption(sidebarExpanded ? "W  Widgets" : "W");
         sidebarChromeButton.setCaption(sidebarExpanded ? "C  Chrome" : "C");
+        sidebarExitButton.setCaption(sidebarExpanded ? "X  Exit" : "X");
         applySidebarButtonLayout(sidebarExpandButton);
         applySidebarButtonLayout(sidebarHelpButton);
         applySidebarButtonLayout(sidebarStatusButton);
         applySidebarButtonLayout(sidebarSettingsButton);
         applySidebarButtonLayout(sidebarWidgetButton);
         applySidebarButtonLayout(sidebarChromeButton);
+        applySidebarButtonLayout(sidebarExitButton);
     }
 
     void applySidebarButtonLayout(UiButton button)
@@ -969,6 +976,7 @@ unittest
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
 
@@ -991,6 +999,10 @@ unittest
     const chromeCount = screen.chromeWindows.length;
     screen.sidebarChromeButton.onClick();
     assert(screen.chromeWindows.length == chromeCount + 1);
+
+    assert(!screen.quitRequested);
+    screen.sidebarExitButton.onClick();
+    assert(screen.quitRequested);
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")
@@ -1010,15 +1022,19 @@ unittest
     assert(screen.sidebarWindow.width == sidebarExpandedWidth);
     assert(screen.sidebarReservedLeft() > collapsedReserved);
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
-    assert(screen.sidebarHelpButton.caption == "?  Controls");
+    assert(screen.sidebarHelpButton.caption == "?  Help");
+    assert(screen.sidebarExitButton.caption == "X  Exit");
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarExpandedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
 
     screen.sidebarExpandButton.onClick();
     assert(!screen.sidebarExpanded);
     assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
     assert(screen.sidebarHelpButton.caption == "?");
+    assert(screen.sidebarExitButton.caption == "X");
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding);
 }

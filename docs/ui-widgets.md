@@ -152,6 +152,8 @@ Required behavior:
 - expanded width large enough for icon plus label text
 - vertical layout of actions with stable 32 x 32 icon slots
 - action widgets fill the available sidebar width in compact and expanded modes
+- support a growable spacer between primary launcher actions and bottom system actions
+- bottom system actions should include Help, Settings, and Exit in the demo sidebar
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
 - optional tooltip when collapsed and labels are hidden
@@ -172,6 +174,7 @@ Demo coverage:
 
 - The demo sidebar mirrors key Demo Control actions.
 - The sidebar launches or reveals Controls / Log, Status, Settings, Widget Demo, and Chrome Demo, with compact and expanded labels.
+- The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Settings, and Exit actions to the bottom.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
 Open questions:

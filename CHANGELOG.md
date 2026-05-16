@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added bottom-aligned Help, Settings, and Exit actions to the demo sidebar using a vertically growable spacer.
 - Documented that the sidebar currently uses temporary `UiButton` rows and should later move to a dedicated icon/action row widget.
 - Allowed `UiButton` to stretch horizontally when layout hints request growth, and documented size hints versus layout policy.
 - Added an expanded-label mode to the left-edge demo sidebar.

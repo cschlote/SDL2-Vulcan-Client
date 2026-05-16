@@ -114,6 +114,8 @@ Size hints and grow policy should be treated as separate layout inputs. A widget
 
 The current sidebar still uses ordinary `UiButton` instances as temporary text-placeholder actions. Their centered internal label row is good enough for bootstrapping, but the planned launcher control should be a dedicated `UiIconButton`, `UiSidebarAction`, or equivalent row with a fixed 32 px icon slot and a separate expanded label region. That later widget should replace the current "icon marker plus label text in one centered caption" approach.
 
+The sidebar should use the layout system for grouping instead of manually placing buttons. Primary demo-window actions live at the top, then a vertically growable `UiSpacer` consumes the remaining height, and bottom system actions such as Help, Settings, and Exit stay attached to the lower edge. This keeps the sidebar responsive to viewport height changes and exercises the same flex layout model future toolbars and docks should use.
+
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
@@ -181,7 +183,7 @@ The next work should continue from reusable engine foundations toward demo polis
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
-4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders.
+4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
@@ -216,7 +218,7 @@ The next work should continue from reusable engine foundations toward demo polis
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
-19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions. Done with temporary `UiButton` text-placeholder actions.
+19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, window show/raise/spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
