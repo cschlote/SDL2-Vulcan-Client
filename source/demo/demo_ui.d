@@ -29,7 +29,7 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
 import vulkan.ui.ui_cursor : UiCursorKind;
-import vulkan.ui.ui_event : UiResizeHandle;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSpacer, UiVBox;
@@ -767,19 +767,23 @@ final class DemoUiScreen : UiScreen
 
         foreach (index, option; dropdown.options)
         {
-            const rowIndex = index;
-            auto row = new UiButton(option, 0.0f, 0.0f, anchorWidth, dropdownPopupRowHeight, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText, UiTextStyle.medium, 8.0f, 4.0f);
-            row.setLayoutHint(anchorWidth, dropdownPopupRowHeight, anchorWidth, dropdownPopupRowHeight, float.max, dropdownPopupRowHeight, 1.0f, 0.0f);
-            row.onClick = ()
-            {
-                dropdown.selectIndex(rowIndex);
-                dismissActivePopup();
-            };
-            list.add(row);
+            list.add(createDropdownPopupRow(dropdown, index, option, anchorWidth));
         }
 
         dropdownPopupWindow.add(list);
         showPopupWindow(dropdownPopupWindow, anchorX, anchorY, anchorWidth, anchorHeight);
+    }
+
+    UiButton createDropdownPopupRow(UiDropdown dropdown, size_t rowIndex, string option, float rowWidth)
+    {
+        auto row = new UiButton(option, 0.0f, 0.0f, rowWidth, dropdownPopupRowHeight, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText, UiTextStyle.medium, 8.0f, 4.0f);
+        row.setLayoutHint(rowWidth, dropdownPopupRowHeight, rowWidth, dropdownPopupRowHeight, float.max, dropdownPopupRowHeight, 1.0f, 0.0f);
+        row.onClick = ()
+        {
+            dropdown.selectIndex(rowIndex);
+            dismissActivePopup();
+        };
+        return row;
     }
 
     void updateSettingsSummary()
@@ -1044,10 +1048,16 @@ unittest
     assert(screen.dropdownPopupWindow.visible);
     assert(screen.windowsInFrontToBack()[$ - 1] is screen.dropdownPopupWindow);
 
-    screen.settingsThemeDropdown.selectIndex(2);
-    assert(screen.settingsDraft.ui.theme == "contrast");
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 310.0f;
+    event.y = 238.0f;
 
-    screen.dismissActivePopup();
+    assert(screen.dispatchPointerEvent(event));
+    assert(screen.settingsThemeDropdown.selectedText() == "midnight");
+    assert(screen.settingsDraft.ui.theme == "midnight");
+
     assert(!screen.hasActivePopup());
 }
 
