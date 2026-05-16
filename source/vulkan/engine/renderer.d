@@ -550,6 +550,15 @@ class VulkanRenderer
     {
         const mouseX = cast(float)event.wheel.mouseX;
         const mouseY = cast(float)event.wheel.mouseY;
+        UiPointerEvent pointerEvent;
+        pointerEvent.kind = UiPointerEventKind.wheel;
+        pointerEvent.x = mouseX;
+        pointerEvent.y = mouseY;
+        pointerEvent.wheelX = cast(float)event.wheel.x;
+        pointerEvent.wheelY = cast(float)event.wheel.y;
+
+        if (uiScreen.dispatchPointerEvent(pointerEvent))
+            return false;
 
         if (uiScreen.containsPointer(mouseX, mouseY))
             return false;

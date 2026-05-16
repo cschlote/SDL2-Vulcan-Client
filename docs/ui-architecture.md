@@ -102,6 +102,7 @@ The reusable UI package currently provides these retained widgets:
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
+- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets and wheel handling
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
 - `UiDropdown`: compact option selector that cycles values until popup menus exist
@@ -111,7 +112,7 @@ The D-key debug overlay outlines these boxes at runtime. The current color map i
 
 Planned widgets and widget variants include reusable `UiSidebar`, `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
 
-`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars.
+`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
 
 ## Context-Sensitive Cursors
 

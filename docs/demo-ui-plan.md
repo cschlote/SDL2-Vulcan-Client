@@ -20,7 +20,7 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, HBox/VBox/Grid layout, scroll areas, toggles, sliders, dropdowns, and text fields
 - widget documentation that covers existing widgets and planned widgets
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
@@ -59,7 +59,7 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, row/column/grid containers, toggles, sliders, dropdowns, and text fields.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, row/column/grid containers, scroll areas, toggles, sliders, dropdowns, and text fields.
 
 Next widgets:
 
@@ -116,7 +116,7 @@ The current sidebar still uses ordinary `UiButton` instances as temporary text-p
 
 The sidebar should use the layout system for grouping instead of manually placing buttons. Primary demo-window actions live at the top, then a vertically growable `UiSpacer` consumes the remaining height, and bottom system actions such as Help, Settings, and Exit stay attached to the lower edge. This keeps the sidebar responsive to viewport height changes and exercises the same flex layout model future toolbars and docks should use.
 
-The number of directly visible sidebar actions should stay limited while the minimum SDL window size is small. When the demo grows more windows than the sidebar can display comfortably, the upper launcher group should become scrollable by mouse wheel and use fade-out indicators to show that more entries exist above or below. The bottom system group should remain pinned and should not scroll with the launcher actions.
+The number of directly visible sidebar actions should stay limited while the minimum SDL window size is small. When the demo grows more windows than the sidebar can display comfortably, the upper launcher group should become scrollable by mouse wheel and use fade-out indicators to show that more entries exist above or below. The bottom system group should remain pinned and should not scroll with the launcher actions. The initial `UiScrollArea` already supports retained scroll offsets and wheel routing, but it still needs renderer clipping and visible scroll indicators before it should be used for this sidebar launcher group.
 
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 
@@ -187,7 +187,7 @@ The next work should continue from reusable engine foundations toward demo polis
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
 4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
-6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
+6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
@@ -222,7 +222,7 @@ The next work should continue from reusable engine foundations toward demo polis
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, window show/raise/spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
-21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
+21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets and wheel handling.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
 23. Turn the current layout probe into a real widget demo/control gallery.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.

@@ -101,7 +101,7 @@ Planned extensions:
 - add search over built-in help topics and documentation snippets
 - add an AI-agent style question interface after the help data model and safety boundaries are clear
 - add a scrolling log region after list or text-area widgets exist
-- use `UiScrollArea` once long text and log content exceed the visible window body
+- use `UiScrollArea` once renderer clipping and scroll indicators exist for long help and log content
 - add filter controls for input, UI, renderer, and audio messages
 - add a copy/export command after clipboard support exists
 

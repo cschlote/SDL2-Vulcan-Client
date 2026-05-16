@@ -12,7 +12,7 @@ module vulkan.ui.ui_layout;
 
 import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
-import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
@@ -22,6 +22,7 @@ private immutable float[4] verticalLayoutDebugBoundsColor = [0.20f, 1.00f, 0.35f
 private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.00f, 0.65f];
 private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
 private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f];
+private immutable float[4] scrollAreaDebugBoundsColor = [1.00f, 0.72f, 0.18f, 0.65f];
 
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
@@ -332,6 +333,145 @@ unittest
 
     assert(box.drawBackground);
     assert(box.drawBorder);
+}
+
+/** Scrollable viewport for content that can exceed the visible area. */
+final class UiScrollArea : UiLayoutContainer
+{
+    float scrollX;
+    float scrollY;
+    float contentWidth;
+    float contentHeight;
+    float wheelStep = 32.0f;
+
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, paddingLeft, paddingTop, paddingRight, paddingBottom);
+        scrollX = 0.0f;
+        scrollY = 0.0f;
+        contentWidth = 0.0f;
+        contentHeight = 0.0f;
+        flexGrowX = 1.0f;
+        flexGrowY = 1.0f;
+    }
+
+    void scrollTo(float x, float y)
+    {
+        scrollX = clampFloat(x, 0.0f, maxScrollX());
+        scrollY = clampFloat(y, 0.0f, maxScrollY());
+        childOffsetX = -scrollX;
+        childOffsetY = -scrollY;
+    }
+
+    float maxScrollX() const
+    {
+        const viewportWidth = innerWidth();
+        return contentWidth > viewportWidth ? contentWidth - viewportWidth : 0.0f;
+    }
+
+    float maxScrollY() const
+    {
+        const viewportHeight = innerHeight();
+        return contentHeight > viewportHeight ? contentHeight - viewportHeight : 0.0f;
+    }
+
+    bool canScroll() const
+    {
+        return maxScrollX() > 0.0f || maxScrollY() > 0.0f;
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        if (children.length == 0)
+            return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : width, preferredHeight > 0.0f ? preferredHeight : height);
+
+        const childSize = children[0].measure(context);
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : childSize.width + paddingLeft + paddingRight;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : childSize.height + paddingTop + paddingBottom;
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
+    override void layoutChildren()
+    {
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = contentWidth > 0.0f ? contentWidth : innerWidth();
+            child.height = contentHeight > 0.0f ? contentHeight : innerHeight();
+        }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float measuredWidth = 0.0f;
+        float measuredHeight = 0.0f;
+
+        foreach (child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > measuredWidth)
+                measuredWidth = childSize.width;
+            if (childSize.height > measuredHeight)
+                measuredHeight = childSize.height;
+        }
+
+        contentWidth = measuredWidth > innerWidth() ? measuredWidth : innerWidth();
+        contentHeight = measuredHeight > innerHeight() ? measuredHeight : innerHeight();
+        scrollTo(scrollX, scrollY);
+
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = contentWidth;
+            child.height = contentHeight;
+            child.layout(context);
+        }
+    }
+
+    override bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        if (event.kind != UiPointerEventKind.wheel)
+            return false;
+
+        const oldScrollX = scrollX;
+        const oldScrollY = scrollY;
+        const wheelX = event.wheelX == event.wheelX ? event.wheelX : 0.0f;
+        const wheelY = event.wheelY == event.wheelY ? event.wheelY : 0.0f;
+        scrollTo(scrollX - wheelX * wheelStep, scrollY - wheelY * wheelStep);
+        return scrollX != oldScrollX || scrollY != oldScrollY;
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])scrollAreaDebugBoundsColor;
+    }
+}
+
+@("UiScrollArea clamps wheel scrolling to content bounds")
+unittest
+{
+    auto area = new UiScrollArea(0.0f, 0.0f, 100.0f, 80.0f);
+    auto content = new UiSpacer(100.0f, 200.0f);
+    area.add(content);
+
+    UiLayoutContext context;
+    area.layout(context);
+    assert(area.maxScrollY() == 120.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.wheel;
+    event.x = 20.0f;
+    event.y = 20.0f;
+    event.wheelY = -10.0f;
+    assert(area.dispatchPointerEvent(event));
+    assert(area.scrollY == 120.0f);
+
+    event.wheelY = 10.0f;
+    assert(area.dispatchPointerEvent(event));
+    assert(area.scrollY == 0.0f);
 }
 
 /** Vertical stack container. */
