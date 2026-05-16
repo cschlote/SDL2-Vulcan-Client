@@ -2,7 +2,35 @@
 
 ## Unreleased
 
-No unreleased changes yet.
+- Removed the obsolete Demo Control window; the sidebar now toggles singleton windows and spawns repeatable demo windows.
+- Expanded the Widget Demo into an initial control gallery with content/frame boxes and current retained controls.
+- Added an initial `UiScrollArea` with retained scroll offsets, content bounds, clamped wheel scrolling, and UI wheel-event routing.
+- Split the old content/frame box role into `UiContentBox` for padded content roots and `UiFrameBox` for visible framed groups.
+- Renamed the Controls / Log window to Help Desk and documented the later searchable help and AI-agent direction.
+- Fixed growable `UiSpacer` measurement so an expanded sidebar spacer does not prevent later vertical shrink.
+- Documented the current sidebar entry limit and the later scrollable launcher group with fade-out indicators.
+- Added bottom-aligned Help, Settings, and Exit actions to the demo sidebar using a vertically growable spacer.
+- Documented that the sidebar currently uses temporary `UiButton` rows and should later move to a dedicated icon/action row widget.
+- Allowed `UiButton` to stretch horizontally when layout hints request growth, and documented size hints versus layout policy.
+- Added an expanded-label mode to the left-edge demo sidebar.
+- Added a chrome-less left-edge demo sidebar for opening existing demo windows.
+- Added configurable `UiWindow` chrome visibility for header, title, and border.
+- Clarified the planned split between simple content/frame boxes and a future scroll area widget.
+- Added widget documentation and planning notes for a chrome-less left-edge UI sidebar.
+- Added documentation for current and planned demo windows and the future retained UI animation model.
+- Added a demo custom inspect cursor for Widget Demo probe boxes.
+- Added optional bitmap cursor definitions and SDL custom cursor registration hooks.
+- Added retained UI cursor intent and SDL system cursor updates for controls and window chrome.
+- Moved generic retained UI overlay traversal into `UiScreen`.
+- Moved renderer-facing retained UI geometry range types into the reusable `vulkan.ui` package.
+- Corrected documentation and package metadata around the CC-BY-NC-SA 4.0 license, current UI controls, cursor planning, and planned audio architecture.
+- Fixed middle-click window chrome stacking so retained UI windows can be brought to the front or sent to the back outside their content area.
+- Improved `UiWindow` chrome with edge resize grips, smaller corner markers, larger title text, and content-root insets that avoid the resize ring.
+- Refined `UiWindow` title and resize-ring layout and added a Chrome Demo window for toggling sizeable, closable, and dragable flags at runtime.
+- Reduced the resize-ring opacity so the window chrome reads more subtly.
+- Split middle-click window stacking from the dragable chrome flag and exposed the stackable flag in the Chrome Demo.
+- Added generic retained UI keyboard focus routing, SDL text input forwarding, and editable `UiTextField` cursor/key handling.
+- Updated the UI architecture and demo plan for focus ownership, text editing, and the next popup/menu work.
 
 ## Release 26.20.7022
 
@@ -21,7 +49,7 @@ No unreleased changes yet.
 - Fixed layout measurement so arranged widget sizes do not become new intrinsic sizes, and improved slider dragging.
 - Anchored the settings Apply and Save buttons in a fixed bottom action row below the growable settings body.
 - Added UiScreen window stacking and non-overlap placement helpers; middle-clicking a window header toggles that window between front and back.
-- Added the UI debug bounds color legend to the Controls / Log window.
+- Added the UI debug bounds color legend to the Help Desk window.
 - Removed stale layout-demo color literals, expanded DDoc for the retained controls and `UiScreen`, and refreshed the UI plan to match the current widget set.
 - Updated architecture notes for the current reusable engine boundary after the UI cleanup.
 - Improved font test coverage and documentation for release checks.

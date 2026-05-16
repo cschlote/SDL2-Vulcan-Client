@@ -23,53 +23,21 @@ import std.algorithm : max;
 import std.conv : ConvException, to;
 
 import demo.demo_settings : DemoSettings;
+import logging : logLine;
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.engine.pipeline : Vertex;
-import vulkan.ui.ui_event : UiResizeHandle;
-import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_button : UiButton;
+import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
+import vulkan.ui.ui_cursor : UiCursorKind;
+import vulkan.ui.ui_event : UiResizeHandle;
+import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
-import vulkan.ui.ui_layout_context : UiLayoutContext;
-import vulkan.ui.ui_layout_context : UiLayoutSize;
+import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
-import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
-import logging : logLine;
-
-/** Describes one contiguous draw block inside the overlay buffers.
- *
- * Each range maps one logical window to a contiguous set of panel and text
- * vertices so the renderer can preserve the intended stacking order.
- */
-struct UiWindowDrawRange
-{
-    /** Start index for panel vertices. */
-    uint panelsStart;
-    /** Vertex count for panel geometry. */
-    uint panelsCount;
-    /** Start indices for text vertices, indexed by UiTextStyle. */
-    uint[7] textStarts;
-    /** Vertex counts for text geometry, indexed by UiTextStyle. */
-    uint[7] textCounts;
-}
-
-/** Holds the panel and text geometry for the UI overlay.
- *
- * The renderer uploads each vertex list independently and uses the draw ranges
- * to emit one logical window at a time.
- */
-struct UiOverlayGeometry
-{
-    /** Window body and header quads. */
-    Vertex[] panels;
-    /** Text quads indexed by UiTextStyle. */
-    Vertex[][7] textLayers;
-    /** Draw ranges that keep each window's render calls contiguous. */
-    UiWindowDrawRange[] windows;
-}
+import vulkan.ui.ui_window : UiWindow;
 
 private final class LayoutDemoProbeBox : UiWidget
 {
@@ -93,6 +61,11 @@ private final class LayoutDemoProbeBox : UiWidget
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
     }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.crosshair;
+    }
 }
 
 /** Builds a retained layout demo window that can be spawned repeatedly. */
@@ -104,36 +77,52 @@ final class LayoutDemoWindow
     this(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
     {
         const windowTitle = format("Widget Demo #%u", serial);
-        window = new UiWindow(windowTitle, 36.0f, 36.0f, 420.0f, 280.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        window = new UiWindow(windowTitle, 36.0f, 36.0f, testWindowWidth, testWindowHeight, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
-        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+
+        auto layoutSectionBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         auto topRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        topRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        topRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, 80.0f, 1.0f, 0.0f);
         topRow.add(new LayoutDemoProbeBox(88.0f, 42.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
         topRow.add(new LayoutDemoProbeBox(120.0f, 58.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB));
         topRow.add(new LayoutDemoProbeBox(66.0f, 74.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC));
+        layoutSectionBody.add(new UiLabel("Layout probes and container bounds", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+        layoutSectionBody.add(topRow);
+        layoutSectionBody.add(new UiSpacer(0.0f, 4.0f));
+        auto contentBox = new UiContentBox(0.0f, 0.0f, 0.0f, 44.0f, 8.0f, 8.0f, 8.0f, 8.0f);
+        contentBox.setLayoutHint(0.0f, 44.0f, 0.0f, 44.0f, float.max, 44.0f, 1.0f, 0.0f);
+        contentBox.add(new LayoutDemoProbeBox(260.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        layoutSectionBody.add(contentBox);
 
-        auto middleRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        middleRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        auto middleColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        middleColumn.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 30.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 52.0f, cast(float[4])probeFillA, cast(float[4])probeBorderB));
-        middleRow.add(middleColumn);
-        middleRow.add(new LayoutDemoProbeBox(126.0f, 92.0f, cast(float[4])probeFillB, cast(float[4])probeBorderC));
+        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 164.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        layoutSection.setLayoutHint(0.0f, 164.0f, 0.0f, 164.0f, float.max, 164.0f, 1.0f, 0.0f);
+        layoutSection.add(layoutSectionBody);
 
-        auto bottomRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        bottomRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        bottomRow.add(new LayoutDemoProbeBox(72.0f, 40.0f, cast(float[4])probeFillC, cast(float[4])probeBorderA));
-        bottomRow.add(new LayoutDemoProbeBox(164.0f, 40.0f, cast(float[4])probeFillD, cast(float[4])probeBorderB));
-        bottomRow.add(new LayoutDemoProbeBox(92.0f, 40.0f, cast(float[4])probeFillA, cast(float[4])probeBorderD));
+        auto controlsBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+        controlsBody.add(new UiLabel("Retained controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+        auto controlsRowA = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        controlsRowA.setLayoutHint(0.0f, 28.0f, 0.0f, 28.0f, float.max, 28.0f, 1.0f, 0.0f);
+        controlsRowA.add(new UiToggle("Enabled", true, 0.0f, 0.0f, 130.0f, 28.0f));
+        controlsRowA.add(new UiDropdown("Mode", ["Alpha", "Beta", "Gamma"], 0, 0.0f, 0.0f, 150.0f, 28.0f));
+        controlsBody.add(controlsRowA);
+        auto controlsRowB = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        controlsRowB.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
+        controlsRowB.add(new UiSlider("Amount", 0.0f, 1.0f, 0.42f, 0.0f, 0.0f, 220.0f, 34.0f));
+        controlsRowB.add(new UiTextField("demo", "type here", 0.0f, 0.0f, 160.0f, 28.0f));
+        controlsBody.add(controlsRowB);
+        auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
+        actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
+        controlsBody.add(actionRow);
 
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(topRow);
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(middleRow);
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(bottomRow);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 150.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 150.0f, 0.0f, 150.0f, float.max, 150.0f, 1.0f, 0.0f);
+        controlsSection.add(controlsBody);
+
+        content.add(layoutSection);
+        content.add(controlsSection);
         content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
 
         UiLayoutContext layoutContext;
@@ -164,6 +153,66 @@ final class LayoutDemoWindow
     }
 }
 
+/** Builds a retained window chrome demo with runtime flag toggles. */
+final class ChromeDemoWindow
+{
+    UiWindow window;
+    UiVBox content;
+    private UiLabel summaryLabel;
+    private UiToggle sizeableToggle;
+    private UiToggle closableToggle;
+    private UiToggle dragableToggle;
+    private UiToggle stackableToggle;
+    private UiToggle headerToggle;
+    private UiToggle titleToggle;
+    private UiToggle borderToggle;
+
+    this(uint serial)
+    {
+        const windowTitle = format("Chrome Demo #%u", serial);
+        window = new UiWindow(windowTitle, 54.0f, 54.0f, 360.0f, 320.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        sizeableToggle = new UiToggle("Resize grips", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        closableToggle = new UiToggle("Close button", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        dragableToggle = new UiToggle("Drag header", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        stackableToggle = new UiToggle("MMB stacking", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        headerToggle = new UiToggle("Header band", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        titleToggle = new UiToggle("Title text", true, 0.0f, 0.0f, 220.0f, 28.0f);
+        borderToggle = new UiToggle("Outer border", true, 0.0f, 0.0f, 220.0f, 28.0f);
+
+        sizeableToggle.onChanged = (value) { updateWindowChrome(); };
+        closableToggle.onChanged = (value) { updateWindowChrome(); };
+        dragableToggle.onChanged = (value) { updateWindowChrome(); };
+        stackableToggle.onChanged = (value) { updateWindowChrome(); };
+        headerToggle.onChanged = (value) { updateWindowChrome(); };
+        titleToggle.onChanged = (value) { updateWindowChrome(); };
+        borderToggle.onChanged = (value) { updateWindowChrome(); };
+
+        content.add(summaryLabel);
+        content.add(new UiSpacer(0.0f, sectionSpacing));
+        content.add(sizeableToggle);
+        content.add(closableToggle);
+        content.add(dragableToggle);
+        content.add(stackableToggle);
+        content.add(headerToggle);
+        content.add(titleToggle);
+        content.add(borderToggle);
+        window.add(content);
+        window.visible = true;
+        updateWindowChrome();
+    }
+
+    void updateWindowChrome()
+    {
+        window.setChromeFlags(sizeableToggle.checked, closableToggle.checked, dragableToggle.checked, stackableToggle.checked);
+        window.setChromeVisibility(headerToggle.checked, titleToggle.checked, borderToggle.checked);
+        summaryLabel.text = format("resize %s, close %s, header %s, border %s", sizeableToggle.checked ? "on" : "off", closableToggle.checked && headerToggle.checked ? "on" : "off", headerToggle.checked ? "on" : "off", borderToggle.checked ? "on" : "off");
+    }
+}
+
 /** Creates a new retained layout demo window. */
 LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
 {
@@ -172,16 +221,20 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
 
 
 private enum float windowMargin = 10.0f;
-private enum float initWidth = 160.0f;
-private enum float initHeight = 258.0f;
+private enum float sidebarCollapsedWidth = 44.0f;
+private enum float sidebarExpandedWidth = 168.0f;
+private enum float sidebarButtonSize = 32.0f;
+private enum float sidebarPadding = 5.0f;
+private enum float sidebarSpacing = 4.0f;
+private enum float sidebarFallbackHeight = 260.0f;
 private enum float helpWidth = 388.0f;
 private enum float helpHeight = 214.0f;
 private enum float statusWidth = 348.0f;
 private enum float statusHeight = 184.0f;
 private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 188.0f;
-private enum float testWindowWidth = 420.0f;
-private enum float testWindowHeight = 280.0f;
+private enum float testWindowWidth = 560.0f;
+private enum float testWindowHeight = 440.0f;
 private enum float contentSpacing = 6.0f;
 private enum float sectionSpacing = 8.0f;
 private enum float probeSpacing = 10.0f;
@@ -190,12 +243,13 @@ private enum float windowContentPaddingX = 17.0f;
 private enum float windowContentPaddingY = 15.0f;
 private enum float overlayWindowDepth = 0.10f;
 
-private immutable float[4] initBodyColor = [0.10f, 0.12f, 0.16f, 0.96f];
-private immutable float[4] initHeaderColor = [0.14f, 0.16f, 0.20f, 0.98f];
-private immutable float[4] initTitleColor = [1.00f, 0.98f, 0.82f, 1.00f];
 private immutable float[4] initButtonFill = [0.16f, 0.18f, 0.24f, 0.96f];
 private immutable float[4] initButtonBorder = [0.20f, 0.56f, 0.98f, 1.00f];
 private immutable float[4] initButtonText = [1.00f, 1.00f, 1.00f, 1.00f];
+private immutable float[4] sidebarBodyColor = [0.08f, 0.09f, 0.11f, 0.96f];
+private immutable float[4] sidebarButtonFill = [0.15f, 0.17f, 0.21f, 0.98f];
+private immutable float[4] sidebarButtonBorder = [0.24f, 0.58f, 0.80f, 1.00f];
+private immutable float[4] sidebarButtonText = [1.00f, 1.00f, 1.00f, 1.00f];
 
 private immutable float[4] helpBodyColor = [0.10f, 0.12f, 0.16f, 0.95f];
 private immutable float[4] helpHeaderColor = [0.14f, 0.16f, 0.20f, 0.98f];
@@ -231,21 +285,25 @@ final class DemoUiScreen : UiScreen
     void delegate() onApplySettings;
     void delegate() onSaveSettings;
 
-    private UiWindow initWindow;
+    private UiWindow sidebarWindow;
     private UiWindow helpWindow;
     private UiWindow statusWindow;
     private UiWindow settingsWindow;
     private LayoutDemoWindow[] testWindows;
-    private UiVBox initContent;
+    private ChromeDemoWindow[] chromeWindows;
+    private UiVBox sidebarContent;
     private UiVBox helpContent;
     private UiVBox statusContent;
     private UiVBox settingsContent;
     private UiVBox settingsBody;
     private UiHBox settingsActionRow;
-    private UiButton initHelpButton;
-    private UiButton initStatusButton;
-    private UiButton initSettingsButton;
-    private UiButton initTestButton;
+    private UiButton sidebarExpandButton;
+    private UiButton sidebarHelpButton;
+    private UiButton sidebarStatusButton;
+    private UiButton sidebarSettingsButton;
+    private UiButton sidebarWidgetButton;
+    private UiButton sidebarChromeButton;
+    private UiButton sidebarExitButton;
 
     private UiLabel helpTitleLabel;
     private UiLabel helpIntroLabel;
@@ -279,12 +337,13 @@ final class DemoUiScreen : UiScreen
     private UiButton settingsApplyButton;
     private UiButton settingsSaveButton;
 
-    private bool initAnchored;
     private bool helpAnchored;
     private bool statusAnchored;
     private bool settingsAnchored;
+    private bool sidebarExpanded;
 
     private uint nextTestWindowSerial = 1;
+    private uint nextChromeWindowSerial = 1;
 
     bool quitRequested;
 
@@ -292,13 +351,15 @@ final class DemoUiScreen : UiScreen
     {
         settingsDraft = DemoSettings.init;
         sceneMouseDragging = false;
+        sidebarExpanded = false;
         testWindows = [];
+        chromeWindows = [];
 
-        buildInitWindow();
+        buildSidebarWindow();
         buildHelpWindow();
         buildStatusWindow();
         buildSettingsWindow();
-        autoSizeWindow(initWindow, initContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, initWidth, initHeight);
+        addWindow(sidebarWindow);
         autoSizeWindow(helpWindow, helpContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, helpWidth, helpHeight);
         autoSizeWindow(statusWindow, statusContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, statusWidth, statusHeight);
         autoSizeWindow(settingsWindow, settingsContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, settingsWidth, settingsHeight);
@@ -312,66 +373,62 @@ final class DemoUiScreen : UiScreen
         ensureWindowLayout();
     }
 
-    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, const(FontAtlas)[] liveFonts, bool debugWidgetBounds = false)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, bool debugWidgetBounds = false)
     {
         syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion);
-
-        UiOverlayGeometry geometry;
-        geometry.panels = [];
-        foreach (layerIndex; 0 .. geometry.textLayers.length)
-            geometry.textLayers[layerIndex] = [];
-
-        UiWindowDrawRange[] drawRanges;
-        UiRenderContext context = UiRenderContext.init;
-        context.extentWidth = extentWidth;
-        context.extentHeight = extentHeight;
-        context.originX = 0.0f;
-        context.originY = 0.0f;
-        context.depthBase = 0.10f;
-        context.debugWidgetBounds = debugWidgetBounds;
-        foreach (index; 0 .. context.fonts.length)
-            context.fonts[index] = index < liveFonts.length ? &liveFonts[index] : null;
-        context.panels = &geometry.panels;
-        foreach (index; 0 .. context.textLayers.length)
-            context.textLayers[index] = &geometry.textLayers[index];
-
-        foreach (window; windowsInFrontToBack())
-        {
-            if (!window.visible)
-                continue;
-
-            UiWindowDrawRange range;
-            range.panelsStart = cast(uint)geometry.panels.length;
-            foreach (layerIndex; 0 .. geometry.textLayers.length)
-                range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
-
-            context.depthBase = overlayWindowDepth;
-            window.render(context);
-
-            range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
-            foreach (layerIndex; 0 .. geometry.textLayers.length)
-                range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
-
-            drawRanges ~= range;
-        }
-
-        geometry.windows = drawRanges;
-        return geometry;
+        return buildOverlayGeometry(debugWidgetBounds, overlayWindowDepth);
     }
 
     void toggleHelpWindow()
     {
-        toggleWindow(helpWindow);
+        toggleSingletonWindow(helpWindow);
+    }
+
+    void showHelpWindow()
+    {
+        showSingletonWindow(helpWindow);
     }
 
     void toggleStatusWindow()
     {
-        toggleWindow(statusWindow);
+        toggleSingletonWindow(statusWindow);
+    }
+
+    void showStatusWindow()
+    {
+        showSingletonWindow(statusWindow);
     }
 
     void toggleSettingsWindow()
     {
-        toggleWindow(settingsWindow);
+        toggleSingletonWindow(settingsWindow);
+    }
+
+    void toggleSingletonWindow(UiWindow window)
+    {
+        toggleWindow(window);
+        if (sidebarWindow !is null)
+            bringWindowToFront(sidebarWindow);
+    }
+
+    void showSettingsDialog(const(DemoSettings)* liveSettings)
+    {
+        if (liveSettings !is null)
+            settingsDraft = *liveSettings;
+        refreshSettingsControls();
+        showSingletonWindow(settingsWindow);
+    }
+
+    void showSingletonWindow(UiWindow window)
+    {
+        if (window is null)
+            return;
+
+        window.visible = true;
+        bringWindowToFront(window);
+        if (sidebarWindow !is null)
+            bringWindowToFront(sidebarWindow);
+        ensureWindowLayout();
     }
 
     void requestQuit()
@@ -381,11 +438,7 @@ final class DemoUiScreen : UiScreen
 
     void openSettingsDialog(const(DemoSettings)* liveSettings)
     {
-        if (liveSettings !is null)
-            settingsDraft = *liveSettings;
-        refreshSettingsControls();
-        if (!settingsWindow.visible)
-            toggleSettingsWindow();
+        showSettingsDialog(liveSettings);
     }
 
     void toggleSettingsDialog(const(DemoSettings)* liveSettings)
@@ -393,7 +446,7 @@ final class DemoUiScreen : UiScreen
         if (liveSettings !is null)
             settingsDraft = *liveSettings;
         refreshSettingsControls();
-        toggleSettingsWindow();
+        toggleSingletonWindow(settingsWindow);
     }
 
     void setSettingsDraft(const(DemoSettings)* liveSettings)
@@ -407,42 +460,103 @@ final class DemoUiScreen : UiScreen
 
     void updateWindowState()
     {
-        initWindow.visible = true;
         helpWindow.visible = false;
         statusWindow.visible = false;
         settingsWindow.visible = false;
     }
 
-    void buildInitWindow()
+    void buildSidebarWindow()
     {
-        initWindow = new UiWindow("Demo Control", windowMargin, windowMargin, initWidth, initHeight, cast(float[4])initBodyColor, cast(float[4])initHeaderColor, cast(float[4])initTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        sidebarWindow = new UiWindow("Demo Sidebar", 0.0f, 0.0f, currentSidebarWidth(), sidebarFallbackHeight, cast(float[4])sidebarBodyColor, cast(float[4])sidebarBodyColor, cast(float[4])sidebarButtonText, false, false, false, 0.0f, 0.0f, 0.0f, 0.0f);
+        sidebarWindow.setChromeFlags(false, false, false, false);
+        sidebarWindow.setChromeVisibility(false, false, false);
+        sidebarWindow.minimumWidth = sidebarCollapsedWidth;
+        sidebarWindow.minimumHeight = sidebarFallbackHeight;
 
-        initContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
-        initHelpButton = new UiButton("Toggle Controls / Log", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
-        initHelpButton.onClick = &toggleHelpWindow;
-        initStatusButton = new UiButton("Toggle Status", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
-        initStatusButton.onClick = &toggleStatusWindow;
-        initSettingsButton = new UiButton("Open Settings", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
-        initSettingsButton.onClick = () { toggleSettingsDialog(null); };
-        initTestButton = new UiButton("Open Widget Demo", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
-        initTestButton.onClick = &spawnLayoutTestWindow;
+        sidebarContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, sidebarSpacing, sidebarPadding, sidebarPadding, sidebarPadding, sidebarPadding);
+        sidebarContent.setLayoutHint(currentSidebarWidth(), sidebarFallbackHeight, currentSidebarWidth(), sidebarFallbackHeight, currentSidebarWidth(), float.max, 0.0f, 1.0f);
+        sidebarExpandButton = buildSidebarButton(">>", &toggleSidebarExpanded);
+        sidebarHelpButton = buildSidebarButton("?", &toggleHelpWindow);
+        sidebarStatusButton = buildSidebarButton("S", &toggleStatusWindow);
+        sidebarSettingsButton = buildSidebarButton("Cfg", () { toggleSettingsDialog(null); });
+        sidebarWidgetButton = buildSidebarButton("W", &spawnLayoutTestWindow);
+        sidebarChromeButton = buildSidebarButton("C", &spawnChromeDemoWindow);
+        sidebarExitButton = buildSidebarButton("X", &requestQuit);
+        auto sidebarBottomSpacer = new UiSpacer(0.0f, 0.0f);
+        sidebarBottomSpacer.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
 
-        initContent.add(initHelpButton);
-        initContent.add(new UiSpacer(0.0f, sectionSpacing));
-        initContent.add(initStatusButton);
-        initContent.add(new UiSpacer(0.0f, sectionSpacing));
-        initContent.add(initSettingsButton);
-        initContent.add(new UiSpacer(0.0f, sectionSpacing));
-        initContent.add(initTestButton);
-        initWindow.add(initContent);
-        initWindow.onClose = &requestQuit;
-        registerWindowInteractionHandlers(initWindow);
-        addWindow(initWindow);
+        sidebarContent.add(sidebarExpandButton);
+        sidebarContent.add(new UiSpacer(0.0f, sidebarSpacing));
+        sidebarContent.add(sidebarStatusButton);
+        sidebarContent.add(sidebarWidgetButton);
+        sidebarContent.add(sidebarChromeButton);
+        sidebarContent.add(sidebarBottomSpacer);
+        sidebarContent.add(sidebarHelpButton);
+        sidebarContent.add(sidebarSettingsButton);
+        sidebarContent.add(sidebarExitButton);
+        sidebarWindow.add(sidebarContent);
+        sidebarWindow.visible = true;
+        refreshSidebarLabels();
+    }
+
+    UiButton buildSidebarButton(string caption, void delegate() onClick)
+    {
+        auto button = new UiButton(caption, 0.0f, 0.0f, sidebarButtonSize, sidebarButtonSize, cast(float[4])sidebarButtonFill, cast(float[4])sidebarButtonBorder, cast(float[4])sidebarButtonText, UiTextStyle.small, 2.0f, 0.5f);
+        button.setLayoutHint(sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, float.max, sidebarButtonSize, 1.0f, 0.0f);
+        button.onClick = onClick;
+        return button;
+    }
+
+    float currentSidebarWidth() const
+    {
+        return sidebarExpanded ? sidebarExpandedWidth : sidebarCollapsedWidth;
+    }
+
+    float sidebarReservedLeft() const
+    {
+        return currentSidebarWidth() + windowMargin;
+    }
+
+    void toggleSidebarExpanded()
+    {
+        sidebarExpanded = !sidebarExpanded;
+        refreshSidebarLabels();
+        helpAnchored = false;
+        statusAnchored = false;
+        settingsAnchored = false;
+        ensureWindowLayout();
+    }
+
+    void refreshSidebarLabels()
+    {
+        const width = currentSidebarWidth();
+        sidebarWindow.width = width;
+        sidebarWindow.minimumWidth = width;
+        sidebarContent.setLayoutHint(width, sidebarFallbackHeight, width, sidebarFallbackHeight, width, float.max, 0.0f, 1.0f);
+        sidebarExpandButton.setCaption(sidebarExpanded ? "<<" : ">>");
+        sidebarHelpButton.setCaption(sidebarExpanded ? "?  Help Desk" : "?");
+        sidebarStatusButton.setCaption(sidebarExpanded ? "S  Status" : "S");
+        sidebarSettingsButton.setCaption(sidebarExpanded ? "Cfg Settings" : "Cfg");
+        sidebarWidgetButton.setCaption(sidebarExpanded ? "W  Widgets" : "W");
+        sidebarChromeButton.setCaption(sidebarExpanded ? "C  Chrome" : "C");
+        sidebarExitButton.setCaption(sidebarExpanded ? "X  Exit" : "X");
+        applySidebarButtonLayout(sidebarExpandButton);
+        applySidebarButtonLayout(sidebarHelpButton);
+        applySidebarButtonLayout(sidebarStatusButton);
+        applySidebarButtonLayout(sidebarSettingsButton);
+        applySidebarButtonLayout(sidebarWidgetButton);
+        applySidebarButtonLayout(sidebarChromeButton);
+        applySidebarButtonLayout(sidebarExitButton);
+    }
+
+    void applySidebarButtonLayout(UiButton button)
+    {
+        button.setLayoutHint(sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, float.max, sidebarButtonSize, 1.0f, 0.0f);
     }
 
     void buildHelpWindow()
     {
-        helpWindow = new UiWindow("Controls / Log", windowMargin, windowMargin + initHeight + windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        helpWindow = new UiWindow("Help Desk", sidebarReservedLeft(), windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         helpContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         helpTitleLabel = new UiLabel("Keyboard and mouse controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
@@ -451,7 +565,7 @@ final class DemoUiScreen : UiScreen
         helpCloseLabel = new UiLabel("F/T/W/H switch render modes, D toggles UI bounds, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendTitleLabel = new UiLabel("Debug bounds colors:", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
         helpDebugLegendWindowLabel = new UiLabel("Orange: UiWindow", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiSurfaceBox / content root", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiContentBox / UiFrameBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendVBoxLabel = new UiLabel("Green: UiVBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendHBoxLabel = new UiLabel("Blue: UiHBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendGridLabel = new UiLabel("Purple: UiGrid", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
@@ -476,7 +590,7 @@ final class DemoUiScreen : UiScreen
         helpWindow.onClose = ()
         {
             helpWindow.visible = false;
-            logLine("UiWindow close: Controls / Log");
+            logLine("UiWindow close: Help Desk");
         };
         registerWindowInteractionHandlers(helpWindow);
         addWindow(helpWindow);
@@ -657,36 +771,37 @@ final class DemoUiScreen : UiScreen
         statusSceneLabel.text = format("Szene: %s", currentShapeName);
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
-        helpIntroLabel.text = format("Open widget demos: %u", cast(uint)testWindows.length);
+        helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length));
         updateSettingsSummary();
     }
 
     override void anchorWindows()
     {
-        if (!initAnchored)
+        if (sidebarWindow !is null)
         {
-            initWindow.x = windowMargin;
-            initWindow.y = windowMargin;
-            initAnchored = true;
+            sidebarWindow.x = 0.0f;
+            sidebarWindow.y = 0.0f;
+            sidebarWindow.width = currentSidebarWidth();
+            sidebarWindow.height = viewportHeight > 0.0f ? viewportHeight : sidebarFallbackHeight;
         }
 
         if (!helpAnchored)
         {
-            helpWindow.x = windowMargin;
-            helpWindow.y = initWindow.y + initWindow.height + windowMargin;
+            helpWindow.x = sidebarReservedLeft();
+            helpWindow.y = windowMargin;
             helpAnchored = true;
         }
 
         if (!statusAnchored)
         {
-            statusWindow.x = viewportWidth > statusWindow.width ? viewportWidth - statusWindow.width - windowMargin : windowMargin;
+            statusWindow.x = viewportWidth > statusWindow.width + sidebarReservedLeft() ? viewportWidth - statusWindow.width - windowMargin : sidebarReservedLeft();
             statusWindow.y = windowMargin;
             statusAnchored = true;
         }
 
         if (!settingsAnchored)
         {
-            settingsWindow.x = viewportWidth > settingsWindow.width ? viewportWidth - settingsWindow.width - windowMargin : windowMargin;
+            settingsWindow.x = viewportWidth > settingsWindow.width + sidebarReservedLeft() ? viewportWidth - settingsWindow.width - windowMargin : sidebarReservedLeft();
             settingsWindow.y = viewportHeight > settingsWindow.height ? viewportHeight - settingsWindow.height - windowMargin : windowMargin;
             settingsAnchored = true;
         }
@@ -694,6 +809,16 @@ final class DemoUiScreen : UiScreen
         foreach (index, demoWindow; testWindows)
         {
             const offset = windowMargin + cast(float)index * 22.0f;
+            if (demoWindow.window.x <= 0.0f && demoWindow.window.y <= 0.0f)
+            {
+                demoWindow.window.x = max(windowMargin * 2.0f + offset, windowMargin);
+                demoWindow.window.y = max(windowMargin * 2.0f + offset, windowMargin);
+            }
+        }
+
+        foreach (index, demoWindow; chromeWindows)
+        {
+            const offset = windowMargin + cast(float)(testWindows.length + index) * 22.0f;
             if (demoWindow.window.x <= 0.0f && demoWindow.window.y <= 0.0f)
             {
                 demoWindow.window.x = max(windowMargin * 2.0f + offset, windowMargin);
@@ -742,6 +867,47 @@ final class DemoUiScreen : UiScreen
 
         removeWindow(demoWindow.window);
     }
+
+    void spawnChromeDemoWindow()
+    {
+        ChromeDemoWindow demoWindow = new ChromeDemoWindow(nextChromeWindowSerial++);
+        const cascadeIndex = cast(float)(nextChromeWindowSerial - 2);
+        demoWindow.window.x += cascadeIndex * 28.0f;
+        demoWindow.window.y += cascadeIndex * 24.0f;
+        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, 360.0f, 320.0f);
+        demoWindow.window.onClose = ()
+        {
+            demoWindow.window.visible = false;
+            removeChromeDemoWindow(demoWindow);
+            logLine("UiWindow close: ", demoWindow.window.title);
+        };
+        registerWindowInteractionHandlers(demoWindow.window);
+        chromeWindows ~= demoWindow;
+        addWindow(demoWindow.window);
+        if (viewportWidth > 0.0f && viewportHeight > 0.0f)
+        {
+            ensureWindowLayout();
+            placeWindowWithoutOverlap(demoWindow.window);
+        }
+        logLine("UiWindow spawn: ", demoWindow.window.title);
+    }
+
+    void removeChromeDemoWindow(ChromeDemoWindow demoWindow)
+    {
+        if (demoWindow is null)
+            return;
+
+        for (size_t index = 0; index < chromeWindows.length; ++index)
+        {
+            if (chromeWindows[index] is demoWindow)
+            {
+                chromeWindows = chromeWindows[0 .. index] ~ chromeWindows[index + 1 .. $];
+                break;
+            }
+        }
+
+        removeWindow(demoWindow.window);
+    }
 }
 
 @("DemoUiScreen spawns and toggles the rebuilt windows")
@@ -749,6 +915,7 @@ unittest
 {
     DemoUiScreen screen = new DemoUiScreen();
     screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
 
     assert(screen.containsPointer(20.0f, 20.0f));
     screen.toggleSettingsWindow();
@@ -757,4 +924,106 @@ unittest
     assert(!screen.settingsWindow.visible);
     screen.spawnLayoutTestWindow();
     assert(screen.windowsInFrontToBack().length >= 5);
+    screen.spawnChromeDemoWindow();
+    assert(screen.windowsInFrontToBack().length >= 6);
+}
+
+@("DemoUiScreen sidebar reveals and spawns demo windows")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    assert(screen.sidebarWindow.visible);
+    assert(screen.sidebarWindow.x == 0.0f);
+    assert(screen.sidebarWindow.y == 0.0f);
+    assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
+    assert(screen.sidebarWindow.height == 600.0f);
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+    assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
+
+    assert(!screen.helpWindow.visible);
+    screen.sidebarHelpButton.onClick();
+    assert(screen.helpWindow.visible);
+    screen.sidebarHelpButton.onClick();
+    assert(!screen.helpWindow.visible);
+
+    assert(!screen.statusWindow.visible);
+    screen.sidebarStatusButton.onClick();
+    assert(screen.statusWindow.visible);
+    screen.sidebarStatusButton.onClick();
+    assert(!screen.statusWindow.visible);
+
+    assert(!screen.settingsWindow.visible);
+    screen.sidebarSettingsButton.onClick();
+    assert(screen.settingsWindow.visible);
+    screen.sidebarSettingsButton.onClick();
+    assert(!screen.settingsWindow.visible);
+
+    const testCount = screen.testWindows.length;
+    screen.sidebarWidgetButton.onClick();
+    assert(screen.testWindows.length == testCount + 1);
+
+    const chromeCount = screen.chromeWindows.length;
+    screen.sidebarChromeButton.onClick();
+    assert(screen.chromeWindows.length == chromeCount + 1);
+
+    assert(!screen.quitRequested);
+    screen.sidebarExitButton.onClick();
+    assert(screen.quitRequested);
+}
+
+@("DemoUiScreen sidebar expands labels and reserves width")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    assert(!screen.sidebarExpanded);
+    assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
+    const collapsedReserved = screen.sidebarReservedLeft();
+    assert(screen.helpWindow.x >= collapsedReserved);
+
+    screen.sidebarExpandButton.onClick();
+    assert(screen.sidebarExpanded);
+    assert(screen.sidebarWindow.width == sidebarExpandedWidth);
+    assert(screen.sidebarReservedLeft() > collapsedReserved);
+    assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
+    assert(screen.sidebarHelpButton.caption == "?  Help Desk");
+    assert(screen.sidebarExitButton.caption == "X  Exit");
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarExpandedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+
+    screen.sidebarExpandButton.onClick();
+    assert(!screen.sidebarExpanded);
+    assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
+    assert(screen.sidebarHelpButton.caption == "?");
+    assert(screen.sidebarExitButton.caption == "X");
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+}
+
+@("DemoUiScreen sidebar shrinks vertically after a larger layout")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(1024.0f, 720.0f, 0.0f, "test", "test", "test");
+
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
+
+    screen.syncViewport(1024.0f, 576.0f, 0.0f, "test", "test", "test");
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarWindow.height == 576.0f);
+    assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
 }

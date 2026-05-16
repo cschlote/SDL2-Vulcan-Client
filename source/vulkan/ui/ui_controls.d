@@ -9,11 +9,13 @@
  */
 module vulkan.ui.ui_controls;
 
-import std.algorithm : max;
+import std.algorithm : max, min;
 import std.format : format;
 
+import vulkan.font.font_legacy : measureTextWidth;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import vulkan.ui.ui_cursor : UiCursorKind;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame, appendTextLine, appendQuad;
@@ -39,6 +41,12 @@ private float textWidth(ref UiLayoutContext context, UiTextStyle style, string t
 {
     const measured = context.textWidth(style, text);
     return measured > 0.0f ? measured : cast(float)text.length * fallbackGlyphWidth;
+}
+
+private float textWidth(ref UiRenderContext context, UiTextStyle style, string text)
+{
+    auto atlas = context.atlasFor(style);
+    return atlas is null ? cast(float)text.length * fallbackGlyphWidth : measureTextWidth(*atlas, text);
 }
 
 private float textHeight(ref UiLayoutContext context, UiTextStyle style)
@@ -133,6 +141,11 @@ protected:
         if (onChanged !is null)
             onChanged(checked);
         return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
     }
 }
 
@@ -258,6 +271,11 @@ protected:
         return true;
     }
 
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
+    }
+
     void updateValueFromPointer(float pointerX)
     {
         const ratio = width > 0.0f ? clampFloat(pointerX / width, 0.0f, 1.0f) : 0.0f;
@@ -349,13 +367,17 @@ protected:
             onChanged(selectedIndex, selectedText());
         return true;
     }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return options.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
+    }
 }
 
 /** Single-line text value field with focus state.
  *
- * `UiTextField` currently stores and renders a single text value and can be
- * focused by pointer input. Keyboard editing is still an application/UI-engine
- * follow-up; programmatic updates use `setText`.
+ * `UiTextField` stores, renders, and edits a single UTF-8 text value. It is
+ * focusable and accepts platform text input while it owns keyboard focus.
  */
 final class UiTextField : UiWidget
 {
@@ -363,8 +385,8 @@ final class UiTextField : UiWidget
     string text;
     /** Placeholder rendered when `text` is empty. */
     string placeholder;
-    /** True after the field receives a primary-button click. */
-    bool focused;
+    /** Cursor byte index inside `text`. */
+    size_t cursorIndex;
     /** Font style used for text and placeholder rendering. */
     UiTextStyle style;
     /** Field fill color. */
@@ -395,6 +417,8 @@ final class UiTextField : UiWidget
         this.text = text;
         this.placeholder = placeholder;
         this.style = style;
+        this.cursorIndex = text.length;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         focusedBorderColor = cast(float[4])defaultAccentColor;
@@ -405,8 +429,15 @@ final class UiTextField : UiWidget
     void setText(string newText)
     {
         text = newText;
+        cursorIndex = min(cursorIndex, text.length);
         if (onChanged !is null)
             onChanged(text);
+    }
+
+    /** Moves the cursor to the end of the current text. */
+    void moveCursorToEnd()
+    {
+        cursorIndex = text.length;
     }
 
 protected:
@@ -425,6 +456,12 @@ protected:
         const color = text.length != 0 ? textColor : cast(float[4])defaultMutedColor;
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, focused ? focusedBorderColor : borderColor, context.depthBase);
         appendTextLine(context, style, shownText, controlPaddingX, centeredTextY(height, fallbackTextHeight), color, context.depthBase - 0.002f);
+        if (focused)
+        {
+            const cursorText = cursorIndex > 0 ? text[0 .. cursorIndex] : "";
+            const cursorX = min(width - controlPaddingX, controlPaddingX + textWidth(context, style, cursorText));
+            appendQuad(context, cursorX, 5.0f, cursorX + 1.0f, height - 5.0f, context.depthBase - 0.003f, focusedBorderColor);
+        }
     }
 
     override bool handlePointerEvent(ref UiPointerEvent event)
@@ -433,7 +470,100 @@ protected:
             return false;
 
         focused = true;
+        moveCursorToEnd();
         return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.text;
+    }
+
+    override bool handleTextInputEvent(ref UiTextInputEvent event)
+    {
+        if (event.text.length == 0)
+            return false;
+
+        text = text[0 .. cursorIndex] ~ event.text ~ text[cursorIndex .. $];
+        cursorIndex += event.text.length;
+        emitChanged();
+        return true;
+    }
+
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown)
+            return false;
+
+        final switch (event.key)
+        {
+            case UiKeyCode.backspace:
+                if (cursorIndex == 0)
+                    return true;
+                const previous = previousUtf8Boundary(text, cursorIndex);
+                text = text[0 .. previous] ~ text[cursorIndex .. $];
+                cursorIndex = previous;
+                emitChanged();
+                return true;
+            case UiKeyCode.delete_:
+                if (cursorIndex >= text.length)
+                    return true;
+                const next = nextUtf8Boundary(text, cursorIndex);
+                text = text[0 .. cursorIndex] ~ text[next .. $];
+                emitChanged();
+                return true;
+            case UiKeyCode.left:
+                cursorIndex = previousUtf8Boundary(text, cursorIndex);
+                return true;
+            case UiKeyCode.right:
+                cursorIndex = nextUtf8Boundary(text, cursorIndex);
+                return true;
+            case UiKeyCode.home:
+                cursorIndex = 0;
+                return true;
+            case UiKeyCode.end:
+                cursorIndex = text.length;
+                return true;
+            case UiKeyCode.enter:
+            case UiKeyCode.escape:
+            case UiKeyCode.tab:
+            case UiKeyCode.unknown:
+                return false;
+        }
+    }
+
+private:
+    void emitChanged()
+    {
+        if (onChanged !is null)
+            onChanged(text);
+    }
+
+    static size_t previousUtf8Boundary(string value, size_t index)
+    {
+        if (index == 0)
+            return 0;
+
+        auto pos = min(index, value.length) - 1;
+        while (pos > 0 && isUtf8Continuation(value[pos]))
+            --pos;
+        return pos;
+    }
+
+    static size_t nextUtf8Boundary(string value, size_t index)
+    {
+        if (index >= value.length)
+            return value.length;
+
+        auto pos = index + 1;
+        while (pos < value.length && isUtf8Continuation(value[pos]))
+            ++pos;
+        return pos;
+    }
+
+    static bool isUtf8Continuation(char value)
+    {
+        return (cast(ubyte)value & 0xC0) == 0x80;
     }
 }
 
@@ -521,4 +651,33 @@ unittest
     assert(field.focused);
     field.setText("Player");
     assert(field.text == "Player");
+}
+
+@("UiTextField edits focused text with key and text input events")
+unittest
+{
+    auto field = new UiTextField("AC", "Name", 0.0f, 0.0f, 160.0f, 28.0f);
+    string changed;
+    field.onChanged = (value) { changed = value; };
+    field.setFocused(true);
+    field.cursorIndex = 1;
+
+    UiTextInputEvent textEvent;
+    textEvent.text = "B";
+    assert(field.dispatchTextInputEvent(textEvent));
+    assert(field.text == "ABC");
+    assert(field.cursorIndex == 2);
+    assert(changed == "ABC");
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.backspace;
+    assert(field.dispatchKeyEvent(keyEvent));
+    assert(field.text == "AC");
+    assert(field.cursorIndex == 1);
+
+    keyEvent.key = UiKeyCode.delete_;
+    assert(field.dispatchKeyEvent(keyEvent));
+    assert(field.text == "A");
+    assert(field.cursorIndex == 1);
 }

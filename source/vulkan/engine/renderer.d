@@ -15,7 +15,7 @@
  */
 module vulkan.engine.renderer;
 
-import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_Vulkan_DestroySurface;
+import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_StartTextInput, SDL_SystemCursor, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import demo.demo_settings : DemoSettings, saveDemoSettings;
-import demo.demo_ui : DemoUiScreen, UiWindowDrawRange;
+import demo.demo_ui : DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.engine.device;
@@ -34,10 +34,48 @@ import vulkan.engine.pipeline;
 import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import vulkan.ui.ui_cursor : UiCursorBitmap, UiCursorKind;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
+import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
 
 private enum maxFramesInFlight = 2;
+private immutable ubyte[32] demoInspectCursorData = [
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+    0x01, 0x80,
+];
+private immutable ubyte[32] demoInspectCursorMask = [
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0xFF, 0xFF,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+    0x03, 0xC0,
+];
 
 private enum RenderMode
 {
@@ -227,6 +265,7 @@ class VulkanRenderer
         uiScreen.onSaveSettings = &saveSettingsDialog;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
+        SDL_StartTextInput(window.handle);
 
         instance = VulkanInstance(window.handle);
         enforce(window.createVulkanSurface(instance.handle, surface), "SDL_Vulkan_CreateSurface failed: " ~ fromStringz(SDL_GetError()).idup);
@@ -268,6 +307,7 @@ class VulkanRenderer
         uiScreen.initialize(fontAtlases[]);
         uiScreen.setSettingsDraft(demoSettings);
         uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
+        registerDemoCursors();
         createUniformBuffers();
         createDescriptorPoolAndSets();
         createFramebuffers();
@@ -277,6 +317,50 @@ class VulkanRenderer
         updateWindowTitle();
         lastRotationTicks = SDL_GetTicks();
         fpsStartTicks = SDL_GetTicks();
+    }
+
+    /** Registers a custom bitmap cursor for one retained UI cursor kind.
+     *
+     * Params:
+     *   bitmap = UI cursor bitmap and hotspot definition.
+     *
+     * Returns:
+     *   `true` when the SDL window accepted the cursor override.
+     */
+    bool registerCustomCursor(ref const UiCursorBitmap bitmap)
+    {
+        if (window is null || !bitmap.isValid())
+            return false;
+
+        const sdlBitmap = SdlCursorBitmap(bitmap.width, bitmap.height, bitmap.hotX, bitmap.hotY, bitmap.data, bitmap.mask);
+        return window.registerCustomSystemCursor(sdlCursorFor(bitmap.kind), sdlBitmap);
+    }
+
+    /** Clears a custom bitmap cursor override for one retained UI cursor kind.
+     *
+     * Params:
+     *   cursor = UI cursor kind to restore to its system fallback.
+     *
+     * Returns:
+     *   Nothing.
+     */
+    void clearCustomCursor(UiCursorKind cursor)
+    {
+        if (window is null)
+            return;
+
+        window.clearCustomSystemCursor(sdlCursorFor(cursor));
+    }
+
+    /** Registers demo-owned cursor artwork used to exercise custom cursor hooks.
+     *
+     * Returns:
+     *   Nothing.
+     */
+    void registerDemoCursors()
+    {
+        auto inspectCursor = UiCursorBitmap(UiCursorKind.crosshair, 16, 16, 7, 7, demoInspectCursorData[], demoInspectCursorMask[]);
+        registerCustomCursor(inspectCursor);
     }
 
     /** Destroys all renderer-owned Vulkan resources and the SDL surface. */
@@ -348,6 +432,8 @@ class VulkanRenderer
             case SDL_EventType.quit:
                 return true;
             case SDL_EventType.keyDown:
+                if (dispatchUiKeyEvent(event, UiKeyEventKind.keyDown))
+                    return false;
                 if (event.key.scancode == SDL_Scancode.escape)
                     return true;
                 if (!event.key.repeat && (event.key.scancode == SDL_Scancode.equals || event.key.scancode == SDL_Scancode.kpPlus))
@@ -373,6 +459,8 @@ class VulkanRenderer
                 else if (event.key.scancode == SDL_Scancode.down)
                     rotateDown = true;
                 return false;
+            case SDL_EventType.textInput:
+                return handleTextInput(event);
             case SDL_EventType.mouseButtonDown:
                 return handleMouseButtonDown(event);
             case SDL_EventType.mouseButtonUp:
@@ -382,6 +470,8 @@ class VulkanRenderer
             case SDL_EventType.mouseWheel:
                 return handleMouseWheel(event);
             case SDL_EventType.keyUp:
+                if (dispatchUiKeyEvent(event, UiKeyEventKind.keyUp))
+                    return false;
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
                 else if (event.key.scancode == SDL_Scancode.right)
@@ -402,11 +492,73 @@ class VulkanRenderer
 
     }
 
+    /** Routes mapped SDL keyboard events to the retained UI focus owner. */
+    private bool dispatchUiKeyEvent(ref SDL_Event event, UiKeyEventKind kind)
+    {
+        UiKeyEvent uiEvent;
+        uiEvent.kind = kind;
+        uiEvent.key = mapUiKey(event.key.scancode);
+        uiEvent.repeat = event.key.repeat;
+        uiEvent.modifiers = cast(uint)event.key.mod;
+
+        if (uiScreen.dispatchKeyEvent(uiEvent))
+            return true;
+
+        return uiScreen.hasKeyboardFocus();
+    }
+
+    /** Routes SDL text input to the retained UI focus owner. */
+    private bool handleTextInput(ref SDL_Event event)
+    {
+        UiTextInputEvent uiEvent;
+        uiEvent.text = event.text.text is null ? "" : fromStringz(event.text.text).idup;
+        uiScreen.dispatchTextInputEvent(uiEvent);
+        return false;
+    }
+
+    /** Converts SDL scancodes to the generic UI key set. */
+    private static UiKeyCode mapUiKey(SDL_Scancode scancode)
+    {
+        switch (scancode)
+        {
+            case SDL_Scancode.backspace:
+                return UiKeyCode.backspace;
+            case SDL_Scancode.delete_:
+                return UiKeyCode.delete_;
+            case SDL_Scancode.left:
+                return UiKeyCode.left;
+            case SDL_Scancode.right:
+                return UiKeyCode.right;
+            case SDL_Scancode.home:
+                return UiKeyCode.home;
+            case SDL_Scancode.end:
+                return UiKeyCode.end;
+            case SDL_Scancode.return_:
+            case SDL_Scancode.kpEnter:
+                return UiKeyCode.enter;
+            case SDL_Scancode.escape:
+                return UiKeyCode.escape;
+            case SDL_Scancode.tab:
+                return UiKeyCode.tab;
+            default:
+                return UiKeyCode.unknown;
+        }
+    }
+
     /** Adjusts the camera opening angle when the wheel is used outside the UI. */
     private bool handleMouseWheel(ref SDL_Event event)
     {
         const mouseX = cast(float)event.wheel.mouseX;
         const mouseY = cast(float)event.wheel.mouseY;
+        UiPointerEvent pointerEvent;
+        pointerEvent.kind = UiPointerEventKind.wheel;
+        pointerEvent.x = mouseX;
+        pointerEvent.y = mouseY;
+        pointerEvent.wheelX = cast(float)event.wheel.x;
+        pointerEvent.wheelY = cast(float)event.wheel.y;
+
+        if (uiScreen.dispatchPointerEvent(pointerEvent))
+            return false;
 
         if (uiScreen.containsPointer(mouseX, mouseY))
             return false;
@@ -1113,7 +1265,6 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             buildVersion,
-            fontAtlases[],
             uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
@@ -1146,17 +1297,15 @@ class VulkanRenderer
                 );
             }
 
-            /** Starts a scene drag when a mouse press does not hit the UI. */
+            /** Starts a scene drag when a primary mouse press does not hit the UI. */
             private bool handleMouseButtonDown(ref SDL_Event event)
             {
-                if (event.button.button != 1)
-                    return false;
-
                 UiPointerEvent pointerEvent;
                 pointerEvent.kind = UiPointerEventKind.buttonDown;
                 pointerEvent.x = cast(float)event.button.x;
                 pointerEvent.y = cast(float)event.button.y;
                 pointerEvent.button = cast(uint)event.button.button;
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.dispatchPointerEvent(pointerEvent))
                 {
@@ -1167,6 +1316,9 @@ class VulkanRenderer
 
                     return false;
                 }
+
+                if (event.button.button != 1)
+                    return false;
 
                 if (uiScreen.containsPointer(pointerEvent.x, pointerEvent.y))
                 {
@@ -1179,12 +1331,9 @@ class VulkanRenderer
                 return false;
             }
 
-            /** Ends any active mouse drag when the button is released. */
+            /** Ends any active mouse drag when the primary mouse button is released. */
             private bool handleMouseButtonUp(ref SDL_Event event)
             {
-                if (event.button.button != 1)
-                    return false;
-
                 UiPointerEvent pointerEvent;
                 pointerEvent.kind = UiPointerEventKind.buttonUp;
                 pointerEvent.x = cast(float)event.button.x;
@@ -1192,9 +1341,13 @@ class VulkanRenderer
                 pointerEvent.button = cast(uint)event.button.button;
 
                 uiScreen.dispatchPointerEvent(pointerEvent);
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.quitRequested)
                     return true;
+
+                if (event.button.button != 1)
+                    return false;
 
                 uiScreen.sceneMouseDragging = false;
                 return false;
@@ -1207,6 +1360,7 @@ class VulkanRenderer
                 pointerEvent.kind = UiPointerEventKind.move;
                 pointerEvent.x = cast(float)event.motion.x;
                 pointerEvent.y = cast(float)event.motion.y;
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.dispatchPointerEvent(pointerEvent))
                     return false;
@@ -1222,6 +1376,42 @@ class VulkanRenderer
                 }
 
                 return false;
+            }
+
+            /** Applies the platform cursor matching current retained UI hover state. */
+            private void updateMouseCursor(float x, float y)
+            {
+                window.setSystemCursor(sdlCursorFor(uiScreen.cursorAt(x, y)));
+            }
+
+            /** Maps retained UI cursor intent to SDL's system cursor set. */
+            private static SDL_SystemCursor sdlCursorFor(UiCursorKind cursor)
+            {
+                final switch (cursor)
+                {
+                    case UiCursorKind.default_:
+                        return SDL_SystemCursor.default_;
+                    case UiCursorKind.text:
+                        return SDL_SystemCursor.text;
+                    case UiCursorKind.pointer:
+                        return SDL_SystemCursor.pointer;
+                    case UiCursorKind.move:
+                        return SDL_SystemCursor.move;
+                    case UiCursorKind.crosshair:
+                        return SDL_SystemCursor.crosshair;
+                    case UiCursorKind.resizeHorizontal:
+                        return SDL_SystemCursor.ewResize;
+                    case UiCursorKind.resizeVertical:
+                        return SDL_SystemCursor.nsResize;
+                    case UiCursorKind.resizeNwse:
+                        return SDL_SystemCursor.nwseResize;
+                    case UiCursorKind.resizeNesw:
+                        return SDL_SystemCursor.neswResize;
+                    case UiCursorKind.busy:
+                        return SDL_SystemCursor.wait;
+                    case UiCursorKind.blocked:
+                        return SDL_SystemCursor.notAllowed;
+                }
             }
     ///
     /// Params:

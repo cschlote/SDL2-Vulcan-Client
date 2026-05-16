@@ -9,8 +9,9 @@
  */
 module vulkan.ui.ui_widget;
 
-import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_event : UiKeyEvent, UiPointerEvent, UiTextInputEvent;
 import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
@@ -34,6 +35,8 @@ abstract class UiWidget
     float childOffsetX;
     float childOffsetY;
     bool visible = true;
+    bool focusable;
+    bool focused;
     UiWidget[] children;
 
     this(float x = 0, float y = 0, float width = 0, float height = 0)
@@ -122,6 +125,74 @@ abstract class UiWidget
         return handlePointerEvent(event);
     }
 
+    /** Returns the deepest focusable widget at the given point in parent space. */
+    UiWidget focusTargetAt(float localX, float localY)
+    {
+        if (!visible)
+            return null;
+
+        if (width > 0.0f && height > 0.0f && !contains(localX, localY))
+            return null;
+
+        const childX = localX - x - childOffsetX;
+        const childY = localY - y - childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            auto target = children[cast(size_t)index].focusTargetAt(childX, childY);
+            if (target !is null)
+                return target;
+        }
+
+        return focusable ? this : null;
+    }
+
+    /** Returns the cursor intent at the given point in parent space. */
+    UiCursorKind cursorAt(float localX, float localY)
+    {
+        if (!visible)
+            return UiCursorKind.default_;
+
+        if (width > 0.0f && height > 0.0f && !contains(localX, localY))
+            return UiCursorKind.default_;
+
+        const childX = localX - x - childOffsetX;
+        const childY = localY - y - childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            const cursor = children[cast(size_t)index].cursorAt(childX, childY);
+            if (cursor != UiCursorKind.default_)
+                return cursor;
+        }
+
+        return cursorSelf(localX, localY);
+    }
+
+    /** Updates the widget focus flag. Screens call this when focus ownership changes. */
+    void setFocused(bool focused)
+    {
+        this.focused = focused;
+    }
+
+    /** Routes a keyboard event to this widget. */
+    bool dispatchKeyEvent(ref UiKeyEvent event)
+    {
+        if (!visible)
+            return false;
+
+        return handleKeyEvent(event);
+    }
+
+    /** Routes UTF-8 text input to this widget. */
+    bool dispatchTextInputEvent(ref UiTextInputEvent event)
+    {
+        if (!visible)
+            return false;
+
+        return handleTextInputEvent(event);
+    }
+
     /** Renders the widget and its children in back-to-front order. */
     final void render(ref UiRenderContext context)
     {
@@ -165,8 +236,26 @@ protected:
         return cast(float[4])widgetDebugBoundsColor;
     }
 
+    /** Returns this widget's own cursor intent after children were checked. */
+    UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.default_;
+    }
+
     /** Handles a pointer event after children had a chance to consume it. */
     bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        return false;
+    }
+
+    /** Handles a keyboard event when the widget owns focus. */
+    bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        return false;
+    }
+
+    /** Handles UTF-8 text input when the widget owns focus. */
+    bool handleTextInputEvent(ref UiTextInputEvent event)
     {
         return false;
     }

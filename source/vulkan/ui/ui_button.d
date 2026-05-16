@@ -11,12 +11,13 @@ module vulkan.ui.ui_button;
 
 import logging : logLine;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_image : UiImage;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiHBox, UiSpacer;
+import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
 enum float buttonInnerMarginX = 10.0f;
@@ -120,13 +121,31 @@ final class UiButton : UiWidget
         super.add(contentRow);
     }
 
+    /** Updates the visible caption and remeasures on the next layout pass. */
+    void setCaption(string caption)
+    {
+        this.caption = caption;
+        captionLabel.text = caption;
+        preferredWidth = 0.0f;
+        preferredHeight = 0.0f;
+        minimumWidth = 0.0f;
+        minimumHeight = 0.0f;
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
         const contentSize = contentRow.measure(context);
-        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : contentSize.width;
-        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : contentSize.height;
-        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, measuredWidth, measuredHeight);
+        const naturalWidth = contentSize.width;
+        const naturalHeight = contentSize.height;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : naturalWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : naturalHeight;
+        minimumWidth = minimumWidth > 0.0f ? minimumWidth : naturalWidth;
+        minimumHeight = minimumHeight > 0.0f ? minimumHeight : naturalHeight;
+        preferredWidth = measuredWidth;
+        preferredHeight = measuredHeight;
+        maximumWidth = maximumWidth > 0.0f ? maximumWidth : naturalWidth;
+        maximumHeight = maximumHeight > 0.0f ? maximumHeight : measuredHeight;
         return UiLayoutSize(measuredWidth, measuredHeight);
     }
 
@@ -149,6 +168,11 @@ protected:
     override void renderSelf(ref UiRenderContext context)
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor, context.depthBase);
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
     }
 
     override bool handlePointerEvent(ref UiPointerEvent event)
@@ -193,4 +217,18 @@ unittest
     assert(cast(UiSpacer)row.children[2] !is null);
     assert(cast(UiLabel)row.children[3] !is null);
     assert(cast(UiSpacer)row.children[4] !is null);
+}
+
+@("UiButton can stretch horizontally when layout policy allows it")
+unittest
+{
+    auto column = new UiVBox(0.0f, 0.0f, 120.0f, 32.0f);
+    auto button = new UiButton("A", 0.0f, 0.0f, 32.0f, 32.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    button.setLayoutHint(32.0f, 32.0f, 32.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+    column.add(button);
+
+    UiLayoutContext context;
+    column.layout(context);
+
+    assert(button.width == 120.0f);
 }

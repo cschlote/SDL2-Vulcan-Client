@@ -45,22 +45,30 @@ void appendWindowFrame(ref UiRenderContext context, float left, float top, float
 
     appendQuad(context, left, top, right, bottom, z, bodyColor);
 
-    // const headerLeft = left + headerLeftInset;
-    // const headerRight = right - headerRightInset;
-    // if (headerRight > headerLeft)
-    //     appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
+    if (headerHeight <= 0.0f)
+        return;
+
+    const headerLeft = left + headerLeftInset;
+    const headerRight = right - headerRightInset;
+    if (headerRight > headerLeft)
+        appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
 
     appendQuad(context, left, top + headerHeight - 2.0f, right, top + headerHeight - 1.0f, z - 0.002f, [0.10f, 0.10f, 0.12f, 0.70f]);
     appendQuad(context, left, top + headerHeight - 1.0f, right, top + headerHeight, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.48f]);
 }
 
 /** Appends the outer border quads for a retained window frame. */
-void appendWindowBorder(ref UiRenderContext context, float left, float top, float right, float bottom, float z)
+void appendWindowBorder(ref UiRenderContext context, float left, float top, float right, float bottom, float z, float thickness = 1.0f)
 {
-    appendQuad(context, left, top, right, top + 2.0f, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.34f]);
-    appendQuad(context, left, bottom - 1.0f, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, left, top, left + 1.0f, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
-    appendQuad(context, right - 1.0f, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    if (right <= left || bottom <= top || thickness <= 0.0f)
+        return;
+
+    const clampedThickness = thickness < (right - left) * 0.5f ? thickness : (right - left) * 0.5f;
+    const verticalThickness = clampedThickness < (bottom - top) * 0.5f ? clampedThickness : (bottom - top) * 0.5f;
+    appendQuad(context, left, top, right, top + verticalThickness, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.34f]);
+    appendQuad(context, left, bottom - verticalThickness, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, left, top, left + clampedThickness, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
+    appendQuad(context, right - clampedThickness, top, right, bottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.26f]);
 }
 
 /** Appends the button body and border quads for the retained UI style. */
@@ -109,6 +117,35 @@ void appendQuad(ref UiRenderContext context, float left, float top, float right,
     (*context.panels) ~= Vertex([x0, y0, z], color);
     (*context.panels) ~= Vertex([x1, y1, z], color);
     (*context.panels) ~= Vertex([x0, y1, z], color);
+}
+
+/** Appends a colored triangle to the panel vertex buffer in normalized device space.
+ *
+ * Params:
+ *   context = Active UI render context receiving panel vertices.
+ *   x0Pixels = First point X coordinate in local pixels.
+ *   y0Pixels = First point Y coordinate in local pixels.
+ *   x1Pixels = Second point X coordinate in local pixels.
+ *   y1Pixels = Second point Y coordinate in local pixels.
+ *   x2Pixels = Third point X coordinate in local pixels.
+ *   y2Pixels = Third point Y coordinate in local pixels.
+ *   z = Depth value for the emitted triangle.
+ *   color = Vertex color applied to the triangle.
+ * Returns:
+ *   Nothing.
+ */
+void appendTriangle(ref UiRenderContext context, float x0Pixels, float y0Pixels, float x1Pixels, float y1Pixels, float x2Pixels, float y2Pixels, float z, float[4] color)
+{
+    const x0 = toNdcX(context, x0Pixels);
+    const y0 = toNdcY(context, y0Pixels);
+    const x1 = toNdcX(context, x1Pixels);
+    const y1 = toNdcY(context, y1Pixels);
+    const x2 = toNdcX(context, x2Pixels);
+    const y2 = toNdcY(context, y2Pixels);
+
+    (*context.panels) ~= Vertex([x0, y0, z], color);
+    (*context.panels) ~= Vertex([x1, y1, z], color);
+    (*context.panels) ~= Vertex([x2, y2, z], color);
 }
 
 /** Converts a local X coordinate from pixels to normalized device space. */

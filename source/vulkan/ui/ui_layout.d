@@ -12,29 +12,37 @@ module vulkan.ui.ui_layout;
 
 import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
-import vulkan.ui.ui_event : UiPointerEvent;
+import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
-private immutable float[4] surfaceDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
+private immutable float[4] contentBoxDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
 private immutable float[4] verticalLayoutDebugBoundsColor = [0.20f, 1.00f, 0.35f, 0.65f];
 private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.00f, 0.65f];
 private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
 private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f];
+private immutable float[4] scrollAreaDebugBoundsColor = [1.00f, 0.72f, 0.18f, 0.65f];
 
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
 {
+    private float naturalWidth;
+    private float naturalHeight;
+
     this(float width = 0.0f, float height = 0.0f)
     {
         super(0.0f, 0.0f, width, height);
+        naturalWidth = width;
+        naturalHeight = height;
     }
 
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        return UiLayoutSize(width, height);
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : naturalWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : naturalHeight;
+        return UiLayoutSize(measuredWidth, measuredHeight);
     }
 
     override void renderSelf(ref UiRenderContext context)
@@ -69,6 +77,22 @@ unittest
     assert(child.height == 60.0f);
 }
 
+@("UiSpacer keeps its intrinsic size after grow layout")
+unittest
+{
+    auto column = new UiVBox(0.0f, 0.0f, 100.0f, 120.0f, 0.0f);
+    auto child = new UiSpacer();
+    child.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
+    column.add(child);
+
+    UiLayoutContext context;
+    column.layout(context);
+    assert(child.height == 120.0f);
+
+    const measured = child.measure(context);
+    assert(measured.height == 0.0f);
+}
+
 private float clampFloat(float value, float minimum, float maximum)
 {
     return value < minimum ? minimum : (value > maximum ? maximum : value);
@@ -85,8 +109,8 @@ private struct AxisHint
 private AxisHint horizontalHint(UiWidget child)
 {
     AxisHint hint;
-    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
-    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.width;
+    hint.minimum = child.minimumWidth > 0.0f ? child.minimumWidth : child.preferredWidth > 0.0f ? child.preferredWidth : child.flexGrowX > 0.0f ? 0.0f : child.width;
+    hint.preferred = child.preferredWidth > 0.0f ? child.preferredWidth : child.flexGrowX > 0.0f ? 0.0f : child.width;
     hint.maximum = child.maximumWidth > 0.0f ? child.maximumWidth : float.max;
     hint.grow = child.flexGrowX;
     return hint;
@@ -95,8 +119,8 @@ private AxisHint horizontalHint(UiWidget child)
 private AxisHint verticalHint(UiWidget child)
 {
     AxisHint hint;
-    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
-    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.height;
+    hint.minimum = child.minimumHeight > 0.0f ? child.minimumHeight : child.preferredHeight > 0.0f ? child.preferredHeight : child.flexGrowY > 0.0f ? 0.0f : child.height;
+    hint.preferred = child.preferredHeight > 0.0f ? child.preferredHeight : child.flexGrowY > 0.0f ? 0.0f : child.height;
     hint.maximum = child.maximumHeight > 0.0f ? child.maximumHeight : float.max;
     hint.grow = child.flexGrowY;
     return hint;
@@ -201,19 +225,21 @@ protected:
     }
 }
 
-/** Box-style layout container with optional background and border. */
-final class UiSurfaceBox : UiLayoutContainer
+/** Shared implementation for content and framed layout boxes. */
+abstract class UiBoxBase : UiLayoutContainer
 {
     float[4] backgroundColor;
     float[4] borderColor;
-    bool drawBorder = true;
-    bool drawBackground = true;
+    bool drawBorder;
+    bool drawBackground;
 
-    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f, bool drawBackground = false, bool drawBorder = false)
     {
         super(x, y, width, height, paddingLeft, paddingTop, paddingRight, paddingBottom);
         this.backgroundColor = backgroundColor;
         this.borderColor = borderColor;
+        this.drawBackground = drawBackground;
+        this.drawBorder = drawBorder;
     }
 
 protected:
@@ -260,8 +286,192 @@ protected:
 
     override float[4] debugBoundsColor() const
     {
-        return cast(float[4])surfaceDebugBoundsColor;
+        return cast(float[4])contentBoxDebugBoundsColor;
     }
+}
+
+/** Padded content root that assigns one useful inner rectangle to its children. */
+final class UiContentBox : UiBoxBase
+{
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, [0.0f, 0.0f, 0.0f, 0.0f], [0.0f, 0.0f, 0.0f, 0.0f], paddingLeft, paddingTop, paddingRight, paddingBottom, false, false);
+    }
+}
+
+/** Visible framed box for grouping content with an optional background. */
+final class UiFrameBox : UiBoxBase
+{
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float[4] backgroundColor = [0.0f, 0.0f, 0.0f, 0.0f], float[4] borderColor = [0.0f, 0.0f, 0.0f, 0.0f], float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, backgroundColor, borderColor, paddingLeft, paddingTop, paddingRight, paddingBottom, true, true);
+    }
+}
+
+@("UiContentBox lays out children inside padding")
+unittest
+{
+    auto box = new UiContentBox(0.0f, 0.0f, 100.0f, 80.0f, 4.0f, 5.0f, 6.0f, 7.0f);
+    auto child = new UiSpacer();
+    box.add(child);
+
+    UiLayoutContext context;
+    box.layout(context);
+
+    assert(child.x == 4.0f);
+    assert(child.y == 5.0f);
+    assert(child.width == 90.0f);
+    assert(child.height == 68.0f);
+    assert(!box.drawBackground);
+    assert(!box.drawBorder);
+}
+
+@("UiFrameBox renders as visible framed content container")
+unittest
+{
+    auto box = new UiFrameBox(0.0f, 0.0f, 100.0f, 80.0f, [0.1f, 0.2f, 0.3f, 1.0f], [0.4f, 0.5f, 0.6f, 1.0f]);
+
+    assert(box.drawBackground);
+    assert(box.drawBorder);
+}
+
+/** Scrollable viewport for content that can exceed the visible area. */
+final class UiScrollArea : UiLayoutContainer
+{
+    float scrollX;
+    float scrollY;
+    float contentWidth;
+    float contentHeight;
+    float wheelStep = 32.0f;
+
+    this(float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, float paddingLeft = 0.0f, float paddingTop = 0.0f, float paddingRight = 0.0f, float paddingBottom = 0.0f)
+    {
+        super(x, y, width, height, paddingLeft, paddingTop, paddingRight, paddingBottom);
+        scrollX = 0.0f;
+        scrollY = 0.0f;
+        contentWidth = 0.0f;
+        contentHeight = 0.0f;
+        flexGrowX = 1.0f;
+        flexGrowY = 1.0f;
+    }
+
+    void scrollTo(float x, float y)
+    {
+        scrollX = clampFloat(x, 0.0f, maxScrollX());
+        scrollY = clampFloat(y, 0.0f, maxScrollY());
+        childOffsetX = -scrollX;
+        childOffsetY = -scrollY;
+    }
+
+    float maxScrollX() const
+    {
+        const viewportWidth = innerWidth();
+        return contentWidth > viewportWidth ? contentWidth - viewportWidth : 0.0f;
+    }
+
+    float maxScrollY() const
+    {
+        const viewportHeight = innerHeight();
+        return contentHeight > viewportHeight ? contentHeight - viewportHeight : 0.0f;
+    }
+
+    bool canScroll() const
+    {
+        return maxScrollX() > 0.0f || maxScrollY() > 0.0f;
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        if (children.length == 0)
+            return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : width, preferredHeight > 0.0f ? preferredHeight : height);
+
+        const childSize = children[0].measure(context);
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : childSize.width + paddingLeft + paddingRight;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : childSize.height + paddingTop + paddingBottom;
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
+    override void layoutChildren()
+    {
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = contentWidth > 0.0f ? contentWidth : innerWidth();
+            child.height = contentHeight > 0.0f ? contentHeight : innerHeight();
+        }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        float measuredWidth = 0.0f;
+        float measuredHeight = 0.0f;
+
+        foreach (child; children)
+        {
+            const childSize = child.measure(context);
+            if (childSize.width > measuredWidth)
+                measuredWidth = childSize.width;
+            if (childSize.height > measuredHeight)
+                measuredHeight = childSize.height;
+        }
+
+        contentWidth = measuredWidth > innerWidth() ? measuredWidth : innerWidth();
+        contentHeight = measuredHeight > innerHeight() ? measuredHeight : innerHeight();
+        scrollTo(scrollX, scrollY);
+
+        foreach (child; children)
+        {
+            child.x = paddingLeft;
+            child.y = paddingTop;
+            child.width = contentWidth;
+            child.height = contentHeight;
+            child.layout(context);
+        }
+    }
+
+    override bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        if (event.kind != UiPointerEventKind.wheel)
+            return false;
+
+        const oldScrollX = scrollX;
+        const oldScrollY = scrollY;
+        const wheelX = event.wheelX == event.wheelX ? event.wheelX : 0.0f;
+        const wheelY = event.wheelY == event.wheelY ? event.wheelY : 0.0f;
+        scrollTo(scrollX - wheelX * wheelStep, scrollY - wheelY * wheelStep);
+        return scrollX != oldScrollX || scrollY != oldScrollY;
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])scrollAreaDebugBoundsColor;
+    }
+}
+
+@("UiScrollArea clamps wheel scrolling to content bounds")
+unittest
+{
+    auto area = new UiScrollArea(0.0f, 0.0f, 100.0f, 80.0f);
+    auto content = new UiSpacer(100.0f, 200.0f);
+    area.add(content);
+
+    UiLayoutContext context;
+    area.layout(context);
+    assert(area.maxScrollY() == 120.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.wheel;
+    event.x = 20.0f;
+    event.y = 20.0f;
+    event.wheelY = -10.0f;
+    assert(area.dispatchPointerEvent(event));
+    assert(area.scrollY == 120.0f);
+
+    event.wheelY = 10.0f;
+    assert(area.dispatchPointerEvent(event));
+    assert(area.scrollY == 0.0f);
 }
 
 /** Vertical stack container. */

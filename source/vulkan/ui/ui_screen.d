@@ -14,10 +14,16 @@ module vulkan.ui.ui_screen;
 import std.algorithm : max;
 
 import vulkan.font.font_legacy : FontAtlas;
-import vulkan.ui.ui_event : UiPointerEvent, UiResizeHandle;
+import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_cursor : UiCursorKind, cursorForResizeHandle;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
+import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_window : UiWindow;
 import vulkan.ui.ui_widget : UiWidget;
+
+version (unittest)
+    import vulkan.ui.ui_controls : UiTextField;
 
 /** Screen-level coordinator for retained UI windows. */
 class UiScreen
@@ -37,15 +43,19 @@ class UiScreen
     private float resizeStartWidth;
     private float resizeStartHeight;
     private UiResizeHandle resizeStartHandle;
+    private UiWidget focusedWidget;
 
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
     {
+        viewportWidth_ = 0.0f;
+        viewportHeight_ = 0.0f;
         fontAtlases_ = liveFonts;
         windows_ = [];
         activeDragWindow = null;
         activeResizeWindow = null;
         resizeStartHandle = UiResizeHandle.none;
+        setFocusedWidget(null);
         onInitialize();
         ensureWindowLayout();
     }
@@ -61,6 +71,9 @@ class UiScreen
     /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
+        if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
+            setFocusedWidget(focusTargetAt(event.x, event.y));
+
         if (activeResizeWindow !is null && activeResizeWindow.visible)
             return activeResizeWindow.dispatchPointerEvent(event);
 
@@ -79,6 +92,36 @@ class UiScreen
         return false;
     }
 
+    /** Routes a keyboard event to the focused widget. */
+    bool dispatchKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && focusedWidget !is null)
+        {
+            setFocusedWidget(null);
+            return true;
+        }
+
+        if (focusedWidget is null)
+            return false;
+
+        return focusedWidget.dispatchKeyEvent(event);
+    }
+
+    /** Routes UTF-8 text input to the focused widget. */
+    bool dispatchTextInputEvent(ref UiTextInputEvent event)
+    {
+        if (focusedWidget is null || event.text.length == 0)
+            return false;
+
+        return focusedWidget.dispatchTextInputEvent(event);
+    }
+
+    /** Returns true while a widget owns keyboard focus. */
+    bool hasKeyboardFocus() const
+    {
+        return focusedWidget !is null;
+    }
+
     /** Returns true when the point is inside any visible window. */
     bool containsPointer(float x, float y) const
     {
@@ -92,6 +135,27 @@ class UiScreen
         }
 
         return false;
+    }
+
+    /** Returns the cursor intent for the front-most visible UI region. */
+    UiCursorKind cursorAt(float x, float y)
+    {
+        if (activeResizeWindow !is null && activeResizeWindow.visible)
+            return cursorForResizeHandle(resizeStartHandle);
+
+        if (activeDragWindow !is null && activeDragWindow.visible)
+            return UiCursorKind.move;
+
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
+                return window.cursorAt(x, y);
+        }
+
+        return UiCursorKind.default_;
     }
 
     /** Returns the windows in draw order from back to front. */
@@ -115,6 +179,49 @@ class UiScreen
         layoutWindows();
         anchorWindows();
         clampWindowsToViewport();
+    }
+
+    /** Builds renderer-facing overlay geometry for all visible windows.
+     *
+     * Params:
+     *   debugWidgetBounds = Draws per-widget debug outlines when enabled.
+     *   windowDepth = Base depth used by top-level window rendering.
+     *
+     * Returns:
+     *   UI panel, text-layer, and draw-range geometry in retained window order.
+     */
+    UiOverlayGeometry buildOverlayGeometry(bool debugWidgetBounds = false, float windowDepth = 0.10f)
+    {
+        UiOverlayGeometry geometry;
+        geometry.panels = [];
+        foreach (layerIndex; 0 .. geometry.textLayers.length)
+            geometry.textLayers[layerIndex] = [];
+
+        auto context = buildRenderContext(geometry, debugWidgetBounds, windowDepth);
+        UiWindowDrawRange[] drawRanges;
+
+        foreach (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            UiWindowDrawRange range;
+            range.panelsStart = cast(uint)geometry.panels.length;
+            foreach (layerIndex; 0 .. geometry.textLayers.length)
+                range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
+
+            context.depthBase = windowDepth;
+            window.render(context);
+
+            range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
+            foreach (layerIndex; 0 .. geometry.textLayers.length)
+                range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
+
+            drawRanges ~= range;
+        }
+
+        geometry.windows = drawRanges;
+        return geometry;
     }
 
 protected:
@@ -169,6 +276,9 @@ protected:
 
         if (isInteractingWith(window))
             endWindowInteraction();
+
+        if (focusedWidget !is null && windowOwnsWidget(window, focusedWidget))
+            setFocusedWidget(null);
 
         for (size_t index = 0; index < windows_.length; ++index)
         {
@@ -291,6 +401,21 @@ protected:
         resizeStartHandle = UiResizeHandle.none;
     }
 
+    /** Sets the current keyboard focus owner. */
+    void setFocusedWidget(UiWidget widget)
+    {
+        if (focusedWidget is widget)
+            return;
+
+        if (focusedWidget !is null)
+            focusedWidget.setFocused(false);
+
+        focusedWidget = widget;
+
+        if (focusedWidget !is null)
+            focusedWidget.setFocused(true);
+    }
+
     /** Returns true when the window is currently dragged or resized. */
     bool isInteractingWith(UiWindow window) const
     {
@@ -312,6 +437,33 @@ protected:
         return context;
     }
 
+    /** Builds a render context targeting the provided overlay geometry.
+     *
+     * Params:
+     *   geometry = Overlay geometry that receives emitted panel and text vertices.
+     *   debugWidgetBounds = Draws per-widget debug outlines when enabled.
+     *   windowDepth = Initial base depth used for window rendering.
+     *
+     * Returns:
+     *   Render context bound to this screen's viewport and font atlases.
+     */
+    UiRenderContext buildRenderContext(ref UiOverlayGeometry geometry, bool debugWidgetBounds, float windowDepth) const
+    {
+        UiRenderContext context = UiRenderContext.init;
+        context.extentWidth = viewportWidth_;
+        context.extentHeight = viewportHeight_;
+        context.originX = 0.0f;
+        context.originY = 0.0f;
+        context.depthBase = windowDepth;
+        context.debugWidgetBounds = debugWidgetBounds;
+        foreach (index; 0 .. context.fonts.length)
+            context.fonts[index] = index < fontAtlases_.length ? &fontAtlases_[index] : null;
+        context.panels = &geometry.panels;
+        foreach (index; 0 .. context.textLayers.length)
+            context.textLayers[index] = &geometry.textLayers[index];
+        return context;
+    }
+
     /** Measures content and applies effective minimum window size. */
     void autoSizeWindow(UiWindow window, UiWidget content, float paddingLeft, float paddingTop, float paddingRight, float paddingBottom, float minimumWidth, float minimumHeight)
     {
@@ -321,7 +473,7 @@ protected:
         auto sizeContext = buildLayoutContext(fontAtlases_);
         const contentSize = content.measure(sizeContext);
         const desiredWidth = contentSize.width + paddingLeft + paddingRight;
-        const desiredHeight = contentSize.height + paddingTop + paddingBottom + window.headerHeight;
+        const desiredHeight = contentSize.height + paddingTop + paddingBottom + window.verticalChromeExtent();
         const effectiveMinimumWidth = max(minimumWidth, window.minimumWidth);
         const effectiveMinimumHeight = max(minimumHeight, window.minimumHeight);
         const minimumWindowWidth = max(effectiveMinimumWidth, desiredWidth);
@@ -349,6 +501,38 @@ protected:
     }
 
 private:
+    UiWidget focusTargetAt(float x, float y)
+    {
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            auto target = window.focusTargetAt(x, y);
+            if (target !is null)
+                return target;
+        }
+
+        return null;
+    }
+
+    static bool windowOwnsWidget(UiWidget root, UiWidget needle)
+    {
+        if (root is null || needle is null)
+            return false;
+
+        if (root is needle)
+            return true;
+
+        foreach (child; root.children)
+        {
+            if (windowOwnsWidget(child, needle))
+                return true;
+        }
+
+        return false;
+    }
+
     ptrdiff_t windowIndex(UiWindow window) const
     {
         foreach (index, candidate; windows_)
@@ -426,6 +610,13 @@ private:
 
         final switch (resizeStartHandle)
         {
+            case UiResizeHandle.top:
+            {
+                const newTop = clampFloat(cursorY, 0.0f, startBottom - minimumHeight);
+                activeResizeWindow.y = newTop;
+                activeResizeWindow.height = startBottom - newTop;
+                break;
+            }
             case UiResizeHandle.topLeft:
             {
                 const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
@@ -445,6 +636,18 @@ private:
                 activeResizeWindow.height = startBottom - newTop;
                 break;
             }
+            case UiResizeHandle.right:
+            {
+                const availableRight = viewportWidth_ > resizeStartLeft ? viewportWidth_ - resizeStartLeft : minimumWidth;
+                activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableRight);
+                break;
+            }
+            case UiResizeHandle.bottom:
+            {
+                const availableBottom = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
+                activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableBottom);
+                break;
+            }
             case UiResizeHandle.bottomLeft:
             {
                 const availableBottom = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
@@ -460,6 +663,13 @@ private:
                 const availableHeight = viewportHeight_ > resizeStartTop ? viewportHeight_ - resizeStartTop : minimumHeight;
                 activeResizeWindow.width = clampFloat(cursorX - resizeStartLeft, minimumWidth, availableWidth);
                 activeResizeWindow.height = clampFloat(cursorY - resizeStartTop, minimumHeight, availableHeight);
+                break;
+            }
+            case UiResizeHandle.left:
+            {
+                const newLeft = clampFloat(cursorX, 0.0f, startRight - minimumWidth);
+                activeResizeWindow.x = newLeft;
+                activeResizeWindow.width = startRight - newLeft;
                 break;
             }
             case UiResizeHandle.none:
@@ -502,6 +712,138 @@ unittest
     assert(screen.isFrontWindow(first));
     screen.toggleWindowStackPosition(first);
     assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen toggles window stacking from a middle chrome click")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto first = new UiWindow("first", 0.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, false);
+    auto second = new UiWindow("second", 100.0f, 0.0f, 80.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, true);
+    screen.registerWindowInteractionHandlers(first);
+    screen.registerWindowInteractionHandlers(second);
+    screen.addWindow(first);
+    screen.addWindow(second);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 2;
+    event.x = 10.0f;
+    event.y = 10.0f;
+
+    assert(screen.dispatchPointerEvent(event));
+    assert(screen.isFrontWindow(first));
+
+    event.y = 35.0f;
+    assert(!screen.dispatchPointerEvent(event));
+    assert(screen.isFrontWindow(first));
+
+    event.y = 78.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(screen.windowsInFrontToBack()[0] is first);
+
+    first.stackable = false;
+    assert(!screen.dispatchPointerEvent(event));
+    assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen builds overlay geometry in retained window order")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto hidden = new UiWindow("hidden", 10.0f, 10.0f, 70.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto visible = new UiWindow("visible", 90.0f, 10.0f, 70.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    hidden.visible = false;
+    screen.addWindow(hidden);
+    screen.addWindow(visible);
+
+    auto geometry = screen.buildOverlayGeometry();
+    assert(geometry.windows.length == 1);
+    assert(geometry.panels.length > 0);
+    assert(geometry.windows[0].panelsStart == 0);
+    assert(geometry.windows[0].panelsCount == geometry.panels.length);
+}
+
+@("UiScreen reports context-sensitive cursor intent")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(260.0f, 180.0f);
+
+    auto window = new UiWindow("window", 10.0f, 10.0f, 180.0f, 120.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], true, false, true);
+    auto field = new UiTextField("", "Name", 0.0f, 0.0f, 120.0f, 28.0f);
+    window.add(field);
+    screen.addWindow(window);
+
+    assert(screen.cursorAt(10.0f, 10.0f) == UiCursorKind.resizeNwse);
+    assert(screen.cursorAt(80.0f, 20.0f) == UiCursorKind.move);
+    assert(screen.cursorAt(25.0f, 48.0f) == UiCursorKind.text);
+    assert(screen.cursorAt(240.0f, 160.0f) == UiCursorKind.default_);
+}
+
+@("UiScreen resizes windows from edge grips with non-primary buttons")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto window = new UiWindow("window", 10.0f, 10.0f, 80.0f, 70.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], true, false, true);
+    window.minimumWidth = 40.0f;
+    window.minimumHeight = 40.0f;
+    screen.registerWindowInteractionHandlers(window);
+    screen.addWindow(window);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 3;
+    event.x = 88.0f;
+    event.y = 42.0f;
+    assert(screen.dispatchPointerEvent(event));
+
+    event.kind = UiPointerEventKind.move;
+    event.x = 110.0f;
+    event.y = 42.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(window.width == 100.0f);
+    assert(window.height == 70.0f);
+
+    event.kind = UiPointerEventKind.buttonUp;
+    event.button = 3;
+    assert(screen.dispatchPointerEvent(event));
+}
+
+@("UiScreen assigns and clears keyboard focus from pointer input")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("window", 0.0f, 0.0f, 180.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto field = new UiTextField("", "Name", 8.0f, 8.0f, 120.0f, 28.0f);
+    window.add(field);
+    screen.addWindow(window);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 14.0f;
+    event.y = window.headerHeight + 14.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(field.focused);
+    assert(screen.hasKeyboardFocus());
+
+    event.x = 170.0f;
+    event.y = 86.0f;
+    assert(!screen.dispatchPointerEvent(event));
+    assert(!field.focused);
+    assert(!screen.hasKeyboardFocus());
 }
 
 @("UiScreen can place a window away from existing visible windows")

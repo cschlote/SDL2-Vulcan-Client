@@ -16,6 +16,10 @@ This repository is a compact D codebase for building a small game-engine spine w
 - [docs/vulkan-quickstart.md](docs/vulkan-quickstart.md) for the frame lifecycle and Vulkan object model.
 - [docs/rendering-architecture.md](docs/rendering-architecture.md) for the renderer's layered frame composition.
 - [docs/ui-architecture.md](docs/ui-architecture.md) for the retained UI engine direction.
+- [docs/ui-widgets.md](docs/ui-widgets.md) for existing and planned UI widgets.
+- [docs/demo-windows.md](docs/demo-windows.md) for the current and planned demo windows that exercise UI classes.
+- [docs/ui-animation-plan.md](docs/ui-animation-plan.md) for the planned widget animation and window transition model.
+- [docs/audio-architecture.md](docs/audio-architecture.md) for the planned audio event, mixer, and music architecture.
 - [docs/demo-ui-plan.md](docs/demo-ui-plan.md) for the current migration and planning notes.
 - [docs/shaders.md](docs/shaders.md) for the GLSL stage contract.
 - [docs/README.md](docs/README.md) for the documentation index.
@@ -48,14 +52,14 @@ The build runs the version helper and shader compiler before linking the executa
 - `T` selects lit and textured rendering.
 - `W` selects wireframe rendering.
 - `H` selects hidden-line rendering.
-- `D` toggles red UI widget bounds for layout debugging.
+- `D` toggles color-coded UI widget bounds for layout debugging.
 - Arrow keys rotate the camera.
 - Hold `Shift` while rotating for faster camera movement.
 - Mouse drag outside UI windows rotates the scene.
-- Middle-click a UI window header to toggle that window between front and back.
+- Middle-click free UI window chrome to toggle that window between front and back.
 - Mouse wheel outside UI windows changes the camera field of view.
 - `+` and `-` switch the active Platonic solid, including keypad variants.
-- `Esc` closes the application.
+- `Esc` closes the application unless a focused UI control consumes it first.
 
 ## Settings Policy
 
@@ -68,3 +72,7 @@ Settings are loaded from `~/.config/sdl2-vulcan-demo/config`. Runtime changes st
 - [scripts/release_timetag.d](scripts/release_timetag.d) prints the release tag seed.
 
 For release commits, keep `CHANGELOG.md` focused, generate the timetag with the helper script, and tag the commit with a leading `v`.
+
+## License
+
+The repository uses the CC-BY-NC-SA 4.0 license for source code, documentation, and related project material unless a file says otherwise. The project is intended as a learning demo and engine-building reference; commercial reuse requires separate permission.
