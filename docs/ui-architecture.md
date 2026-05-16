@@ -12,6 +12,7 @@ The core goals are:
 - windows provide reusable chrome, close handling, dragging, and resizing
 - `UiScreen` owns screen-wide window order, viewport state, layout dispatch, and input routing
 - layout is font-sensitive and deterministic
+- widgets and windows can later add local animation without moving application policy into the renderer
 - application-specific UI is built outside the reusable `vulkan.ui` package
 - the renderer consumes generated geometry instead of owning UI behavior
 
@@ -178,6 +179,14 @@ The longer-term direction is signal-like communication:
 
 Whether signals are synchronous delegates, queued events, or a small typed event bus remains open.
 
+## Animation Direction
+
+The retained UI should reserve a path for animation without changing ownership boundaries. Widgets may later animate their own visual state, such as hover fades, caret blinking, animated images, media widgets, progress movement, or validation feedback. Windows may later animate their own presentation, such as short pop-in and close-out transitions.
+
+The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` is the natural owner for frame-time dispatch and active transition cleanup, while `UiWidget` and `UiWindow` own the state they visually animate. The renderer should draw resolved geometry and optional transform or texture-frame data; it should not own animation policy.
+
+See [UI Animation Plan](ui-animation-plan.md) for the planned scheduler, widget-local animation, media-widget, and window-transition model.
+
 ## Renderer Boundary
 
 The renderer should not know widget internals. It should receive generated UI geometry and draw ranges.
@@ -227,3 +236,5 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - [source/demo/demo_ui.d](../source/demo/demo_ui.d)
 - [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d)
 - [docs/demo-ui-plan.md](demo-ui-plan.md)
+- [docs/demo-windows.md](demo-windows.md)
+- [docs/ui-animation-plan.md](ui-animation-plan.md)

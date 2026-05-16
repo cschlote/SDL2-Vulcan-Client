@@ -7,6 +7,8 @@ This folder collects the project-facing documentation for the engine prototype, 
 - [Vulkan Quickstart](vulkan-quickstart.md) explains the rendering stack, resource flow, and frame lifecycle.
 - [Rendering Architecture](rendering-architecture.md) describes the layered scene/UI composition and current renderer ownership.
 - [UI Architecture](ui-architecture.md) captures the retained UI engine model, `UiScreen` ownership, widget layout, and event routing.
+- [Demo Windows](demo-windows.md) documents the current and planned demo windows that exercise UI classes through normal use cases.
+- [UI Animation Plan](ui-animation-plan.md) captures the planned retained UI animation and window transition model.
 - [Audio Architecture](audio-architecture.md) captures the planned audio event, mixer, stream, and music model.
 - [Demo UI Plan](demo-ui-plan.md) tracks the current demo UI migration and the plan for moving toward a reusable engine module.
 - [Shader Guide](shaders.md) explains the GLSL sources and how they map to the renderer.

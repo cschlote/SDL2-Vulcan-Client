@@ -23,6 +23,7 @@ Implemented or partially implemented:
 - retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, surface boxes, HBox/VBox/Grid layout, toggles, sliders, dropdowns, and text fields
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
+- Demo window documentation that maps current and planned windows to reusable UI classes and regression checks
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data in `vulkan.ui`
 - D-key debug bounds overlay with color-coded widget and layout outlines
@@ -37,6 +38,7 @@ Remaining migration debt:
 - settings tabs and broader settings categories are still planned demo work.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
 - audio output, audio events, and music playback are still planned engine work.
+- UI animation scheduling, animated media widgets, and animated window open/close transitions are planned engine work.
 
 ## UI Design Direction
 
@@ -78,8 +80,15 @@ The demo should evolve from a test shell into a small application with clear win
 - Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
 - Settings window: display, controls, gameplay, audio, and UI options.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
+- Input demo window: focus traversal, activation keys, pointer capture, disabled states, and modal focus behavior.
+- Selection demo window: popup-backed dropdowns, list selection, placement, dismissal, and keyboard selection.
+- Media demo window: texture-backed images, animated images, and later video-like widgets.
+- Animation demo window: widget-local animation, progress animation, panel transitions, and window pop-in/close-out behavior.
+- Audio demo window: UI sound events, effect preview, bus volume controls, music loop/fade/crossfade behavior, and settings preview.
 
 The four corner windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
+
+Detailed per-window maintenance notes live in [Demo Windows](demo-windows.md). Every visible demo window should have documented purpose, covered UI classes, regression checks, and planned extensions there.
 
 The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, surface boxes, grids, and spacers.
 
@@ -96,6 +105,8 @@ Settings-style dialogs should split the window body into a growable content area
 `UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
 
 Context-sensitive custom cursors should be resolved through `UiScreen`. Window chrome should report move and resize cursors, text fields should report a text insertion cursor, clickable controls should report an action cursor, and the application should fall back to the scene cursor outside UI. The SDL window layer should own platform cursor handles so widget code only reports cursor intent.
+
+UI elements should also leave room for future animation. Local widget animation should cover state changes such as hover, press, caret blink, progress, animated images, and validation feedback. Window-level animation should cover opening, closing, and modal presentation without changing the logical layout or hit-test model unexpectedly. The current plan is captured in [UI Animation Plan](ui-animation-plan.md).
 
 ## Audio Direction
 
@@ -157,9 +168,11 @@ The next work should continue from reusable engine foundations toward demo polis
 6. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
 7. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
 8. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress.
-9. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
-10. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
-11. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
+9. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
+10. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data.
+11. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
+12. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
+13. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
 ## Implementation Order
 
@@ -182,12 +195,15 @@ The next work should continue from reusable engine foundations toward demo polis
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
 19. Turn the current layout probe into a real widget demo/control gallery.
-20. Add keyboard navigation, tab traversal, and modal focus behavior.
-21. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-22. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-23. Add UI and demo audio events, such as button click feedback and settings volume preview.
-24. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-25. Review package boundaries again after UI cursors and the first audio service exist.
+20. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
+21. Add keyboard navigation, tab traversal, and modal focus behavior.
+22. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+23. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
+24. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
+25. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+26. Add UI and demo audio events, such as button click feedback and settings volume preview.
+27. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+28. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
 
 ## Public Package Preparation
 
