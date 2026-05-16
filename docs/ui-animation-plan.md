@@ -1,6 +1,6 @@
 # UI Animation Plan
 
-This document captures the planned animation model for the retained UI layer. No animation runtime exists yet. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and window transitions can be added without rewriting input routing or layout.
+This document captures the planned animation model for the retained UI layer. A first frame-time dispatch runtime exists; concrete animated widgets and window transitions are still planned. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and window transitions can be added without rewriting input routing or layout.
 
 ## Goals
 
@@ -37,12 +37,12 @@ The UI layer needs a small time source independent from input events. `UiScreen`
 
 Expected first API shape:
 
-- `UiScreen.tickUi(float deltaSeconds)`
-- `UiWidget.tick(float deltaSeconds)` for widgets with active local animation
+- `UiScreen.tickUi(float deltaSeconds)`. Implemented with delta clamping and dirty return.
+- `UiWidget.tick(float deltaSeconds)` for widgets with active local animation. Implemented as a recursive subtree hook.
 - `UiWindow.tickTransition(float deltaSeconds)` for top-level transition state
-- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle
+- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle. Implemented for `UiScreen.tickUi` and `UiWidget.tick`.
 
-The scheduler should clamp large delta values after stalls or breakpoints so transitions do not jump through several visual states at once.
+The scheduler clamps large delta values after stalls or breakpoints so transitions do not jump through several visual states at once.
 
 ## Widget-Local Animation
 
@@ -123,7 +123,7 @@ The renderer should still not own widget state. It should draw the current frame
 
 ## Demo Coverage
 
-The demo should add an Animation Demo window when the scheduler exists. Until then, the planning target is:
+The demo should add an Animation Demo window now that the basic scheduler exists. The next planning targets are:
 
 - keep widget rendering methods small enough to accept animated visual parameters later
 - avoid hard-coding all visual state as immutable constants
@@ -139,4 +139,3 @@ The Chrome Demo is the natural first place to test open and close transitions. T
 - How should animations be paused when the application is minimized?
 - Should animated cursors use the same timing model as UI widgets, or stay backend/theme-specific?
 - How should video or media decoding integrate with the render thread and asset lifetime?
-

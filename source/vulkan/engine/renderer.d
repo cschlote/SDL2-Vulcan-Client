@@ -1223,6 +1223,8 @@ class VulkanRenderer
         if (rotateDown)
             pitchAngle += rotationSpeed * deltaSeconds;
 
+        uiScreen.tickUi(deltaSeconds);
+
         const mesh = shapeMeshes[currentShapeIndex];
         currentIndexCount = cast(uint)mesh.indices.length;
 

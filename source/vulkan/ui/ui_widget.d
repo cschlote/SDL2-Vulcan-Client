@@ -193,6 +193,23 @@ abstract class UiWidget
         return handleTextInputEvent(event);
     }
 
+    /** Advances optional widget-local animation state for this subtree.
+     *
+     * Returns true when rendering another UI frame is useful even without new
+     * input.
+     */
+    final bool tick(float deltaSeconds)
+    {
+        if (!visible)
+            return false;
+
+        bool dirty = tickSelf(deltaSeconds);
+        foreach (child; children)
+            dirty = child.tick(deltaSeconds) || dirty;
+
+        return dirty;
+    }
+
     /** Renders the widget and its children in back-to-front order. */
     final void render(ref UiRenderContext context)
     {
@@ -260,9 +277,57 @@ protected:
         return false;
     }
 
+    /** Advances this widget's own animation state. */
+    bool tickSelf(float deltaSeconds)
+    {
+        return false;
+    }
+
     /** Returns whether the event hits the widget body in parent space. */
     bool contains(float localX, float localY) const
     {
         return localX >= x && localY >= y && localX < x + width && localY < y + height;
     }
+}
+
+@("UiWidget ticks visible subtrees and reports animation dirtiness")
+unittest
+{
+    final class TickWidget : UiWidget
+    {
+        float lastDelta;
+        uint tickCount;
+        bool dirty;
+
+        this(bool dirty = false)
+        {
+            super(0.0f, 0.0f, 10.0f, 10.0f);
+            this.dirty = dirty;
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+
+        override bool tickSelf(float deltaSeconds)
+        {
+            lastDelta = deltaSeconds;
+            tickCount++;
+            return dirty;
+        }
+    }
+
+    auto root = new TickWidget();
+    auto child = new TickWidget(true);
+    auto hiddenChild = new TickWidget(true);
+    hiddenChild.visible = false;
+    root.add(child);
+    root.add(hiddenChild);
+
+    assert(root.tick(0.025f));
+    assert(root.tickCount == 1);
+    assert(child.tickCount == 1);
+    assert(hiddenChild.tickCount == 0);
+    assert(child.lastDelta == 0.025f);
 }

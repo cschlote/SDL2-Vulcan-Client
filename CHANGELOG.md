@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added the first UI animation scheduler hooks with `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, and renderer frame dispatch.
 - Added blocked cursor feedback for background regions behind active modal windows.
 - Added modal default and cancel button handling for Enter and Escape on active `UiWindow` dialogs.
 - Added `UiScreen` modal window routing with background input blocking, modal stack priority, and modal focus containment.

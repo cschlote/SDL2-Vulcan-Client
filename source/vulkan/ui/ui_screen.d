@@ -25,7 +25,11 @@ import vulkan.ui.ui_widget : UiWidget;
 version (unittest)
     import vulkan.ui.ui_button : UiButton;
 version (unittest)
+    import vulkan.ui.ui_context : UiRenderContext;
+version (unittest)
     import vulkan.ui.ui_controls : UiTextField;
+
+private enum float maxUiTickDeltaSeconds = 0.05f;
 
 /** Screen-level coordinator for retained UI windows. */
 class UiScreen
@@ -322,6 +326,23 @@ class UiScreen
         return activePopupWindow !is null && activePopupWindow.visible;
     }
 
+    /** Advances retained UI animation state for one frame.
+     *
+     * Large frame deltas are clamped so animation state does not jump through
+     * several visual states after stalls or breakpoints.
+     *
+     * Returns true when at least one widget requests another rendered frame.
+     */
+    bool tickUi(float deltaSeconds)
+    {
+        const clampedDelta = clampUiTickDelta(deltaSeconds);
+        bool dirty;
+        foreach (window; windowsInFrontToBack())
+            dirty = window.tick(clampedDelta) || dirty;
+
+        return dirty;
+    }
+
     /** Builds renderer-facing overlay geometry for all visible windows.
      *
      * Params:
@@ -517,6 +538,14 @@ protected:
     bool isFrontWindow(UiWindow window) const
     {
         return window !is null && windows_.length > 0 && windows_[$ - 1] is window;
+    }
+
+    /** Clamps UI animation delta time to a small, stable frame interval. */
+    float clampUiTickDelta(float deltaSeconds) const
+    {
+        if (deltaSeconds <= 0.0f)
+            return 0.0f;
+        return deltaSeconds > maxUiTickDeltaSeconds ? maxUiTickDeltaSeconds : deltaSeconds;
     }
 
     /** Attempts to move `window` to the first free non-overlapping viewport slot. */
@@ -1257,6 +1286,48 @@ unittest
 
     screen.dismissActiveModal();
     assert(screen.cursorAt(20.0f, 40.0f) == UiCursorKind.default_);
+}
+
+@("UiScreen ticks retained windows with clamped frame delta")
+unittest
+{
+    final class TickProbe : UiWidget
+    {
+        float lastDelta;
+        uint tickCount;
+
+        this()
+        {
+            super(0.0f, 0.0f, 10.0f, 10.0f);
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+
+        override bool tickSelf(float deltaSeconds)
+        {
+            lastDelta = deltaSeconds;
+            tickCount++;
+            return true;
+        }
+    }
+
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto window = new UiWindow("animated", 0.0f, 0.0f, 120.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto probe = new TickProbe();
+    window.add(probe);
+    screen.addWindow(window);
+
+    assert(screen.tickUi(2.0f));
+    assert(probe.tickCount == 1);
+    assert(probe.lastDelta == 0.05f);
+
+    assert(screen.clampUiTickDelta(-1.0f) == 0.0f);
 }
 
 @("UiScreen can place a window away from existing visible windows")

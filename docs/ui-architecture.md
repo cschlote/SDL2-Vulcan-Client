@@ -202,7 +202,7 @@ Whether signals are synchronous delegates, queued events, or a small typed event
 
 The retained UI should reserve a path for animation without changing ownership boundaries. Widgets may later animate their own visual state, such as hover fades, caret blinking, animated images, media widgets, progress movement, or validation feedback. Windows may later animate their own presentation, such as short pop-in and close-out transitions.
 
-The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` is the natural owner for frame-time dispatch and active transition cleanup, while `UiWidget` and `UiWindow` own the state they visually animate. The renderer should draw resolved geometry and optional transform or texture-frame data; it should not own animation policy.
+The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` owns frame-time dispatch through `tickUi`, while `UiWidget` owns recursive widget-local tick hooks. Future `UiWindow` transition cleanup should build on the same scheduler. The renderer should draw resolved geometry and optional transform or texture-frame data; it should not own animation policy.
 
 See [UI Animation Plan](ui-animation-plan.md) for the planned scheduler, widget-local animation, media-widget, and window-transition model.
 
