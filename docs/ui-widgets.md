@@ -314,7 +314,7 @@ Required behavior:
 Demo coverage:
 
 - current window content roots use `UiContentBox` internally.
-- Widget Demo should gain explicit panel examples.
+- Widget Demo shows an explicit padded `UiContentBox` example inside the control gallery.
 
 ### UiFrameBox
 
@@ -338,7 +338,7 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo should gain explicit framed panel examples.
+- Widget Demo uses `UiFrameBox` sections for layout probes and retained controls.
 
 ### UiScrollArea
 
@@ -472,7 +472,7 @@ Required behavior:
 Demo coverage:
 
 - Demo Control and Settings.
-- Widget Demo should add state examples.
+- Widget Demo includes button examples in the retained-controls section.
 - Sidebar currently reuses `UiButton` as a temporary text-placeholder row.
 - Sidebar should later use `UiIconButton`, `UiSidebarAction`, or a specialized derivative.
 

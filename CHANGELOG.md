@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Expanded the Widget Demo into an initial control gallery with content/frame boxes and current retained controls.
 - Added an initial `UiScrollArea` with retained scroll offsets, content bounds, clamped wheel scrolling, and UI wheel-event routing.
 - Split the old content/frame box role into `UiContentBox` for padded content roots and `UiFrameBox` for visible framed groups.
 - Renamed the Controls / Log window to Help Desk and documented the later searchable help and AI-agent direction.

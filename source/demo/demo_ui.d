@@ -32,7 +32,7 @@ import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiHBox, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
 import vulkan.ui.ui_widget : UiWidget;
@@ -77,36 +77,52 @@ final class LayoutDemoWindow
     this(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
     {
         const windowTitle = format("Widget Demo #%u", serial);
-        window = new UiWindow(windowTitle, 36.0f, 36.0f, 420.0f, 280.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        window = new UiWindow(windowTitle, 36.0f, 36.0f, testWindowWidth, testWindowHeight, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
-        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+
+        auto layoutSectionBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         auto topRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        topRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        topRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, 80.0f, 1.0f, 0.0f);
         topRow.add(new LayoutDemoProbeBox(88.0f, 42.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
         topRow.add(new LayoutDemoProbeBox(120.0f, 58.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB));
         topRow.add(new LayoutDemoProbeBox(66.0f, 74.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC));
+        layoutSectionBody.add(new UiLabel("Layout probes and container bounds", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+        layoutSectionBody.add(topRow);
+        layoutSectionBody.add(new UiSpacer(0.0f, 4.0f));
+        auto contentBox = new UiContentBox(0.0f, 0.0f, 0.0f, 44.0f, 8.0f, 8.0f, 8.0f, 8.0f);
+        contentBox.setLayoutHint(0.0f, 44.0f, 0.0f, 44.0f, float.max, 44.0f, 1.0f, 0.0f);
+        contentBox.add(new LayoutDemoProbeBox(260.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        layoutSectionBody.add(contentBox);
 
-        auto middleRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        middleRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        auto middleColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        middleColumn.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 30.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
-        middleColumn.add(new LayoutDemoProbeBox(152.0f, 52.0f, cast(float[4])probeFillA, cast(float[4])probeBorderB));
-        middleRow.add(middleColumn);
-        middleRow.add(new LayoutDemoProbeBox(126.0f, 92.0f, cast(float[4])probeFillB, cast(float[4])probeBorderC));
+        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 164.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        layoutSection.setLayoutHint(0.0f, 164.0f, 0.0f, 164.0f, float.max, 164.0f, 1.0f, 0.0f);
+        layoutSection.add(layoutSectionBody);
 
-        auto bottomRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
-        bottomRow.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
-        bottomRow.add(new LayoutDemoProbeBox(72.0f, 40.0f, cast(float[4])probeFillC, cast(float[4])probeBorderA));
-        bottomRow.add(new LayoutDemoProbeBox(164.0f, 40.0f, cast(float[4])probeFillD, cast(float[4])probeBorderB));
-        bottomRow.add(new LayoutDemoProbeBox(92.0f, 40.0f, cast(float[4])probeFillA, cast(float[4])probeBorderD));
+        auto controlsBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+        controlsBody.add(new UiLabel("Retained controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+        auto controlsRowA = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        controlsRowA.setLayoutHint(0.0f, 28.0f, 0.0f, 28.0f, float.max, 28.0f, 1.0f, 0.0f);
+        controlsRowA.add(new UiToggle("Enabled", true, 0.0f, 0.0f, 130.0f, 28.0f));
+        controlsRowA.add(new UiDropdown("Mode", ["Alpha", "Beta", "Gamma"], 0, 0.0f, 0.0f, 150.0f, 28.0f));
+        controlsBody.add(controlsRowA);
+        auto controlsRowB = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        controlsRowB.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
+        controlsRowB.add(new UiSlider("Amount", 0.0f, 1.0f, 0.42f, 0.0f, 0.0f, 220.0f, 34.0f));
+        controlsRowB.add(new UiTextField("demo", "type here", 0.0f, 0.0f, 160.0f, 28.0f));
+        controlsBody.add(controlsRowB);
+        auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
+        actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
+        controlsBody.add(actionRow);
 
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(topRow);
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(middleRow);
-        content.add(new UiSpacer(12.0f, 6.0f));
-        content.add(bottomRow);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 150.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 150.0f, 0.0f, 150.0f, float.max, 150.0f, 1.0f, 0.0f);
+        controlsSection.add(controlsBody);
+
+        content.add(layoutSection);
+        content.add(controlsSection);
         content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
 
         UiLayoutContext layoutContext;
@@ -219,8 +235,8 @@ private enum float statusWidth = 348.0f;
 private enum float statusHeight = 184.0f;
 private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 188.0f;
-private enum float testWindowWidth = 420.0f;
-private enum float testWindowHeight = 280.0f;
+private enum float testWindowWidth = 560.0f;
+private enum float testWindowHeight = 440.0f;
 private enum float contentSpacing = 6.0f;
 private enum float sectionSpacing = 8.0f;
 private enum float probeSpacing = 10.0f;

@@ -85,7 +85,7 @@ The demo should evolve from a test shell into a small application with clear win
 - Main/demo control window: opens tools, exits the app, and exposes common demo actions.
 - UI sidebar: a left-edge icon launcher that shows or raises demo windows and can optionally expand to show text labels next to the icons.
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
-- Widget demo window: currently a layout probe window; it should become an interactive control gallery for buttons, toggles, sliders, dropdowns, text fields, and future widgets.
+- Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
 - Settings window: display, controls, gameplay, audio, and UI options.
@@ -193,7 +193,7 @@ The next work should continue from reusable engine foundations toward demo polis
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
 10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
-12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress.
+12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
@@ -224,7 +224,7 @@ The next work should continue from reusable engine foundations toward demo polis
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets and wheel handling.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-23. Turn the current layout probe into a real widget demo/control gallery.
+23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, and current controls.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
 26. Add keyboard navigation, tab traversal, and modal focus behavior.
