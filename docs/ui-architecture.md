@@ -51,6 +51,7 @@ Generic responsibilities belong in `UiScreen`:
 - move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
 - own transient popup window placement, stack priority, and outside-click/Escape dismissal
+- own active modal window routing, background blocking, and modal focus containment
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
@@ -237,7 +238,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - Should UI signals stay as delegates or become typed event objects?
 - Should `UiScreen.buildOverlayGeometry` stay as the final render traversal API, or should it become part of a separate UI renderer object?
 - Should future color or animated cursors be represented as theme assets, renderer textures, SDL surfaces, or a backend-specific extension?
-- How should keyboard navigation, tab traversal, and modal windows be represented?
+- Which modal dialog conventions should be built on top of the current modal routing primitive?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Should the left-edge UI sidebar reserve viewport space, overlay the scene, or support both modes?
 - Should `UiScrollArea` support both axes in the first version, or should vertical scrolling land first?

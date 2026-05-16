@@ -65,6 +65,7 @@ Common use cases:
 - own the visible window list
 - dispatch pointer and keyboard events
 - resolve top-most hit targets
+- block background routing while a modal window is active
 - build renderer-facing overlay geometry
 - clamp and place windows in the SDL viewport
 
@@ -82,8 +83,8 @@ Demo coverage:
 
 Planned work:
 
-- popup root ownership
-- modal routing and blocked-background handling
+- widget-level popup root ownership
+- default/cancel button policy for modal dialogs
 - animation tick dispatch and transition cleanup
 - optional dock/sidebar placement helpers
 
@@ -753,7 +754,7 @@ Required behavior:
 - place relative to anchor widget. Implemented at screen-window level.
 - clamp to viewport edges. Implemented at screen-window level.
 - dismiss on outside click or Escape. Implemented at screen-window level.
-- stack above normal windows but below modal blocking policy where appropriate. Implemented for the normal window stack; modal policy is still planned.
+- stack above normal windows but below active popups and modal blocking policy where appropriate. Implemented at screen-window level.
 - expose a widget-level popup root API for dropdowns, context menus, and tooltips.
 
 Demo coverage:

@@ -190,8 +190,8 @@ The next work should continue from reusable engine foundations toward demo polis
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Partial: dropdown popup behavior, reusable `UiListBox` text-row selection, and focused keyboard selection are implemented; scroll-backed long lists are still planned.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages. Partial: Display, UI, and Audio pages are implemented; Controls and Gameplay remain planned.
-10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal plus focused activation/adjustment keys on current controls; modal focus containment is still planned.
-11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
+10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal, focused activation/adjustment keys, and modal focus containment.
+11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions. Partial for `UiScreen` modal routing and blocked-background input.
 12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data.
@@ -226,7 +226,7 @@ The next work should continue from reusable engine foundations toward demo polis
 23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, and current controls.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
-26. Add keyboard navigation, tab traversal, and modal focus behavior.
+26. Add keyboard navigation, tab traversal, and modal focus behavior. Partial for traversal and modal focus containment.
 27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio.
 28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.

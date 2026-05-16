@@ -45,6 +45,7 @@ class UiScreen
     private UiResizeHandle resizeStartHandle;
     private UiWidget focusedWidget;
     private UiWindow activePopupWindow;
+    private UiWindow activeModalWindow;
 
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
@@ -56,6 +57,7 @@ class UiScreen
         activeDragWindow = null;
         activeResizeWindow = null;
         activePopupWindow = null;
+        activeModalWindow = null;
         resizeStartHandle = UiResizeHandle.none;
         setFocusedWidget(null);
         onInitialize();
@@ -89,6 +91,18 @@ class UiScreen
             }
         }
 
+        if (activeModalWindow !is null)
+        {
+            if (!activeModalWindow.visible)
+                activeModalWindow = null;
+            else if (!windowContainsPointer(activeModalWindow, event.x, event.y))
+            {
+                if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
+                    setFocusedWidget(null);
+                return true;
+            }
+        }
+
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
             setFocusedWidget(focusTargetAt(event.x, event.y));
 
@@ -97,6 +111,9 @@ class UiScreen
 
         if (activeDragWindow !is null && activeDragWindow.visible)
             return activeDragWindow.dispatchPointerEvent(event);
+
+        if (activeModalWindow !is null && activeModalWindow.visible)
+            return activeModalWindow.dispatchPointerEvent(event);
 
         foreach_reverse (window; windowsInFrontToBack())
         {
@@ -215,7 +232,45 @@ class UiScreen
         layoutWindows();
         anchorWindows();
         clampWindowsToViewport();
+        keepActiveModalFront();
         keepActivePopupFront();
+    }
+
+    /** Shows a modal window and blocks routing to windows behind it. */
+    void showModalWindow(UiWindow modal)
+    {
+        if (modal is null)
+            return;
+
+        if (activeModalWindow !is null && activeModalWindow !is modal)
+            activeModalWindow.visible = false;
+
+        if (windowIndex(modal) < 0)
+            addWindow(modal);
+
+        endWindowInteraction();
+        modal.visible = true;
+        activeModalWindow = modal;
+        bringWindowToFront(modal);
+    }
+
+    /** Hides the active modal window, if any. */
+    void dismissActiveModal()
+    {
+        if (activeModalWindow is null)
+            return;
+
+        if (focusedWidget !is null && windowOwnsWidget(activeModalWindow, focusedWidget))
+            setFocusedWidget(null);
+
+        activeModalWindow.visible = false;
+        activeModalWindow = null;
+    }
+
+    /** Returns true while a visible modal window is active. */
+    bool hasActiveModal() const
+    {
+        return activeModalWindow !is null && activeModalWindow.visible;
     }
 
     /** Shows a transient popup window near an anchor rectangle in screen coordinates. */
@@ -350,6 +405,8 @@ protected:
 
         if (activePopupWindow is window)
             activePopupWindow = null;
+        if (activeModalWindow is window)
+            activeModalWindow = null;
 
         if (focusedWidget !is null && windowOwnsWidget(window, focusedWidget))
             setFocusedWidget(null);
@@ -391,6 +448,8 @@ protected:
             endWindowInteraction();
         if (!window.visible && activePopupWindow is window)
             activePopupWindow = null;
+        if (!window.visible && activeModalWindow is window)
+            activeModalWindow = null;
         else if (window.visible)
             bringWindowToFront(window);
 
@@ -405,6 +464,8 @@ protected:
         if (!moveWindowToFront(window))
             return;
 
+        if (activeModalWindow !is null && activeModalWindow !is window && activeModalWindow.visible)
+            moveWindowToFront(activeModalWindow);
         if (activePopupWindow !is null && activePopupWindow !is window && activePopupWindow.visible)
             moveWindowToFront(activePopupWindow);
     }
@@ -412,6 +473,9 @@ protected:
     /** Moves a registered window to the back of the draw order. */
     void sendWindowToBack(UiWindow window)
     {
+        if (window !is null && activeModalWindow is window)
+            return;
+
         const index = windowIndex(window);
         if (index <= 0)
             return;
@@ -423,6 +487,9 @@ protected:
     void toggleWindowStackPosition(UiWindow window)
     {
         if (window is null)
+            return;
+
+        if (activeModalWindow is window)
             return;
 
         if (isFrontWindow(window))
@@ -610,6 +677,12 @@ private:
     UiWidget[] focusableWidgetsInTraversalOrder()
     {
         UiWidget[] widgets;
+        if (activeModalWindow !is null && activeModalWindow.visible)
+        {
+            collectFocusableWidgets(activeModalWindow, widgets);
+            return widgets;
+        }
+
         foreach_reverse (window; windowsInFrontToBack())
         {
             if (!window.visible)
@@ -681,8 +754,17 @@ private:
             moveWindowToFront(activePopupWindow);
     }
 
+    void keepActiveModalFront()
+    {
+        if (activeModalWindow !is null && activeModalWindow.visible)
+            moveWindowToFront(activeModalWindow);
+    }
+
     UiWidget focusTargetAt(float x, float y)
     {
+        if (activeModalWindow !is null && activeModalWindow.visible)
+            return activeModalWindow.focusTargetAt(x, y);
+
         foreach_reverse (window; windowsInFrontToBack())
         {
             if (!window.visible)
@@ -1054,6 +1136,51 @@ unittest
     event.modifiers = cast(uint)UiKeyModifier.shift;
     assert(screen.dispatchKeyEvent(event));
     assert(screen.currentFocusedWidget() is first);
+}
+
+@("UiScreen blocks background routing while modal windows are active")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto background = new UiWindow("background", 0.0f, 0.0f, 160.0f, 100.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto backgroundField = new UiTextField("", "Background", 8.0f, 8.0f, 120.0f, 28.0f);
+    background.add(backgroundField);
+
+    auto modal = new UiWindow("modal", 180.0f, 20.0f, 120.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto modalField = new UiTextField("", "Modal", 8.0f, 8.0f, 90.0f, 28.0f);
+    modal.add(modalField);
+
+    screen.addWindow(background);
+    screen.showModalWindow(modal);
+
+    assert(screen.hasActiveModal());
+    assert(screen.windowsInFrontToBack()[$ - 1] is modal);
+
+    screen.bringWindowToFront(background);
+    assert(screen.windowsInFrontToBack()[$ - 1] is modal);
+
+    UiPointerEvent pointerEvent;
+    pointerEvent.kind = UiPointerEventKind.buttonDown;
+    pointerEvent.button = 1;
+    pointerEvent.x = 20.0f;
+    pointerEvent.y = background.headerHeight + 20.0f;
+    assert(screen.dispatchPointerEvent(pointerEvent));
+    assert(!backgroundField.focused);
+    assert(screen.currentFocusedWidget() is null);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.tab;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(screen.currentFocusedWidget() is modalField);
+
+    screen.dismissActiveModal();
+    assert(!screen.hasActiveModal());
+    assert(!modal.visible);
+    assert(screen.currentFocusedWidget() is null);
 }
 
 @("UiScreen can place a window away from existing visible windows")
