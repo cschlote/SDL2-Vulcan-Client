@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added retained UI cursor intent and SDL system cursor updates for controls and window chrome.
 - Moved generic retained UI overlay traversal into `UiScreen`.
 - Moved renderer-facing retained UI geometry range types into the reusable `vulkan.ui` package.
 - Corrected documentation and package metadata around the CC-BY-NC-SA 4.0 license, current UI controls, cursor planning, and planned audio architecture.

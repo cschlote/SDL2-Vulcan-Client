@@ -9,10 +9,12 @@
  */
 module sdl2.window;
 
-import bindbc.sdl : SDL_CreateWindow, SDL_DestroyWindow, SDL_GetError, SDL_GetWindowSize, SDL_SetWindowMinimumSize, SDL_SetWindowTitle, SDL_Vulkan_CreateSurface, SDL_Window, SDL_WindowFlags;
+import bindbc.sdl : SDL_CreateSystemCursor, SDL_Cursor, SDL_DestroyCursor, SDL_CreateWindow, SDL_DestroyWindow, SDL_GetDefaultCursor, SDL_GetError, SDL_GetWindowSize, SDL_SetCursor, SDL_SetWindowMinimumSize, SDL_SetWindowTitle, SDL_SystemCursor, SDL_Vulkan_CreateSurface, SDL_Window, SDL_WindowFlags;
 import bindbc.vulkan;
 import std.exception : enforce;
 import std.string : fromStringz, toStringz;
+
+private enum size_t systemCursorCount = cast(size_t)SDL_SystemCursor.count;
 
 /** Creates a resizable Vulkan-capable SDL window.
  *
@@ -28,6 +30,8 @@ struct SdlWindow
 {
     /** Owning SDL window handle used for surface creation and event routing. */
     SDL_Window* handle;
+    private SDL_Cursor*[systemCursorCount] systemCursors;
+    private SDL_SystemCursor activeCursor = SDL_SystemCursor.count;
 
     this(string title, int width, int height)
     {
@@ -42,6 +46,8 @@ struct SdlWindow
      */
     void destroy()
     {
+        destroySystemCursors();
+
         if (handle !is null)
         {
             SDL_DestroyWindow(handle);
@@ -77,6 +83,23 @@ struct SdlWindow
         SDL_SetWindowTitle(handle, title.toStringz);
     }
 
+    /** Applies a cached SDL system cursor.
+     *
+     * @param cursorKind = SDL system cursor kind to apply.
+     * @returns Nothing.
+     */
+    void setSystemCursor(SDL_SystemCursor cursorKind)
+    {
+        if (cursorKind == activeCursor)
+            return;
+
+        auto cursor = cursorFor(cursorKind);
+        if (cursor is null)
+            cursor = SDL_GetDefaultCursor();
+        if (cursor !is null && SDL_SetCursor(cursor))
+            activeCursor = cursorKind;
+    }
+
     /** Creates a Vulkan surface for the managed SDL window.
      *
      * @param instance = The Vulkan instance used for surface creation.
@@ -89,5 +112,44 @@ struct SdlWindow
         const created = SDL_Vulkan_CreateSurface(handle, instance, null, &rawSurface);
         surface = cast(VkSurfaceKHR)cast(void*)rawSurface;
         return created;
+    }
+
+private:
+    /** Returns a cached SDL cursor for the requested system cursor kind.
+     *
+     * @param cursorKind = System cursor kind.
+     * @returns SDL cursor handle or `null` when SDL cannot create one.
+     */
+    SDL_Cursor* cursorFor(SDL_SystemCursor cursorKind)
+    {
+        if (cursorKind == SDL_SystemCursor.default_)
+            return SDL_GetDefaultCursor();
+
+        const index = cast(size_t)cursorKind;
+        if (index >= systemCursors.length)
+            return SDL_GetDefaultCursor();
+
+        if (systemCursors[index] is null)
+            systemCursors[index] = SDL_CreateSystemCursor(cursorKind);
+
+        return systemCursors[index];
+    }
+
+    /** Destroys cached SDL system cursors created by this wrapper.
+     *
+     * @returns Nothing.
+     */
+    void destroySystemCursors()
+    {
+        foreach (ref cursor; systemCursors)
+        {
+            if (cursor !is null)
+            {
+                SDL_DestroyCursor(cursor);
+                cursor = null;
+            }
+        }
+
+        activeCursor = SDL_SystemCursor.count;
     }
 }

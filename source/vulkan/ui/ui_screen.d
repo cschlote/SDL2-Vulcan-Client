@@ -15,6 +15,7 @@ import std.algorithm : max;
 
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_cursor : UiCursorKind, cursorForResizeHandle;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle, UiTextInputEvent;
 import vulkan.ui.ui_geometry : UiOverlayGeometry, UiWindowDrawRange;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
@@ -132,6 +133,27 @@ class UiScreen
         }
 
         return false;
+    }
+
+    /** Returns the cursor intent for the front-most visible UI region. */
+    UiCursorKind cursorAt(float x, float y)
+    {
+        if (activeResizeWindow !is null && activeResizeWindow.visible)
+            return cursorForResizeHandle(resizeStartHandle);
+
+        if (activeDragWindow !is null && activeDragWindow.visible)
+            return UiCursorKind.move;
+
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.visible)
+                continue;
+
+            if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
+                return window.cursorAt(x, y);
+        }
+
+        return UiCursorKind.default_;
     }
 
     /** Returns the windows in draw order from back to front. */
@@ -743,6 +765,24 @@ unittest
     assert(geometry.panels.length > 0);
     assert(geometry.windows[0].panelsStart == 0);
     assert(geometry.windows[0].panelsCount == geometry.panels.length);
+}
+
+@("UiScreen reports context-sensitive cursor intent")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(260.0f, 180.0f);
+
+    auto window = new UiWindow("window", 10.0f, 10.0f, 180.0f, 120.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], true, false, true);
+    auto field = new UiTextField("", "Name", 0.0f, 0.0f, 120.0f, 28.0f);
+    window.add(field);
+    screen.addWindow(window);
+
+    assert(screen.cursorAt(10.0f, 10.0f) == UiCursorKind.resizeNwse);
+    assert(screen.cursorAt(80.0f, 20.0f) == UiCursorKind.move);
+    assert(screen.cursorAt(25.0f, 48.0f) == UiCursorKind.text);
+    assert(screen.cursorAt(240.0f, 160.0f) == UiCursorKind.default_);
 }
 
 @("UiScreen resizes windows from edge grips with non-primary buttons")

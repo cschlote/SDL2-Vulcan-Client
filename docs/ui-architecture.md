@@ -105,7 +105,7 @@ The D-key debug overlay outlines these boxes at runtime. The current color map i
 
 ## Context-Sensitive Cursors
 
-The UI should own cursor intent for the regions it controls. A widget or window chrome hit test should be able to report the cursor shape that best describes the available action, while the application falls back to the scene cursor when the pointer is outside UI.
+The UI owns cursor intent for the regions it controls. A widget or window chrome hit test reports the cursor shape that best describes the available action, while the application falls back to the scene cursor when the pointer is outside UI.
 
 Expected cursor states include:
 
@@ -116,7 +116,7 @@ Expected cursor states include:
 - hand or action cursor for buttons and clickable controls
 - busy or blocked cursor for future modal or disabled states
 
-`UiScreen` is the right place to resolve final cursor intent because it already owns window order and hit testing. Individual widgets should expose local cursor preferences, and `UiScreen` should choose the front-most visible result. The SDL/window layer should apply the platform cursor, keeping cursor resource ownership out of individual widgets.
+`UiScreen` resolves final cursor intent because it already owns window order and hit testing. Individual widgets expose local cursor preferences, and `UiScreen` chooses the front-most visible result. The SDL/window layer applies the platform cursor, keeping cursor resource ownership out of individual widgets.
 
 ## UiWidget Box Model
 
@@ -208,7 +208,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 
 - Should UI signals stay as delegates or become typed event objects?
 - Should `UiScreen.buildOverlayGeometry` stay as the final render traversal API, or should it become part of a separate UI renderer object?
-- Should cursor intent be queried every frame from hit tests, cached on pointer move, or emitted as part of pointer event routing?
+- Should future custom bitmap cursors be owned by the SDL window wrapper, an asset manager, or a UI theme object?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Which UI pieces are stable enough for the first public engine module?

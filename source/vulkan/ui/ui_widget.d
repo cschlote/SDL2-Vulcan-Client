@@ -11,6 +11,7 @@ module vulkan.ui.ui_widget;
 
 import vulkan.ui.ui_event : UiKeyEvent, UiPointerEvent, UiTextInputEvent;
 import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
@@ -146,6 +147,28 @@ abstract class UiWidget
         return focusable ? this : null;
     }
 
+    /** Returns the cursor intent at the given point in parent space. */
+    UiCursorKind cursorAt(float localX, float localY)
+    {
+        if (!visible)
+            return UiCursorKind.default_;
+
+        if (width > 0.0f && height > 0.0f && !contains(localX, localY))
+            return UiCursorKind.default_;
+
+        const childX = localX - x - childOffsetX;
+        const childY = localY - y - childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            const cursor = children[cast(size_t)index].cursorAt(childX, childY);
+            if (cursor != UiCursorKind.default_)
+                return cursor;
+        }
+
+        return cursorSelf(localX, localY);
+    }
+
     /** Updates the widget focus flag. Screens call this when focus ownership changes. */
     void setFocused(bool focused)
     {
@@ -211,6 +234,12 @@ protected:
     float[4] debugBoundsColor() const
     {
         return cast(float[4])widgetDebugBoundsColor;
+    }
+
+    /** Returns this widget's own cursor intent after children were checked. */
+    UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.default_;
     }
 
     /** Handles a pointer event after children had a chance to consume it. */

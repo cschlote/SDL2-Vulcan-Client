@@ -11,6 +11,7 @@ import std.algorithm : max;
 
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_cursor : UiCursorKind, cursorForResizeHandle;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_layout_context : UiLayoutContext;
 import vulkan.ui.ui_layout : UiHBox, UiSurfaceBox, UiVBox;
@@ -287,6 +288,41 @@ final class UiWindow : UiWidget
         }
 
         return handlePointerEvent(event);
+    }
+
+    /** Returns cursor intent for chrome or body widgets at the given point. */
+    override UiCursorKind cursorAt(float localX, float localY)
+    {
+        if (!visible || !contains(localX, localY))
+            return UiCursorKind.default_;
+
+        updateChromeLayout();
+
+        const handle = hitResizeHandle(localX, localY);
+        if (handle != UiResizeHandle.none)
+            return cursorForResizeHandle(handle);
+
+        const windowX = localX - x;
+        const windowY = localY - y;
+
+        if (closable && closeButton !is null)
+        {
+            const cursor = closeButton.cursorAt(windowX, windowY);
+            if (cursor != UiCursorKind.default_)
+                return cursor;
+        }
+
+        if (headerExtras.children.length > 0)
+        {
+            const cursor = headerExtras.cursorAt(windowX, windowY);
+            if (cursor != UiCursorKind.default_)
+                return cursor;
+        }
+
+        if (dragable && isInDragHeader(localX, localY))
+            return UiCursorKind.move;
+
+        return super.cursorAt(localX, localY);
     }
 
 protected:

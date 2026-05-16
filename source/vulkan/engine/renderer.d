@@ -15,7 +15,7 @@
  */
 module vulkan.engine.renderer;
 
-import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_StartTextInput, SDL_Vulkan_DestroySurface;
+import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPlatform, SDL_GetTicks, SDL_GetModState, SDL_Keymod, SDL_PollEvent, SDL_Scancode, SDL_StartTextInput, SDL_SystemCursor, SDL_Vulkan_DestroySurface;
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
@@ -34,6 +34,7 @@ import vulkan.engine.pipeline;
 import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
@@ -1214,6 +1215,7 @@ class VulkanRenderer
                 pointerEvent.x = cast(float)event.button.x;
                 pointerEvent.y = cast(float)event.button.y;
                 pointerEvent.button = cast(uint)event.button.button;
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.dispatchPointerEvent(pointerEvent))
                 {
@@ -1249,6 +1251,7 @@ class VulkanRenderer
                 pointerEvent.button = cast(uint)event.button.button;
 
                 uiScreen.dispatchPointerEvent(pointerEvent);
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.quitRequested)
                     return true;
@@ -1267,6 +1270,7 @@ class VulkanRenderer
                 pointerEvent.kind = UiPointerEventKind.move;
                 pointerEvent.x = cast(float)event.motion.x;
                 pointerEvent.y = cast(float)event.motion.y;
+                updateMouseCursor(pointerEvent.x, pointerEvent.y);
 
                 if (uiScreen.dispatchPointerEvent(pointerEvent))
                     return false;
@@ -1282,6 +1286,40 @@ class VulkanRenderer
                 }
 
                 return false;
+            }
+
+            /** Applies the platform cursor matching current retained UI hover state. */
+            private void updateMouseCursor(float x, float y)
+            {
+                window.setSystemCursor(sdlCursorFor(uiScreen.cursorAt(x, y)));
+            }
+
+            /** Maps retained UI cursor intent to SDL's system cursor set. */
+            private static SDL_SystemCursor sdlCursorFor(UiCursorKind cursor)
+            {
+                final switch (cursor)
+                {
+                    case UiCursorKind.default_:
+                        return SDL_SystemCursor.default_;
+                    case UiCursorKind.text:
+                        return SDL_SystemCursor.text;
+                    case UiCursorKind.pointer:
+                        return SDL_SystemCursor.pointer;
+                    case UiCursorKind.move:
+                        return SDL_SystemCursor.move;
+                    case UiCursorKind.resizeHorizontal:
+                        return SDL_SystemCursor.ewResize;
+                    case UiCursorKind.resizeVertical:
+                        return SDL_SystemCursor.nsResize;
+                    case UiCursorKind.resizeNwse:
+                        return SDL_SystemCursor.nwseResize;
+                    case UiCursorKind.resizeNesw:
+                        return SDL_SystemCursor.neswResize;
+                    case UiCursorKind.busy:
+                        return SDL_SystemCursor.wait;
+                    case UiCursorKind.blocked:
+                        return SDL_SystemCursor.notAllowed;
+                }
             }
     ///
     /// Params:

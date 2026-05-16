@@ -14,6 +14,7 @@ import std.format : format;
 
 import vulkan.font.font_legacy : measureTextWidth;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
@@ -141,6 +142,11 @@ protected:
             onChanged(checked);
         return true;
     }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
+    }
 }
 
 /** Horizontal numeric value selector.
@@ -265,6 +271,11 @@ protected:
         return true;
     }
 
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
+    }
+
     void updateValueFromPointer(float pointerX)
     {
         const ratio = width > 0.0f ? clampFloat(pointerX / width, 0.0f, 1.0f) : 0.0f;
@@ -355,6 +366,11 @@ protected:
         if (onChanged !is null)
             onChanged(selectedIndex, selectedText());
         return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return options.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
     }
 }
 
@@ -456,6 +472,11 @@ protected:
         focused = true;
         moveCursorToEnd();
         return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.text;
     }
 
     override bool handleTextInputEvent(ref UiTextInputEvent event)

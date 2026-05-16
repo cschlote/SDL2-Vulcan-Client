@@ -11,6 +11,7 @@ module vulkan.ui.ui_button;
 
 import logging : logLine;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
@@ -149,6 +150,11 @@ protected:
     override void renderSelf(ref UiRenderContext context)
     {
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, bodyColor, borderColor, context.depthBase);
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return UiCursorKind.pointer;
     }
 
     override bool handlePointerEvent(ref UiPointerEvent event)

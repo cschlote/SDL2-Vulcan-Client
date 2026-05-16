@@ -35,7 +35,7 @@ Remaining migration debt:
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
-- context-sensitive custom mouse cursors are still planned UI work.
+- context-sensitive system mouse cursors exist for current controls and window chrome; custom bitmap cursors are still planned UI/theme work.
 - audio output, audio events, and music playback are still planned engine work.
 
 ## UI Design Direction
@@ -150,7 +150,7 @@ Use `UiScreen` properly:
 The next work should continue from reusable engine foundations toward demo polish. A useful order is:
 
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
-2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, and SDL cursor handle ownership in the window layer.
+2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, and SDL cursor handle ownership in the window layer. Done for SDL system cursors; custom bitmap cursors remain open.
 3. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
 4. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
 5. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
@@ -177,15 +177,16 @@ The next work should continue from reusable engine foundations toward demo polis
 12. Move renderer-facing UI geometry types from the demo module into `vulkan.ui`. Done.
 13. Move generic overlay traversal from `DemoUiScreen` into `UiScreen`. Done.
 14. Remove the renderer's direct dependency on `DemoUiScreen` when a reusable app/screen boundary is ready.
-15. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
-16. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-17. Turn the current layout probe into a real widget demo/control gallery.
-18. Add keyboard navigation, tab traversal, and modal focus behavior.
-19. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-20. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-21. Add UI and demo audio events, such as button click feedback and settings volume preview.
-22. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-23. Review package boundaries again after UI cursors and the first audio service exist.
+15. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer. Done for SDL system cursors.
+16. Add theme/custom bitmap cursor support for project-specific cursor artwork.
+17. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+18. Turn the current layout probe into a real widget demo/control gallery.
+19. Add keyboard navigation, tab traversal, and modal focus behavior.
+20. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+21. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+22. Add UI and demo audio events, such as button click feedback and settings volume preview.
+23. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+24. Review package boundaries again after UI cursors and the first audio service exist.
 
 ## Public Package Preparation
 
