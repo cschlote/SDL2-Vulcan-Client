@@ -102,6 +102,21 @@ The reusable UI package currently provides these retained widgets:
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
+## Context-Sensitive Cursors
+
+The UI should own cursor intent for the regions it controls. A widget or window chrome hit test should be able to report the cursor shape that best describes the available action, while the application falls back to the scene cursor when the pointer is outside UI.
+
+Expected cursor states include:
+
+- default pointer
+- text insertion for focused or hoverable text fields
+- horizontal, vertical, and diagonal resize cursors for window grips
+- move cursor for draggable chrome
+- hand or action cursor for buttons and clickable controls
+- busy or blocked cursor for future modal or disabled states
+
+`UiScreen` is the right place to resolve final cursor intent because it already owns window order and hit testing. Individual widgets should expose local cursor preferences, and `UiScreen` should choose the front-most visible result. The SDL/window layer should apply the platform cursor, keeping cursor resource ownership out of individual widgets.
+
 ## UiWidget Box Model
 
 `UiWidget` is the smallest retained UI object: a rectangular box with local coordinates, layout hints, children, optional focusability, and optional input handling.
@@ -192,6 +207,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - Should UI signals stay as delegates or become typed event objects?
 - Should there be a generic `UiOverlayGeometry` type in `vulkan.ui`?
 - Should `UiScreen` expose a render method that builds geometry, or should rendering stay in app-specific screen classes for now?
+- Should cursor intent be queried every frame from hit tests, cached on pointer move, or emitted as part of pointer event routing?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Which UI pieces are stable enough for the first public engine module?

@@ -6,7 +6,7 @@ This document tracks the current plan for the demo UI and the reusable engine UI
 
 The repository serves two purposes:
 
-1. Build a small D game-engine foundation with SDL2, Vulkan, font rendering, retained UI, settings, input, and basic scene rendering.
+1. Build a small D game-engine foundation with SDL2, Vulkan, font rendering, retained UI, settings, input, audio, and basic scene rendering.
 2. Keep a learning/demo application around that exercises the engine pieces until the reusable code is ready to split into an Engine-only D module.
 
 After the engine shape is stable, the demo-specific parts should stay in the executable project while the reusable parts can be published as a package.
@@ -27,6 +27,7 @@ Implemented or partially implemented:
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data
 - D-key debug bounds overlay with color-coded widget and layout outlines
 - generic keyboard focus dispatch, SDL text input routing, and editable single-line text fields
+- audio settings data for master, music, and effects volumes
 
 Remaining migration debt:
 
@@ -34,6 +35,8 @@ Remaining migration debt:
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
+- context-sensitive custom mouse cursors are still planned UI work.
+- audio output, audio events, and music playback are still planned engine work.
 
 ## UI Design Direction
 
@@ -60,6 +63,7 @@ Next widgets:
 - list box or selection list
 - separator or divider
 - icon/image widget backed by real texture data
+- menu or popup list backing for dropdowns
 
 The first implementation should favor simple, composable widgets over a large framework.
 
@@ -69,7 +73,7 @@ The demo should evolve from a test shell into a small application with clear win
 
 - Main/demo control window: opens tools, exits the app, and exposes common demo actions.
 - Status window: app version, frame rate, active scene, current render mode, and viewport state.
-- Widget demo window: interactive examples for buttons, toggles, sliders, dropdowns, and text fields.
+- Widget demo window: currently a layout probe window; it should become an interactive control gallery for buttons, toggles, sliders, dropdowns, text fields, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Controls/log window: keyboard and mouse help first, then diagnostics or command output later.
 - Settings window: display, controls, gameplay, audio, and UI options.
@@ -90,6 +94,23 @@ Settings-style dialogs should split the window body into a growable content area
 `UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary stackable window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. This stacking behavior is independent of the dragable header flag. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
 `UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
+
+Context-sensitive custom cursors should be resolved through `UiScreen`. Window chrome should report move and resize cursors, text fields should report a text insertion cursor, clickable controls should report an action cursor, and the application should fall back to the scene cursor outside UI. The SDL window layer should own platform cursor handles so widget code only reports cursor intent.
+
+## Audio Direction
+
+The engine should add a reusable audio system after the current UI fundamentals settle. The first target is a small SDL-backed audio service with an event queue, a mixer, short sound effects, and streamed music.
+
+The usual split is:
+
+- audio device ownership for SDL callback setup, sample format, buffer size, and shutdown
+- audio events for play, stop, fade, and bus-volume changes
+- audio mixer for active voices and bus routing
+- preloaded clips for UI and game sound effects
+- streamed music tracks with fade and loop support
+- master, music, effects, and possibly UI buses
+
+Gameplay and UI code should emit audio events instead of calling backend playback APIs directly. This keeps sound policy reusable, testable, and independent from `DemoUiScreen` and `VulkanRenderer`.
 
 ## Settings Policy
 
@@ -124,6 +145,22 @@ Use `UiScreen` properly:
 - `UiScreen` owns generic window iteration, hit testing, layout, and viewport clamping
 - demo-specific window creation, text, and callbacks stay in `DemoUiScreen`
 
+## Planned Class And Module Order
+
+The next work should continue from reusable engine foundations toward demo polish. A useful order is:
+
+1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal.
+2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, and SDL cursor handle ownership in the window layer.
+3. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
+4. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
+5. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
+6. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
+7. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
+8. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress.
+9. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
+10. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
+11. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
+
 ## Implementation Order
 
 1. Update documentation and plans to reflect the engine-first direction. Done.
@@ -135,10 +172,18 @@ Use `UiScreen` properly:
 7. Rebuild the settings window around Apply and Save. Done.
 8. Rework demo windows into clear app roles. Done.
 9. Review which modules are reusable enough for the first Engine-only package boundary. Done.
-10. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
-11. Add keyboard focus and single-line text editing for retained controls. Done.
-12. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
-13. Add keyboard navigation, tab traversal, and modal focus behavior.
+10. Add keyboard focus and single-line text editing for retained controls. Done.
+11. Correct documentation and package metadata for the CC-BY-NC-SA 4.0 license, current controls, and current UI/debug behavior. Done.
+12. Move renderer-facing UI geometry types from the demo module into `vulkan.ui` when the renderer no longer needs to import the demo screen directly.
+13. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer.
+14. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+15. Turn the current layout probe into a real widget demo/control gallery.
+16. Add keyboard navigation, tab traversal, and modal focus behavior.
+17. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+18. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+19. Add UI and demo audio events, such as button click feedback and settings volume preview.
+20. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+21. Review package boundaries again after UI cursors and the first audio service exist.
 
 ## Public Package Preparation
 
@@ -147,6 +192,7 @@ Before publishing on code.dlang.org, decide the package boundary:
 - reusable renderer modules
 - reusable UI modules
 - font atlas support
+- reusable audio device, event, mixer, clip, and music modules
 - SDL2/Vulkan bootstrap helpers
 - demo-only executable and sample assets
 

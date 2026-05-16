@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Corrected documentation and package metadata around the CC-BY-NC-SA 4.0 license, current UI controls, cursor planning, and planned audio architecture.
 - Fixed middle-click window chrome stacking so retained UI windows can be brought to the front or sent to the back outside their content area.
 - Improved `UiWindow` chrome with edge resize grips, smaller corner markers, larger title text, and content-root insets that avoid the resize ring.
 - Refined `UiWindow` title and resize-ring layout and added a Chrome Demo window for toggling sizeable, closable, and dragable flags at runtime.
