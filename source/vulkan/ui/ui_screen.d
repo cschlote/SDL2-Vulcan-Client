@@ -211,6 +211,9 @@ class UiScreen
         if (activeDragWindow !is null && activeDragWindow.visible)
             return UiCursorKind.move;
 
+        if (activeModalWindow !is null && activeModalWindow.visible && !windowContainsPointer(activeModalWindow, x, y))
+            return UiCursorKind.blocked;
+
         foreach_reverse (window; windowsInFrontToBack())
         {
             if (!window.visible)
@@ -1232,6 +1235,28 @@ unittest
     assert(cancelClicked);
     assert(!screen.hasActiveModal());
     assert(!modal.visible);
+}
+
+@("UiScreen reports blocked cursor outside active modal windows")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto background = new UiWindow("background", 0.0f, 0.0f, 160.0f, 100.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto modal = new UiWindow("modal", 180.0f, 20.0f, 120.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto modalButton = new UiButton("OK", 8.0f, 8.0f, 60.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    modal.add(modalButton);
+
+    screen.addWindow(background);
+    screen.showModalWindow(modal);
+
+    assert(screen.cursorAt(20.0f, 40.0f) == UiCursorKind.blocked);
+    assert(screen.cursorAt(modal.x + modal.borderThickness + 20.0f, modal.y + modal.headerHeight + modal.borderThickness + 20.0f) == UiCursorKind.pointer);
+
+    screen.dismissActiveModal();
+    assert(screen.cursorAt(20.0f, 40.0f) == UiCursorKind.default_);
 }
 
 @("UiScreen can place a window away from existing visible windows")

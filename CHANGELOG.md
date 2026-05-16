@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added blocked cursor feedback for background regions behind active modal windows.
 - Added modal default and cancel button handling for Enter and Escape on active `UiWindow` dialogs.
 - Added `UiScreen` modal window routing with background input blocking, modal stack priority, and modal focus containment.
 - Added screen-level Tab and Shift-Tab focus traversal plus Enter/arrow keyboard handling for focused buttons, toggles, and sliders.

@@ -85,7 +85,6 @@ Demo coverage:
 Planned work:
 
 - widget-level popup root ownership
-- cursor feedback for blocked modal background regions
 - animation tick dispatch and transition cleanup
 - optional dock/sidebar placement helpers
 

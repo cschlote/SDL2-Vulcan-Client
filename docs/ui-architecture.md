@@ -131,7 +131,8 @@ Expected cursor states include:
 - horizontal, vertical, and diagonal resize cursors for window grips
 - move cursor for draggable chrome
 - hand or action cursor for buttons and clickable controls
-- busy or blocked cursor for future modal or disabled states
+- busy cursor for future long-running UI actions
+- blocked cursor for the background behind an active modal window
 
 `UiScreen` resolves final cursor intent because it already owns window order and hit testing. Individual widgets expose local cursor preferences, and `UiScreen` chooses the front-most visible result. The SDL/window layer applies the platform cursor, keeping cursor resource ownership out of individual widgets.
 
