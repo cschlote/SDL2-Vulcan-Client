@@ -118,6 +118,8 @@ Expected cursor states include:
 
 `UiScreen` resolves final cursor intent because it already owns window order and hit testing. Individual widgets expose local cursor preferences, and `UiScreen` chooses the front-most visible result. The SDL/window layer applies the platform cursor, keeping cursor resource ownership out of individual widgets.
 
+The first custom-cursor hook is intentionally small. `UiCursorBitmap` describes a monochrome theme cursor for a `UiCursorKind`, and the SDL window wrapper can register that bitmap as an override for the matching system cursor slot. If no custom bitmap is registered, the existing SDL system cursor remains the fallback. A later asset pipeline can load these bitmap definitions from theme data without changing widget cursor intent.
+
 ## UiWidget Box Model
 
 `UiWidget` is the smallest retained UI object: a rectangular box with local coordinates, layout hints, children, optional focusability, and optional input handling.
@@ -208,7 +210,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 
 - Should UI signals stay as delegates or become typed event objects?
 - Should `UiScreen.buildOverlayGeometry` stay as the final render traversal API, or should it become part of a separate UI renderer object?
-- Should future custom bitmap cursors be owned by the SDL window wrapper, an asset manager, or a UI theme object?
+- Should future color or animated cursors be represented as theme assets, renderer textures, SDL surfaces, or a backend-specific extension?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Which UI pieces are stable enough for the first public engine module?

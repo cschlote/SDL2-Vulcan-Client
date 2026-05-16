@@ -34,7 +34,7 @@ import vulkan.engine.pipeline;
 import vulkan.engine.swapchain;
 import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPath, selectDefaultMonospaceFontPath;
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
-import vulkan.ui.ui_cursor : UiCursorKind;
+import vulkan.ui.ui_cursor : UiCursorBitmap, UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
 import vulkan.ui.ui_geometry : UiWindowDrawRange;
 import sdl2.window;
@@ -280,6 +280,39 @@ class VulkanRenderer
         updateWindowTitle();
         lastRotationTicks = SDL_GetTicks();
         fpsStartTicks = SDL_GetTicks();
+    }
+
+    /** Registers a custom bitmap cursor for one retained UI cursor kind.
+     *
+     * Params:
+     *   bitmap = UI cursor bitmap and hotspot definition.
+     *
+     * Returns:
+     *   `true` when the SDL window accepted the cursor override.
+     */
+    bool registerCustomCursor(ref const UiCursorBitmap bitmap)
+    {
+        if (window is null || !bitmap.isValid())
+            return false;
+
+        const sdlBitmap = SdlCursorBitmap(bitmap.width, bitmap.height, bitmap.hotX, bitmap.hotY, bitmap.data, bitmap.mask);
+        return window.registerCustomSystemCursor(sdlCursorFor(bitmap.kind), sdlBitmap);
+    }
+
+    /** Clears a custom bitmap cursor override for one retained UI cursor kind.
+     *
+     * Params:
+     *   cursor = UI cursor kind to restore to its system fallback.
+     *
+     * Returns:
+     *   Nothing.
+     */
+    void clearCustomCursor(UiCursorKind cursor)
+    {
+        if (window is null)
+            return;
+
+        window.clearCustomSystemCursor(sdlCursorFor(cursor));
     }
 
     /** Destroys all renderer-owned Vulkan resources and the SDL surface. */
