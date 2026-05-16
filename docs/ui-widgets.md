@@ -529,7 +529,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiDropdown` is currently a compact option selector that cycles values on click. Popup infrastructure now exists at `UiScreen` level, so the next dropdown step is replacing the cycle behavior with a transient popup list.
+`UiDropdown` is a compact option selector that requests a transient popup list on click. The current demo wires those requests to a chrome-less popup `UiWindow`; the later reusable step is extracting that option-list surface into a proper selection/list widget.
 
 Common use cases:
 
@@ -543,13 +543,14 @@ Required behavior:
 
 - show selected text
 - emit changed callback
-- open popup list in the planned version
+- open popup list through `UiScreen` popup primitives
 - dismiss popup on outside click
 - support keyboard selection later
 
 Demo coverage:
 
 - Settings.
+- Widget Demo.
 - planned Selection Demo.
 
 ### UiTextField

@@ -35,7 +35,7 @@ Implemented or partially implemented:
 Remaining migration debt:
 
 - The renderer still imports `DemoUiScreen`, even though renderer-facing UI draw data and traversal are generic.
-- popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
+- popup-backed dropdown behavior exists in the demo; reusable list-box extraction and keyboard selection are still planned.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
 - reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
@@ -188,7 +188,7 @@ The next work should continue from reusable engine foundations toward demo polis
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
-8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
+8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Done for dropdown popup behavior in the demo; reusable `UiListBox`/selection-list extraction and keyboard selection are still planned.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
 10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.
@@ -222,7 +222,7 @@ The next work should continue from reusable engine foundations toward demo polis
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, singleton toggle actions, repeatable spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets and wheel handling.
-22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
+22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click. Done for demo dropdowns.
 23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, and current controls.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.

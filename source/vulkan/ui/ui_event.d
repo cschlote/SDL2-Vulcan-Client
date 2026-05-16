@@ -41,6 +41,10 @@ struct UiPointerEvent
     float x;
     /** Pointer Y coordinate in the current widget space. */
     float y;
+    /** Pointer X coordinate in screen space, preserved during widget-local routing. */
+    float screenX;
+    /** Pointer Y coordinate in screen space, preserved during widget-local routing. */
+    float screenY;
     /** Pointer button identifier for button events. */
     uint button;
     /** Horizontal wheel delta for wheel events. */

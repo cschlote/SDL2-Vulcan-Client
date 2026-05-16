@@ -76,6 +76,11 @@ final class LayoutDemoWindow
 
     this(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
     {
+        this(serial, null, onClose, onHeaderDragStart, onHeaderDragMove, onHeaderDragEnd, onResizeStart, onResizeMove, onResizeEnd);
+    }
+
+    this(uint serial, void delegate(UiDropdown, float, float, float, float) onDropdownOpen, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
+    {
         const windowTitle = format("Widget Demo #%u", serial);
         window = new UiWindow(windowTitle, 36.0f, 36.0f, testWindowWidth, testWindowHeight, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
@@ -104,7 +109,9 @@ final class LayoutDemoWindow
         auto controlsRowA = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         controlsRowA.setLayoutHint(0.0f, 28.0f, 0.0f, 28.0f, float.max, 28.0f, 1.0f, 0.0f);
         controlsRowA.add(new UiToggle("Enabled", true, 0.0f, 0.0f, 130.0f, 28.0f));
-        controlsRowA.add(new UiDropdown("Mode", ["Alpha", "Beta", "Gamma"], 0, 0.0f, 0.0f, 150.0f, 28.0f));
+        auto modeDropdown = new UiDropdown("Mode", ["Alpha", "Beta", "Gamma"], 0, 0.0f, 0.0f, 150.0f, 28.0f);
+        modeDropdown.onOpenRequested = onDropdownOpen;
+        controlsRowA.add(modeDropdown);
         controlsBody.add(controlsRowA);
         auto controlsRowB = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         controlsRowB.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
@@ -219,6 +226,12 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
     return new LayoutDemoWindow(serial, onClose, onHeaderDragStart, onHeaderDragMove, onHeaderDragEnd, onResizeStart, onResizeMove, onResizeEnd);
 }
 
+/** Creates a new retained layout demo window with dropdown popup integration. */
+LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate(UiDropdown, float, float, float, float) onDropdownOpen, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
+{
+    return new LayoutDemoWindow(serial, onDropdownOpen, onClose, onHeaderDragStart, onHeaderDragMove, onHeaderDragEnd, onResizeStart, onResizeMove, onResizeEnd);
+}
+
 
 private enum float windowMargin = 10.0f;
 private enum float sidebarCollapsedWidth = 44.0f;
@@ -233,6 +246,7 @@ private enum float statusWidth = 348.0f;
 private enum float statusHeight = 184.0f;
 private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 188.0f;
+private enum float dropdownPopupRowHeight = 28.0f;
 private enum float testWindowWidth = 560.0f;
 private enum float testWindowHeight = 440.0f;
 private enum float contentSpacing = 6.0f;
@@ -304,6 +318,7 @@ final class DemoUiScreen : UiScreen
     private UiButton sidebarWidgetButton;
     private UiButton sidebarChromeButton;
     private UiButton sidebarExitButton;
+    private UiWindow dropdownPopupWindow;
 
     private UiLabel helpTitleLabel;
     private UiLabel helpIntroLabel;
@@ -642,11 +657,13 @@ final class DemoUiScreen : UiScreen
         settingsSaveButton = new UiButton("Save", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
 
         settingsWindowModeDropdown.onChanged = (index, value) { settingsDraft.display.windowMode = value; updateSettingsSummary(); };
+        settingsWindowModeDropdown.onOpenRequested = &openDropdownPopup;
         settingsWidthField.onChanged = (value) { settingsDraft.display.windowWidth = parseUintSetting(value, settingsDraft.display.windowWidth); updateSettingsSummary(); };
         settingsHeightField.onChanged = (value) { settingsDraft.display.windowHeight = parseUintSetting(value, settingsDraft.display.windowHeight); updateSettingsSummary(); };
         settingsVsyncToggle.onChanged = (value) { settingsDraft.display.vsync = value; updateSettingsSummary(); };
         settingsScaleSlider.onChanged = (value) { settingsDraft.display.scale = value; updateSettingsSummary(); };
         settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
+        settingsThemeDropdown.onOpenRequested = &openDropdownPopup;
         settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
         settingsApplyButton.onClick = &applySettingsFromDialog;
         settingsSaveButton.onClick = &saveSettingsFromDialog;
@@ -727,6 +744,42 @@ final class DemoUiScreen : UiScreen
         settingsDraft.ui.theme = settingsThemeDropdown.selectedText();
         settingsDraft.ui.compactWindows = settingsCompactToggle.checked;
         updateSettingsSummary();
+    }
+
+    void openDropdownPopup(UiDropdown dropdown, float anchorX, float anchorY, float anchorWidth, float anchorHeight)
+    {
+        if (dropdown is null || dropdown.options.length == 0)
+            return;
+
+        if (dropdownPopupWindow !is null)
+        {
+            removeWindow(dropdownPopupWindow);
+            dropdownPopupWindow = null;
+        }
+
+        const popupHeight = cast(float)dropdown.options.length * dropdownPopupRowHeight + 6.0f;
+        dropdownPopupWindow = new UiWindow("Dropdown", anchorX, anchorY + anchorHeight, anchorWidth, popupHeight, cast(float[4])settingsBodyColor, cast(float[4])settingsHeaderColor, cast(float[4])settingsTitleColor, false, false, false, 0.0f, 0.0f, 0.0f, 0.0f);
+        dropdownPopupWindow.setChromeFlags(false, false, false, false);
+        dropdownPopupWindow.setChromeVisibility(false, false, true);
+
+        auto list = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        list.setLayoutHint(anchorWidth, popupHeight, anchorWidth, popupHeight, anchorWidth, popupHeight);
+
+        foreach (index, option; dropdown.options)
+        {
+            const rowIndex = index;
+            auto row = new UiButton(option, 0.0f, 0.0f, anchorWidth, dropdownPopupRowHeight, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText, UiTextStyle.medium, 8.0f, 4.0f);
+            row.setLayoutHint(anchorWidth, dropdownPopupRowHeight, anchorWidth, dropdownPopupRowHeight, float.max, dropdownPopupRowHeight, 1.0f, 0.0f);
+            row.onClick = ()
+            {
+                dropdown.selectIndex(rowIndex);
+                dismissActivePopup();
+            };
+            list.add(row);
+        }
+
+        dropdownPopupWindow.add(list);
+        showPopupWindow(dropdownPopupWindow, anchorX, anchorY, anchorWidth, anchorHeight);
     }
 
     void updateSettingsSummary()
@@ -829,7 +882,7 @@ final class DemoUiScreen : UiScreen
 
     void spawnLayoutTestWindow()
     {
-        LayoutDemoWindow demoWindow = buildLayoutDemoWindow(nextTestWindowSerial++);
+        LayoutDemoWindow demoWindow = buildLayoutDemoWindow(nextTestWindowSerial++, &openDropdownPopup);
         const cascadeIndex = cast(float)(nextTestWindowSerial - 2);
         demoWindow.window.x += cascadeIndex * 28.0f;
         demoWindow.window.y += cascadeIndex * 24.0f;
@@ -975,6 +1028,27 @@ unittest
     assert(!screen.quitRequested);
     screen.sidebarExitButton.onClick();
     assert(screen.quitRequested);
+}
+
+@("DemoUiScreen opens dropdown popups for settings selections")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    screen.openDropdownPopup(screen.settingsThemeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
+
+    assert(screen.hasActivePopup());
+    assert(screen.dropdownPopupWindow !is null);
+    assert(screen.dropdownPopupWindow.visible);
+    assert(screen.windowsInFrontToBack()[$ - 1] is screen.dropdownPopupWindow);
+
+    screen.settingsThemeDropdown.selectIndex(2);
+    assert(screen.settingsDraft.ui.theme == "contrast");
+
+    screen.dismissActivePopup();
+    assert(!screen.hasActivePopup());
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")

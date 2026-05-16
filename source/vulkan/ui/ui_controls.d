@@ -283,11 +283,7 @@ protected:
     }
 }
 
-/** Compact option selector that cycles through available values on click.
- *
- * This is an intentionally small combo-box placeholder. It keeps the retained
- * control API generic while the UI engine does not yet have popups or menus.
- */
+/** Compact option selector that requests a transient popup list on click. */
 final class UiDropdown : UiWidget
 {
     /** Logical label for the option group. */
@@ -306,6 +302,8 @@ final class UiDropdown : UiWidget
     float[4] textColor;
     /** Called after user interaction selects a new value. */
     void delegate(size_t, string) onChanged;
+    /** Called when the dropdown should open a popup near the supplied screen-space anchor. */
+    void delegate(UiDropdown, float, float, float, float) onOpenRequested;
 
     /** Creates a retained dropdown-style option selector.
      *
@@ -337,6 +335,20 @@ final class UiDropdown : UiWidget
         return options.length == 0 ? "" : options[selectedIndex];
     }
 
+    /** Selects an option by index and emits `onChanged` when the value changes. */
+    void selectIndex(size_t index)
+    {
+        if (options.length == 0)
+            return;
+
+        const normalizedIndex = index % options.length;
+        if (selectedIndex == normalizedIndex)
+            return;
+
+        selectedIndex = normalizedIndex;
+        emitChanged();
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
@@ -362,15 +374,25 @@ protected:
         if (event.kind != UiPointerEventKind.buttonDown || event.button != 1 || options.length == 0)
             return false;
 
-        selectedIndex = (selectedIndex + 1) % options.length;
-        if (onChanged !is null)
-            onChanged(selectedIndex, selectedText());
+        if (onOpenRequested !is null)
+        {
+            const anchorX = event.screenX - event.x + x;
+            const anchorY = event.screenY - event.y + y;
+            onOpenRequested(this, anchorX, anchorY, width, height);
+        }
         return true;
     }
 
     override UiCursorKind cursorSelf(float localX, float localY)
     {
         return options.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
+    }
+
+private:
+    void emitChanged()
+    {
+        if (onChanged !is null)
+            onChanged(selectedIndex, selectedText());
     }
 }
 
@@ -621,18 +643,35 @@ unittest
     assert(slider.dispatchPointerEvent(event));
 }
 
-@("UiDropdown cycles options")
+@("UiDropdown requests popup anchors and selects by index")
 unittest
 {
     auto dropdown = new UiDropdown("Theme", ["midnight", "classic"], 0, 0.0f, 0.0f, 160.0f, 28.0f);
+    bool opened;
+    float anchorX;
+    float anchorY;
+    dropdown.onOpenRequested = (source, x, y, width, height)
+    {
+        opened = source is dropdown;
+        anchorX = x;
+        anchorY = y;
+        assert(width == 160.0f);
+        assert(height == 28.0f);
+    };
 
     UiPointerEvent event;
     event.kind = UiPointerEventKind.buttonDown;
     event.button = 1;
     event.x = 20.0f;
     event.y = 12.0f;
+    event.screenX = 120.0f;
+    event.screenY = 72.0f;
 
     assert(dropdown.dispatchPointerEvent(event));
+    assert(opened);
+    assert(anchorX == 100.0f);
+    assert(anchorY == 60.0f);
+    dropdown.selectIndex(1);
     assert(dropdown.selectedText() == "classic");
 }
 

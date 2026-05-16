@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Reworked `UiDropdown` to request popup lists and wired the demo settings and widget-demo dropdowns to transient popup windows.
 - Added `UiScreen` popup primitives for transient popup windows with anchor placement, viewport clamping, front-most stack handling, outside-click dismissal, and Escape dismissal.
 
 ## Release 26.20.8493

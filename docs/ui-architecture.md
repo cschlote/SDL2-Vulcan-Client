@@ -106,7 +106,7 @@ The reusable UI package currently provides these retained widgets:
 - `UiScrollArea`: partial viewport for oversized content with retained scroll offsets and wheel handling
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
-- `UiDropdown`: compact option selector that cycles values until popup menus exist
+- `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.

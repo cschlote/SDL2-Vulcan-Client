@@ -124,7 +124,7 @@ Useful regression checks:
 
 - `UiTextField` keeps focus and caret behavior while global renderer shortcuts stay blocked
 - slider dragging keeps pointer capture until button-up
-- dropdown cycling remains deterministic until popup menus exist
+- dropdown popups open, stay above normal windows, and close through the screen popup policy
 - the action row stays attached below the growable settings body
 - Apply and Save remain separate persistence concepts
 
@@ -132,7 +132,7 @@ Planned extensions:
 
 - split content into Display, Controls, Gameplay, Audio, and UI pages when tabs exist
 - place oversized page content into `UiScrollArea` instead of forcing the window to grow
-- use popup-backed dropdown lists instead of click-to-cycle dropdowns
+- extract the current popup option rows into a reusable list/selection widget
 - add audio bus volume sliders for master, music, effects, and UI sound
 - add validation feedback for invalid numeric fields
 

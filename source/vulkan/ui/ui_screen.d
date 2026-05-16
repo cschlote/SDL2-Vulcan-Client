@@ -73,6 +73,9 @@ class UiScreen
     /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
+        event.screenX = event.x;
+        event.screenY = event.y;
+
         if (event.kind == UiPointerEventKind.buttonDown && activePopupWindow !is null)
         {
             if (!activePopupWindow.visible)
