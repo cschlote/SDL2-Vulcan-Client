@@ -112,6 +112,8 @@ Layout measurements must keep intrinsic preferred sizes separate from the curren
 
 Size hints and grow policy should be treated as separate layout inputs. A widget reports its natural minimum and preferred size from content, while the parent container may stretch it only when maximum size and flex growth allow that. Sidebar action buttons use this policy to keep a stable compact icon slot but still fill the full sidebar width in both collapsed and expanded modes.
 
+The current sidebar still uses ordinary `UiButton` instances as temporary text-placeholder actions. Their centered internal label row is good enough for bootstrapping, but the planned launcher control should be a dedicated `UiIconButton`, `UiSidebarAction`, or equivalent row with a fixed 32 px icon slot and a separate expanded label region. That later widget should replace the current "icon marker plus label text in one centered caption" approach.
+
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.
@@ -179,7 +181,7 @@ The next work should continue from reusable engine foundations toward demo polis
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
-4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with compact and expanded text placeholders.
+4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
@@ -214,20 +216,21 @@ The next work should continue from reusable engine foundations toward demo polis
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
-19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions. Done with text-placeholder actions.
+19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.
 23. Turn the current layout probe into a real widget demo/control gallery.
-24. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
-25. Add keyboard navigation, tab traversal, and modal focus behavior.
-26. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
-27. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
-28. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
-29. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
-30. Add UI and demo audio events, such as button click feedback and settings volume preview.
-31. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-32. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
+24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
+25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage.
+26. Add keyboard navigation, tab traversal, and modal focus behavior.
+27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI.
+28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters.
+29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
+30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+31. Add UI and demo audio events, such as button click feedback and settings volume preview.
+32. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+33. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
 
 ## Public Package Preparation
 

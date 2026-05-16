@@ -135,6 +135,8 @@ Status: Partial as demo composition; reusable class planned.
 
 `UiSidebar` is the planned reusable left-edge UI bar inspired by application launchers such as EVE Online side panels or the Ubuntu GNOME dock. The current demo implements the first version as a chrome-less `UiWindow` whose content root fills the window. The content stacks compact text-placeholder actions vertically, can expand to show text labels, and can show, raise, or spawn demo windows.
 
+The current sidebar actions intentionally reuse `UiButton` as a temporary compound widget. A `UiButton` centers its label by placing it inside an internal `UiHBox` with flexible spacer widgets on both sides. That is acceptable for the first text-placeholder sidebar, but it is not the target structure for a launcher row.
+
 Common use cases:
 
 - persistent left-edge launcher for demo windows
@@ -162,7 +164,8 @@ Implementation direction:
 
 - keep the first version as a specialized demo composition before deciding whether it deserves a reusable class
 - use `UiVBox` for vertical stacking
-- use a reusable icon button row once texture-backed icons exist
+- replace temporary `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once texture-backed icons exist
+- give the replacement row a fixed icon slot and a separate label region instead of centering the combined text label with symmetric spacers
 - allow the expanded state to be a normal retained boolean, later animated by the UI animation scheduler
 
 Demo coverage:
@@ -426,6 +429,8 @@ Status: Implemented.
 
 `UiButton` is a framed clickable action widget with optional image and label content.
 
+The current implementation is a compound widget: the button owns an internal horizontal row with flexible spacer widgets, an optional image, and a label. This keeps ordinary caption buttons centered and gives us a simple icon-plus-text path, but it is not ideal for sidebar launcher rows where the icon slot should stay fixed on the left and the expanded label should occupy a separate text region.
+
 Common use cases:
 
 - launcher actions
@@ -438,13 +443,15 @@ Required behavior:
 - emit click callback on primary activation
 - show pointer/action cursor
 - measure from label and optional icon content
+- stretch only when layout hints and grow policy explicitly allow it
 - support future hover, pressed, disabled, and focused states
 
 Demo coverage:
 
 - Demo Control and Settings.
 - Widget Demo should add state examples.
-- Sidebar should use icon buttons or a specialized derivative.
+- Sidebar currently reuses `UiButton` as a temporary text-placeholder row.
+- Sidebar should later use `UiIconButton`, `UiSidebarAction`, or a specialized derivative.
 
 ### UiToggle
 
@@ -759,7 +766,8 @@ Common use cases:
 Required behavior:
 
 - stable icon slot, usually 32 x 32 px for the first sidebar implementation
-- optional label text
+- optional label text in a separate region beside the icon slot
+- left-edge sidebar mode where the icon remains aligned and the row can fill the available width
 - active, hover, pressed, disabled, and focused states
 - tooltip support when the label is hidden
 - action cursor

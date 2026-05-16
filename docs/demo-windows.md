@@ -44,6 +44,8 @@ Planned extensions:
 
 The UI Sidebar is a persistent left-edge launcher for demo windows. It is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
 
+The sidebar actions currently reuse `UiButton`, whose internal content row centers the label with flexible spacers on both sides. This keeps the bootstrap implementation small, but it is only a placeholder for the final launcher-row design. A later `UiIconButton` or `UiSidebarAction` should keep a fixed icon slot on the left and place expanded text in a separate label region.
+
 Current behavior:
 
 - anchors to the left edge of the SDL window
@@ -66,7 +68,7 @@ Planned extensions:
 - active or visible-state markers for target windows
 - tooltips for collapsed icon-only actions
 - texture-backed icons or placeholder icon widgets
-- `UiIconButton` or equivalent icon-plus-label action rows
+- `UiIconButton` or equivalent icon-plus-label action rows with fixed icon slot and separate label region
 - optional animation support for expand/collapse
 
 ## Controls / Log Window
