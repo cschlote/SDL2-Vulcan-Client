@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Allowed `UiButton` to stretch horizontally when layout hints request growth, and documented size hints versus layout policy.
 - Added an expanded-label mode to the left-edge demo sidebar.
 - Added a chrome-less left-edge demo sidebar for opening existing demo windows.
 - Added configurable `UiWindow` chrome visibility for header, title, and border.

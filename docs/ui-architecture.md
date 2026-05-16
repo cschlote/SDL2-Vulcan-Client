@@ -139,13 +139,15 @@ The widget model should continue toward a clear box model:
 
 - outer rectangle
 - minimum, preferred, and maximum size
-- flex growth hints
+- flex growth hints as layout policy, not as intrinsic content size
 - optional surface/background behavior in specialized widgets
 - padding and spacing in layout containers
 - children positioned in local coordinates
 - optional focus ownership for controls that consume keyboard or text input
 
 Children should receive a well-defined content area. Chrome, border, and gutter decisions should be owned by the widget or layout container that introduces them.
+
+Layout follows the same broad idea as mature retained UI systems: a widget reports a natural content size, then the parent layout uses minimum, preferred, maximum, and grow hints to decide the arranged size. A control such as `UiButton` may therefore measure its caption as a compact natural width while still filling a sidebar or form row when its maximum width and horizontal grow hint allow stretching. Widgets should not silently turn their current arranged size into their future intrinsic size, because that makes later shrink layouts impossible.
 
 `UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes.
 

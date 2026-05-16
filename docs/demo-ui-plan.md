@@ -110,6 +110,8 @@ The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant
 
 Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
 
+Size hints and grow policy should be treated as separate layout inputs. A widget reports its natural minimum and preferred size from content, while the parent container may stretch it only when maximum size and flex growth allow that. Sidebar action buttons use this policy to keep a stable compact icon slot but still fill the full sidebar width in both collapsed and expanded modes.
+
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 
 Settings-style dialogs should split the window body into a growable content area and a fixed bottom action row. The action row remains attached to the lower edge of the content root while the upper area consumes extra space.

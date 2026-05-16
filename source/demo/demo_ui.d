@@ -490,6 +490,7 @@ final class DemoUiScreen : UiScreen
     UiButton buildSidebarButton(string caption, void delegate() onClick)
     {
         auto button = new UiButton(caption, 0.0f, 0.0f, sidebarButtonSize, sidebarButtonSize, cast(float[4])sidebarButtonFill, cast(float[4])sidebarButtonBorder, cast(float[4])sidebarButtonText, UiTextStyle.small, 2.0f, 0.5f);
+        button.setLayoutHint(sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, float.max, sidebarButtonSize, 1.0f, 0.0f);
         button.onClick = onClick;
         return button;
     }
@@ -521,18 +522,23 @@ final class DemoUiScreen : UiScreen
         sidebarWindow.width = width;
         sidebarWindow.minimumWidth = width;
         sidebarContent.setLayoutHint(width, sidebarFallbackHeight, width, sidebarFallbackHeight, width, float.max, 0.0f, 1.0f);
-        sidebarExpandButton.width = sidebarExpanded ? sidebarExpandedWidth - sidebarPadding * 2.0f : sidebarButtonSize;
-        sidebarHelpButton.width = sidebarExpandButton.width;
-        sidebarStatusButton.width = sidebarExpandButton.width;
-        sidebarSettingsButton.width = sidebarExpandButton.width;
-        sidebarWidgetButton.width = sidebarExpandButton.width;
-        sidebarChromeButton.width = sidebarExpandButton.width;
         sidebarExpandButton.setCaption(sidebarExpanded ? "<<" : ">>");
         sidebarHelpButton.setCaption(sidebarExpanded ? "?  Controls" : "?");
         sidebarStatusButton.setCaption(sidebarExpanded ? "S  Status" : "S");
         sidebarSettingsButton.setCaption(sidebarExpanded ? "Cfg Settings" : "Cfg");
         sidebarWidgetButton.setCaption(sidebarExpanded ? "W  Widgets" : "W");
         sidebarChromeButton.setCaption(sidebarExpanded ? "C  Chrome" : "C");
+        applySidebarButtonLayout(sidebarExpandButton);
+        applySidebarButtonLayout(sidebarHelpButton);
+        applySidebarButtonLayout(sidebarStatusButton);
+        applySidebarButtonLayout(sidebarSettingsButton);
+        applySidebarButtonLayout(sidebarWidgetButton);
+        applySidebarButtonLayout(sidebarChromeButton);
+    }
+
+    void applySidebarButtonLayout(UiButton button)
+    {
+        button.setLayoutHint(sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, sidebarButtonSize, float.max, sidebarButtonSize, 1.0f, 0.0f);
     }
 
     void buildInitWindow()
@@ -960,6 +966,9 @@ unittest
     assert(screen.sidebarWindow.y == 0.0f);
     assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
     assert(screen.sidebarWindow.height == 600.0f);
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
 
@@ -1002,9 +1011,14 @@ unittest
     assert(screen.sidebarReservedLeft() > collapsedReserved);
     assert(screen.initWindow.x >= screen.sidebarReservedLeft(), format("init x %.1f, reserved %.1f", screen.initWindow.x, screen.sidebarReservedLeft()));
     assert(screen.sidebarHelpButton.caption == "?  Controls");
+    UiLayoutContext context;
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarExpandedWidth - sidebarPadding * 2.0f);
 
     screen.sidebarExpandButton.onClick();
     assert(!screen.sidebarExpanded);
     assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
     assert(screen.sidebarHelpButton.caption == "?");
+    screen.sidebarWindow.layoutWindow(context);
+    assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
 }

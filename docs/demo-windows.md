@@ -56,6 +56,7 @@ Useful regression checks:
 
 - content root really fills the chrome-less window
 - icon slots stay stable at compact width
+- compact and expanded action buttons fill the available sidebar width
 - expanding the sidebar updates the reserved left edge for demo windows
 - viewport resizing keeps the bar attached to the left edge
 - modals and popups layer above the sidebar when needed

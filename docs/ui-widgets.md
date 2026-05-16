@@ -41,6 +41,7 @@ Required behavior:
 - optional cursor preference through `cursorSelf`
 - local rendering through `renderSelf`
 - measuring and layout through `measureSelf` and layout hints
+- separation between natural content size and arranged size
 
 Demo coverage:
 
@@ -148,6 +149,7 @@ Required behavior:
 - default compact width around one 32 px icon plus padding
 - expanded width large enough for icon plus label text
 - vertical layout of actions with stable 32 x 32 icon slots
+- action widgets fill the available sidebar width in compact and expanded modes
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
 - optional tooltip when collapsed and labels are hidden
@@ -227,6 +229,12 @@ Demo coverage:
 
 - Settings size row and action row.
 - Widget Demo nested rows.
+
+## Layout Policy
+
+`UiWidget` layout hints describe both size constraints and growth policy. `minimumWidth`/`minimumHeight` are the smallest useful size, `preferredWidth`/`preferredHeight` are the natural size requested by content, and `maximumWidth`/`maximumHeight` cap stretching. `flexGrowX` and `flexGrowY` tell parent containers whether available surplus space may be assigned to the widget on each axis.
+
+This is intentionally similar to Qt-style size hints plus size policies: the measured content size answers "how large would this widget like to be?", while the grow and maximum hints answer "may this widget consume more room?". `UiButton` uses this distinction so ordinary buttons can stay caption-sized, but sidebar buttons can fill the full bar width by setting `maximumWidth` to `float.max` and `flexGrowX` to `1.0f`.
 
 ### UiGrid
 
