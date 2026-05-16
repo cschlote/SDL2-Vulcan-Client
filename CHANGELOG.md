@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a reusable `UiListBox` text-row selection control and switched dropdown popups to use it instead of demo-local button rows.
 - Fixed dropdown popup row selection so each option button selects its own option instead of the last option in the list.
 - Reworked `UiDropdown` to request popup lists and wired the demo settings and widget-demo dropdowns to transient popup windows.
 - Added `UiScreen` popup primitives for transient popup windows with anchor placement, viewport clamping, front-most stack handling, outside-click dismissal, and Escape dismissal.

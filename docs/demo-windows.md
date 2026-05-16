@@ -107,7 +107,7 @@ Planned extensions:
 
 ## Settings Window
 
-The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, `UiDropdown`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, and a fixed action row.
+The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, and a fixed action row.
 
 Current behavior:
 
@@ -138,7 +138,7 @@ Planned extensions:
 
 ## Widget Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiDropdown`, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiDropdown`, `UiListBox` through dropdown popups, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 

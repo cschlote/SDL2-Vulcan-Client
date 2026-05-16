@@ -396,6 +396,119 @@ private:
     }
 }
 
+/** Selectable list of text rows for dropdowns and simple choice panels. */
+final class UiListBox : UiWidget
+{
+    /** Available selectable values. */
+    string[] options;
+    /** Index into `options` for the currently selected value. */
+    size_t selectedIndex;
+    /** Height of one selectable row in pixels. */
+    float rowHeight;
+    /** Font style used for row text. */
+    UiTextStyle style;
+    /** List background color. */
+    float[4] fillColor;
+    /** List border color. */
+    float[4] borderColor;
+    /** Selected row background color. */
+    float[4] selectedColor;
+    /** Row text color. */
+    float[4] textColor;
+    /** Called after user interaction selects a new value. */
+    void delegate(size_t, string) onChanged;
+    /** Called after a row is clicked, even when it is already selected. */
+    void delegate(size_t, string) onActivated;
+
+    /** Creates a retained list box with text rows. */
+    this(string[] options, size_t selectedIndex = 0, float x = 0.0f, float y = 0.0f, float width = 0.0f, float height = 0.0f, UiTextStyle style = UiTextStyle.medium, float rowHeight = controlHeight)
+    {
+        super(x, y, width, height);
+        this.options = options.dup;
+        this.selectedIndex = options.length == 0 ? 0 : selectedIndex % options.length;
+        this.style = style;
+        this.rowHeight = rowHeight > 0.0f ? rowHeight : controlHeight;
+        fillColor = cast(float[4])defaultFillColor;
+        borderColor = cast(float[4])defaultBorderColor;
+        selectedColor = cast(float[4])defaultAccentColor;
+        textColor = cast(float[4])defaultTextColor;
+    }
+
+    /** Returns the selected option text, or an empty string without options. */
+    string selectedText() const
+    {
+        return options.length == 0 ? "" : options[selectedIndex];
+    }
+
+    /** Selects an option by index and emits `onChanged` when the value changes. */
+    void selectIndex(size_t index)
+    {
+        if (options.length == 0)
+            return;
+
+        const normalizedIndex = index % options.length;
+        if (selectedIndex == normalizedIndex)
+            return;
+
+        selectedIndex = normalizedIndex;
+        if (onChanged !is null)
+            onChanged(selectedIndex, selectedText());
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        float widest = 0.0f;
+        foreach (option; options)
+            widest = max(widest, textWidth(context, style, option));
+
+        const naturalWidth = widest + controlPaddingX * 2.0f;
+        const naturalHeight = cast(float)options.length * rowHeight;
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : naturalWidth;
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : naturalHeight;
+        setLayoutHint(measuredWidth, measuredHeight, measuredWidth, measuredHeight, float.max, measuredHeight, 1.0f, 0.0f);
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
+    override void renderSelf(ref UiRenderContext context)
+    {
+        appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
+
+        foreach (index, option; options)
+        {
+            const top = cast(float)index * rowHeight;
+            const bottom = top + rowHeight;
+            if (index == selectedIndex)
+                appendQuad(context, 1.0f, top + 1.0f, width - 1.0f, bottom - 1.0f, context.depthBase - 0.001f, selectedColor);
+            appendTextLine(context, style, option, controlPaddingX, top + centeredTextY(rowHeight, fallbackTextHeight), textColor, context.depthBase - 0.002f);
+        }
+    }
+
+    override bool handlePointerEvent(ref UiPointerEvent event)
+    {
+        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1 || options.length == 0)
+            return false;
+
+        const localY = event.y - y;
+        if (localY < 0.0f)
+            return false;
+
+        const rowIndex = cast(size_t)(localY / rowHeight);
+        if (rowIndex >= options.length)
+            return false;
+
+        selectIndex(rowIndex);
+        if (onActivated !is null)
+            onActivated(rowIndex, options[rowIndex]);
+        return true;
+    }
+
+    override UiCursorKind cursorSelf(float localX, float localY)
+    {
+        return options.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
+    }
+}
+
 /** Single-line text value field with focus state.
  *
  * `UiTextField` stores, renders, and edits a single UTF-8 text value. It is
@@ -673,6 +786,39 @@ unittest
     assert(anchorY == 60.0f);
     dropdown.selectIndex(1);
     assert(dropdown.selectedText() == "classic");
+}
+
+@("UiListBox selects clicked rows")
+unittest
+{
+    auto list = new UiListBox(["Alpha", "Beta", "Gamma"], 0, 0.0f, 0.0f, 160.0f, 84.0f);
+    size_t changedIndex;
+    string changedValue;
+    bool activated;
+    list.onChanged = (index, value)
+    {
+        changedIndex = index;
+        changedValue = value;
+    };
+    list.onActivated = (index, value)
+    {
+        activated = true;
+        assert(index == 1);
+        assert(value == "Beta");
+    };
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 12.0f;
+    event.y = 42.0f;
+
+    assert(list.dispatchPointerEvent(event));
+    assert(list.selectedIndex == 1);
+    assert(list.selectedText() == "Beta");
+    assert(changedIndex == 1);
+    assert(changedValue == "Beta");
+    assert(activated);
 }
 
 @("UiTextField focuses and accepts programmatic text")

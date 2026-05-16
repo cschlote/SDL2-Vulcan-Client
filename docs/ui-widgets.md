@@ -682,9 +682,9 @@ Demo coverage:
 
 ### UiListBox
 
-Status: Planned.
+Status: Partial.
 
-`UiListBox` shows selectable rows.
+`UiListBox` shows selectable text rows. It is currently used as the reusable option surface inside dropdown popups.
 
 Common use cases:
 
@@ -695,14 +695,18 @@ Common use cases:
 
 Required behavior:
 
-- selected row state
-- changed callback
-- hover and active row rendering
+- selected row state. Implemented.
+- changed callback. Implemented.
+- activation callback for clicks on the already selected row. Implemented.
+- active row rendering. Implemented for the selected row.
+- hover row rendering later
 - scroll integration when content exceeds viewport
 - keyboard selection later
 
 Demo coverage:
 
+- Settings dropdown popups.
+- Widget Demo dropdown popup.
 - planned Selection Demo.
 
 ### UiSeparator

@@ -188,7 +188,7 @@ The next work should continue from reusable engine foundations toward demo polis
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
-8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Done for dropdown popup behavior in the demo; reusable `UiListBox`/selection-list extraction and keyboard selection are still planned.
+8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Partial: dropdown popup behavior and reusable `UiListBox` text-row selection are implemented; keyboard selection and scroll-backed long lists are still planned.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
 10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions.

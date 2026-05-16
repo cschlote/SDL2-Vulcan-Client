@@ -27,7 +27,7 @@ import logging : logLine;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_controls : UiDropdown, UiSlider, UiTextField, UiToggle;
+import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiSlider, UiTextField, UiToggle;
 import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
@@ -757,33 +757,22 @@ final class DemoUiScreen : UiScreen
             dropdownPopupWindow = null;
         }
 
-        const popupHeight = cast(float)dropdown.options.length * dropdownPopupRowHeight + 6.0f;
+        const listHeight = cast(float)dropdown.options.length * dropdownPopupRowHeight;
+        const popupHeight = listHeight + 6.0f;
         dropdownPopupWindow = new UiWindow("Dropdown", anchorX, anchorY + anchorHeight, anchorWidth, popupHeight, cast(float[4])settingsBodyColor, cast(float[4])settingsHeaderColor, cast(float[4])settingsTitleColor, false, false, false, 0.0f, 0.0f, 0.0f, 0.0f);
         dropdownPopupWindow.setChromeFlags(false, false, false, false);
         dropdownPopupWindow.setChromeVisibility(false, false, true);
 
-        auto list = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-        list.setLayoutHint(anchorWidth, popupHeight, anchorWidth, popupHeight, anchorWidth, popupHeight);
-
-        foreach (index, option; dropdown.options)
+        auto list = new UiListBox(dropdown.options, dropdown.selectedIndex, 0.0f, 0.0f, anchorWidth, listHeight, UiTextStyle.medium, dropdownPopupRowHeight);
+        list.setLayoutHint(anchorWidth, listHeight, anchorWidth, listHeight, float.max, listHeight, 1.0f, 0.0f);
+        list.onActivated = (index, value)
         {
-            list.add(createDropdownPopupRow(dropdown, index, option, anchorWidth));
-        }
+            dropdown.selectIndex(index);
+            dismissActivePopup();
+        };
 
         dropdownPopupWindow.add(list);
         showPopupWindow(dropdownPopupWindow, anchorX, anchorY, anchorWidth, anchorHeight);
-    }
-
-    UiButton createDropdownPopupRow(UiDropdown dropdown, size_t rowIndex, string option, float rowWidth)
-    {
-        auto row = new UiButton(option, 0.0f, 0.0f, rowWidth, dropdownPopupRowHeight, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText, UiTextStyle.medium, 8.0f, 4.0f);
-        row.setLayoutHint(rowWidth, dropdownPopupRowHeight, rowWidth, dropdownPopupRowHeight, float.max, dropdownPopupRowHeight, 1.0f, 0.0f);
-        row.onClick = ()
-        {
-            dropdown.selectIndex(rowIndex);
-            dismissActivePopup();
-        };
-        return row;
     }
 
     void updateSettingsSummary()
