@@ -50,6 +50,7 @@ Generic responsibilities belong in `UiScreen`:
 - iterate windows from back to front or front to back
 - move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
+- own transient popup window placement, stack priority, and outside-click/Escape dismissal
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport

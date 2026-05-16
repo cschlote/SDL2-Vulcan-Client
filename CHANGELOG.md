@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added `UiScreen` popup primitives for transient popup windows with anchor placement, viewport clamping, front-most stack handling, outside-click dismissal, and Escape dismissal.
+
 ## Release 26.20.8493
 
 - Removed the obsolete Demo Control window; the sidebar now toggles singleton windows and spawns repeatable demo windows.

@@ -529,7 +529,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiDropdown` is currently a compact option selector that cycles values on click. It should become a popup-backed selector when popup infrastructure exists.
+`UiDropdown` is currently a compact option selector that cycles values on click. Popup infrastructure now exists at `UiScreen` level, so the next dropdown step is replacing the cycle behavior with a transient popup list.
 
 Common use cases:
 
@@ -729,9 +729,9 @@ Demo coverage:
 
 ### UiPopupRoot
 
-Status: Planned.
+Status: Partial.
 
-`UiPopupRoot` is the planned owner for transient UI surfaces such as menus, dropdown lists, and tooltips.
+`UiPopupRoot` is the planned widget-facing owner for transient UI surfaces such as menus, dropdown lists, and tooltips. The first implementation step lives in `UiScreen`: a transient popup `UiWindow` can be shown near an anchor rectangle, clamped to the viewport, kept above ordinary windows, and dismissed on outside click or Escape.
 
 Common use cases:
 
@@ -742,14 +742,16 @@ Common use cases:
 
 Required behavior:
 
-- place relative to anchor widget
-- clamp to viewport edges
-- dismiss on outside click or Escape
-- stack above normal windows but below modal blocking policy where appropriate
+- place relative to anchor widget. Implemented at screen-window level.
+- clamp to viewport edges. Implemented at screen-window level.
+- dismiss on outside click or Escape. Implemented at screen-window level.
+- stack above normal windows but below modal blocking policy where appropriate. Implemented for the normal window stack; modal policy is still planned.
+- expose a widget-level popup root API for dropdowns, context menus, and tooltips.
 
 Demo coverage:
 
 - planned Selection Demo.
+- current unit coverage in `UiScreen` for placement, clamping, stacking, outside-click dismissal, and Escape dismissal.
 
 ### UiTooltip
 

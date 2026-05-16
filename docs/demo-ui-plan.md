@@ -187,7 +187,7 @@ The next work should continue from reusable engine foundations toward demo polis
 4. UI sidebar: add a left-edge icon launcher that can toggle singleton windows, spawn repeatable demo windows, exit the app, and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
-7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
+7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages.
 10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment.

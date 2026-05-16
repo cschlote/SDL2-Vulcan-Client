@@ -44,6 +44,7 @@ class UiScreen
     private float resizeStartHeight;
     private UiResizeHandle resizeStartHandle;
     private UiWidget focusedWidget;
+    private UiWindow activePopupWindow;
 
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
@@ -54,6 +55,7 @@ class UiScreen
         windows_ = [];
         activeDragWindow = null;
         activeResizeWindow = null;
+        activePopupWindow = null;
         resizeStartHandle = UiResizeHandle.none;
         setFocusedWidget(null);
         onInitialize();
@@ -71,6 +73,19 @@ class UiScreen
     /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
+        if (event.kind == UiPointerEventKind.buttonDown && activePopupWindow !is null)
+        {
+            if (!activePopupWindow.visible)
+                activePopupWindow = null;
+            else if (!windowContainsPointer(activePopupWindow, event.x, event.y))
+            {
+                dismissActivePopup();
+                if (event.button == 1)
+                    setFocusedWidget(null);
+                return true;
+            }
+        }
+
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
             setFocusedWidget(focusTargetAt(event.x, event.y));
 
@@ -95,6 +110,12 @@ class UiScreen
     /** Routes a keyboard event to the focused widget. */
     bool dispatchKeyEvent(ref UiKeyEvent event)
     {
+        if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && hasActivePopup())
+        {
+            dismissActivePopup();
+            return true;
+        }
+
         if (event.kind == UiKeyEventKind.keyDown && event.key == UiKeyCode.escape && focusedWidget !is null)
         {
             setFocusedWidget(null);
@@ -179,6 +200,41 @@ class UiScreen
         layoutWindows();
         anchorWindows();
         clampWindowsToViewport();
+        keepActivePopupFront();
+    }
+
+    /** Shows a transient popup window near an anchor rectangle in screen coordinates. */
+    void showPopupWindow(UiWindow popup, float anchorX, float anchorY, float anchorWidth, float anchorHeight)
+    {
+        if (popup is null)
+            return;
+
+        if (activePopupWindow !is null && activePopupWindow !is popup)
+            activePopupWindow.visible = false;
+
+        if (windowIndex(popup) < 0)
+            addWindow(popup);
+
+        popup.visible = true;
+        activePopupWindow = popup;
+        placePopupNearAnchor(popup, anchorX, anchorY, anchorWidth, anchorHeight);
+        bringWindowToFront(popup);
+    }
+
+    /** Hides the currently active transient popup, if any. */
+    void dismissActivePopup()
+    {
+        if (activePopupWindow is null)
+            return;
+
+        activePopupWindow.visible = false;
+        activePopupWindow = null;
+    }
+
+    /** Returns true while a visible transient popup is active. */
+    bool hasActivePopup() const
+    {
+        return activePopupWindow !is null && activePopupWindow.visible;
     }
 
     /** Builds renderer-facing overlay geometry for all visible windows.
@@ -277,6 +333,9 @@ protected:
         if (isInteractingWith(window))
             endWindowInteraction();
 
+        if (activePopupWindow is window)
+            activePopupWindow = null;
+
         if (focusedWidget !is null && windowOwnsWidget(window, focusedWidget))
             setFocusedWidget(null);
 
@@ -315,6 +374,8 @@ protected:
 
         if (!window.visible && isInteractingWith(window))
             endWindowInteraction();
+        if (!window.visible && activePopupWindow is window)
+            activePopupWindow = null;
         else if (window.visible)
             bringWindowToFront(window);
 
@@ -326,11 +387,11 @@ protected:
     /** Moves a registered window to the front of the draw order. */
     void bringWindowToFront(UiWindow window)
     {
-        const index = windowIndex(window);
-        if (index < 0 || cast(size_t)index + 1 == windows_.length)
+        if (!moveWindowToFront(window))
             return;
 
-        windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
+        if (activePopupWindow !is null && activePopupWindow !is window && activePopupWindow.visible)
+            moveWindowToFront(activePopupWindow);
     }
 
     /** Moves a registered window to the back of the draw order. */
@@ -501,6 +562,55 @@ protected:
     }
 
 private:
+    static bool windowContainsPointer(UiWindow window, float x, float y)
+    {
+        return window !is null && x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height;
+    }
+
+    void placePopupNearAnchor(UiWindow popup, float anchorX, float anchorY, float anchorWidth, float anchorHeight)
+    {
+        const anchorRight = anchorX + anchorWidth;
+        const anchorBottom = anchorY + anchorHeight;
+        popup.x = anchorX;
+        popup.y = anchorBottom;
+
+        if (viewportWidth_ <= 0.0f || viewportHeight_ <= 0.0f)
+            return;
+
+        if (popup.x + popup.width > viewportWidth_)
+        {
+            const anchoredLeft = anchorRight - popup.width;
+            popup.x = anchoredLeft >= 0.0f ? anchoredLeft : (viewportWidth_ > popup.width ? viewportWidth_ - popup.width : 0.0f);
+        }
+        if (popup.x < 0.0f)
+            popup.x = 0.0f;
+
+        if (popup.y + popup.height > viewportHeight_)
+        {
+            const aboveTop = anchorY - popup.height;
+            popup.y = aboveTop >= 0.0f ? aboveTop : (viewportHeight_ > popup.height ? viewportHeight_ - popup.height : 0.0f);
+        }
+
+        if (popup.y < 0.0f)
+            popup.y = 0.0f;
+    }
+
+    bool moveWindowToFront(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index < 0 || cast(size_t)index + 1 == windows_.length)
+            return false;
+
+        windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
+        return true;
+    }
+
+    void keepActivePopupFront()
+    {
+        if (activePopupWindow !is null && activePopupWindow.visible)
+            moveWindowToFront(activePopupWindow);
+    }
+
     UiWidget focusTargetAt(float x, float y)
     {
         foreach_reverse (window; windowsInFrontToBack())
@@ -860,4 +970,75 @@ unittest
 
     screen.placeWindowWithoutOverlap(target, 10.0f, 24.0f);
     assert(!UiScreen.rectsOverlap(target.x, target.y, target.width, target.height, occupied.x, occupied.y, occupied.width, occupied.height));
+}
+
+@("UiScreen shows popups near anchors and keeps them front-most")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 140.0f);
+
+    auto window = new UiWindow("window", 20.0f, 20.0f, 80.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto popup = new UiWindow("popup", 0.0f, 0.0f, 90.0f, 50.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    popup.visible = false;
+    screen.addWindow(window);
+
+    screen.showPopupWindow(popup, 30.0f, 40.0f, 80.0f, 20.0f);
+
+    assert(screen.hasActivePopup());
+    assert(popup.visible);
+    assert(popup.x == 30.0f);
+    assert(popup.y == 60.0f);
+    assert(screen.isFrontWindow(popup));
+
+    screen.bringWindowToFront(window);
+    assert(screen.isFrontWindow(popup));
+}
+
+@("UiScreen clamps popups to the viewport around anchors")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(200.0f, 120.0f);
+
+    auto popup = new UiWindow("popup", 0.0f, 0.0f, 80.0f, 50.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    popup.visible = false;
+
+    screen.showPopupWindow(popup, 170.0f, 100.0f, 20.0f, 18.0f);
+
+    assert(popup.x == 110.0f);
+    assert(popup.y == 50.0f);
+}
+
+@("UiScreen dismisses active popups on outside click or Escape")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 140.0f);
+
+    auto popup = new UiWindow("popup", 0.0f, 0.0f, 80.0f, 50.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    popup.visible = false;
+
+    screen.showPopupWindow(popup, 20.0f, 20.0f, 60.0f, 20.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 180.0f;
+    event.y = 100.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(!popup.visible);
+    assert(!screen.hasActivePopup());
+
+    screen.showPopupWindow(popup, 20.0f, 20.0f, 60.0f, 20.0f);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.escape;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(!popup.visible);
+    assert(!screen.hasActivePopup());
 }
