@@ -24,6 +24,7 @@ Implemented or partially implemented:
 - widget documentation that covers existing widgets and planned widgets
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
+- chrome-less left-edge demo sidebar with compact 32 px style launcher buttons
 - Demo window documentation that maps current and planned windows to reusable UI classes and regression checks
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data in `vulkan.ui`
@@ -37,7 +38,7 @@ Remaining migration debt:
 - popup/menu behavior is not yet implemented, so `UiDropdown` currently cycles values on click.
 - keyboard navigation and tab traversal are not yet implemented for retained controls.
 - settings tabs and broader settings categories are still planned demo work.
-- a chrome-less left-edge UI sidebar for icon-based demo window launch and reveal is planned.
+- reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
 - audio output, audio events, and music playback are still planned engine work.
 - UI animation scheduling, animated media widgets, and animated window open/close transitions are planned engine work.
@@ -176,7 +177,7 @@ The next work should continue from reusable engine foundations toward demo polis
 1. UI render boundary: move `UiOverlayGeometry` and `UiWindowDrawRange` into a reusable UI module, then let `UiScreen` expose generic render traversal. Done.
 2. Cursor model: add a `UiCursorKind` enum, per-widget cursor queries, `UiScreen` cursor resolution, SDL cursor handle ownership, and optional bitmap overrides. Done for SDL system cursors and monochrome custom cursors.
 3. Window chrome variants: add configurable header/title/close/resize/border/content padding so chrome-less dock/sidebar windows can be built from `UiWindow`. Done for behavior and visibility flags.
-4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode.
+4. UI sidebar: add a left-edge icon launcher that can show, raise, or spawn demo windows and optionally expand to icon-plus-text mode. Done for compact demo composition with text placeholders.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content.
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior.
@@ -211,7 +212,7 @@ The next work should continue from reusable engine foundations toward demo polis
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
 17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
-19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions.
+19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, and window show/raise/spawn actions. Done for compact text-placeholder actions; expanded labels remain planned.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click.

@@ -38,33 +38,31 @@ Planned extensions:
 - add launch buttons for the future Input Demo, Selection Demo, Media Demo, Animation Demo, and Audio Demo windows
 - group launcher actions once tabs or grouped panels exist
 - expose reset-layout and preset-layout actions after a presets window exists
-- migrate or mirror launcher actions into the planned left-edge UI sidebar
+- keep launcher actions mirrored in the left-edge UI sidebar while both launch surfaces exist
 
 ## UI Sidebar
 
-The UI Sidebar is planned as a persistent left-edge launcher for demo windows. It should be implemented first as a chrome-less `UiWindow` whose content root fills the usable window area. The compact mode shows a vertical stack of roughly 32 x 32 icon actions. Expanded mode shows text labels beside the icons, similar to a desktop dock or EVE Online-style side panel.
+The UI Sidebar is a persistent left-edge launcher for demo windows. It is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. The compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode with text labels beside icons remains planned, similar to a desktop dock or EVE Online-style side panel.
 
-Target behavior:
+Current behavior:
 
 - anchors to the left edge of the SDL window
 - shows or raises singleton windows such as Controls / Log, Status, and Settings
 - spawns repeatable windows such as Widget Demo and Chrome Demo when that action policy is useful
-- optionally expands from icon-only to icon-plus-text rows
-- keeps active/visible window state readable
-- uses tooltips for collapsed icon-only actions once tooltip support exists
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
 
 - content root really fills the chrome-less window
 - icon slots stay stable at compact width
-- expanded labels do not change icon hit regions unexpectedly
 - viewport resizing keeps the bar attached to the left edge
 - modals and popups layer above the sidebar when needed
 
-Planned dependencies:
+Planned extensions:
 
-- configurable `UiWindow` chrome attributes
+- expanded icon-plus-text mode
+- active or visible-state markers for target windows
+- tooltips for collapsed icon-only actions
 - texture-backed icons or placeholder icon widgets
 - `UiIconButton` or equivalent icon-plus-label action rows
 - optional animation support for expand/collapse

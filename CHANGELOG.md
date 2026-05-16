@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a chrome-less left-edge demo sidebar for opening existing demo windows.
 - Added configurable `UiWindow` chrome visibility for header, title, and border.
 - Clarified the planned split between simple content/frame boxes and a future scroll area widget.
 - Added widget documentation and planning notes for a chrome-less left-edge UI sidebar.

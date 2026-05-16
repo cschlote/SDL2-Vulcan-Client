@@ -205,6 +205,12 @@ LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = nu
 
 
 private enum float windowMargin = 10.0f;
+private enum float sidebarWidth = 44.0f;
+private enum float sidebarButtonSize = 32.0f;
+private enum float sidebarPadding = 5.0f;
+private enum float sidebarSpacing = 4.0f;
+private enum float sidebarFallbackHeight = 260.0f;
+private enum float sidebarReservedLeft = sidebarWidth + windowMargin;
 private enum float initWidth = 160.0f;
 private enum float initHeight = 304.0f;
 private enum float helpWidth = 388.0f;
@@ -229,6 +235,10 @@ private immutable float[4] initTitleColor = [1.00f, 0.98f, 0.82f, 1.00f];
 private immutable float[4] initButtonFill = [0.16f, 0.18f, 0.24f, 0.96f];
 private immutable float[4] initButtonBorder = [0.20f, 0.56f, 0.98f, 1.00f];
 private immutable float[4] initButtonText = [1.00f, 1.00f, 1.00f, 1.00f];
+private immutable float[4] sidebarBodyColor = [0.08f, 0.09f, 0.11f, 0.96f];
+private immutable float[4] sidebarButtonFill = [0.15f, 0.17f, 0.21f, 0.98f];
+private immutable float[4] sidebarButtonBorder = [0.24f, 0.58f, 0.80f, 1.00f];
+private immutable float[4] sidebarButtonText = [1.00f, 1.00f, 1.00f, 1.00f];
 
 private immutable float[4] helpBodyColor = [0.10f, 0.12f, 0.16f, 0.95f];
 private immutable float[4] helpHeaderColor = [0.14f, 0.16f, 0.20f, 0.98f];
@@ -264,12 +274,14 @@ final class DemoUiScreen : UiScreen
     void delegate() onApplySettings;
     void delegate() onSaveSettings;
 
+    private UiWindow sidebarWindow;
     private UiWindow initWindow;
     private UiWindow helpWindow;
     private UiWindow statusWindow;
     private UiWindow settingsWindow;
     private LayoutDemoWindow[] testWindows;
     private ChromeDemoWindow[] chromeWindows;
+    private UiVBox sidebarContent;
     private UiVBox initContent;
     private UiVBox helpContent;
     private UiVBox statusContent;
@@ -281,6 +293,11 @@ final class DemoUiScreen : UiScreen
     private UiButton initSettingsButton;
     private UiButton initTestButton;
     private UiButton initChromeButton;
+    private UiButton sidebarHelpButton;
+    private UiButton sidebarStatusButton;
+    private UiButton sidebarSettingsButton;
+    private UiButton sidebarWidgetButton;
+    private UiButton sidebarChromeButton;
 
     private UiLabel helpTitleLabel;
     private UiLabel helpIntroLabel;
@@ -331,10 +348,12 @@ final class DemoUiScreen : UiScreen
         testWindows = [];
         chromeWindows = [];
 
+        buildSidebarWindow();
         buildInitWindow();
         buildHelpWindow();
         buildStatusWindow();
         buildSettingsWindow();
+        addWindow(sidebarWindow);
         autoSizeWindow(initWindow, initContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, initWidth, initHeight);
         autoSizeWindow(helpWindow, helpContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, helpWidth, helpHeight);
         autoSizeWindow(statusWindow, statusContent, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, statusWidth, statusHeight);
@@ -360,14 +379,44 @@ final class DemoUiScreen : UiScreen
         toggleWindow(helpWindow);
     }
 
+    void showHelpWindow()
+    {
+        showSingletonWindow(helpWindow);
+    }
+
     void toggleStatusWindow()
     {
         toggleWindow(statusWindow);
     }
 
+    void showStatusWindow()
+    {
+        showSingletonWindow(statusWindow);
+    }
+
     void toggleSettingsWindow()
     {
         toggleWindow(settingsWindow);
+    }
+
+    void showSettingsDialog(const(DemoSettings)* liveSettings)
+    {
+        if (liveSettings !is null)
+            settingsDraft = *liveSettings;
+        refreshSettingsControls();
+        showSingletonWindow(settingsWindow);
+    }
+
+    void showSingletonWindow(UiWindow window)
+    {
+        if (window is null)
+            return;
+
+        window.visible = true;
+        bringWindowToFront(window);
+        if (sidebarWindow !is null)
+            bringWindowToFront(sidebarWindow);
+        ensureWindowLayout();
     }
 
     void requestQuit()
@@ -377,11 +426,7 @@ final class DemoUiScreen : UiScreen
 
     void openSettingsDialog(const(DemoSettings)* liveSettings)
     {
-        if (liveSettings !is null)
-            settingsDraft = *liveSettings;
-        refreshSettingsControls();
-        if (!settingsWindow.visible)
-            toggleSettingsWindow();
+        showSettingsDialog(liveSettings);
     }
 
     void toggleSettingsDialog(const(DemoSettings)* liveSettings)
@@ -409,9 +454,42 @@ final class DemoUiScreen : UiScreen
         settingsWindow.visible = false;
     }
 
+    void buildSidebarWindow()
+    {
+        sidebarWindow = new UiWindow("Demo Sidebar", 0.0f, 0.0f, sidebarWidth, sidebarFallbackHeight, cast(float[4])sidebarBodyColor, cast(float[4])sidebarBodyColor, cast(float[4])sidebarButtonText, false, false, false, 0.0f, 0.0f, 0.0f, 0.0f);
+        sidebarWindow.setChromeFlags(false, false, false, false);
+        sidebarWindow.setChromeVisibility(false, false, false);
+        sidebarWindow.minimumWidth = sidebarWidth;
+        sidebarWindow.minimumHeight = sidebarFallbackHeight;
+
+        sidebarContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, sidebarSpacing, sidebarPadding, sidebarPadding, sidebarPadding, sidebarPadding);
+        sidebarContent.setLayoutHint(sidebarWidth, sidebarFallbackHeight, sidebarWidth, sidebarFallbackHeight, sidebarWidth, float.max, 0.0f, 1.0f);
+        sidebarHelpButton = buildSidebarButton("?", &showHelpWindow);
+        sidebarStatusButton = buildSidebarButton("S", &showStatusWindow);
+        sidebarSettingsButton = buildSidebarButton("Cfg", () { showSettingsDialog(null); });
+        sidebarWidgetButton = buildSidebarButton("W", &spawnLayoutTestWindow);
+        sidebarChromeButton = buildSidebarButton("C", &spawnChromeDemoWindow);
+
+        sidebarContent.add(sidebarHelpButton);
+        sidebarContent.add(sidebarStatusButton);
+        sidebarContent.add(sidebarSettingsButton);
+        sidebarContent.add(new UiSpacer(0.0f, sidebarSpacing));
+        sidebarContent.add(sidebarWidgetButton);
+        sidebarContent.add(sidebarChromeButton);
+        sidebarWindow.add(sidebarContent);
+        sidebarWindow.visible = true;
+    }
+
+    UiButton buildSidebarButton(string caption, void delegate() onClick)
+    {
+        auto button = new UiButton(caption, 0.0f, 0.0f, sidebarButtonSize, sidebarButtonSize, cast(float[4])sidebarButtonFill, cast(float[4])sidebarButtonBorder, cast(float[4])sidebarButtonText, UiTextStyle.small, 2.0f, 0.5f);
+        button.onClick = onClick;
+        return button;
+    }
+
     void buildInitWindow()
     {
-        initWindow = new UiWindow("Demo Control", windowMargin, windowMargin, initWidth, initHeight, cast(float[4])initBodyColor, cast(float[4])initHeaderColor, cast(float[4])initTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        initWindow = new UiWindow("Demo Control", sidebarReservedLeft, windowMargin, initWidth, initHeight, cast(float[4])initBodyColor, cast(float[4])initHeaderColor, cast(float[4])initTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         initContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         initHelpButton = new UiButton("Toggle Controls / Log", 0.0f, 0.0f, 0.0f, 0.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
@@ -442,7 +520,7 @@ final class DemoUiScreen : UiScreen
 
     void buildHelpWindow()
     {
-        helpWindow = new UiWindow("Controls / Log", windowMargin, windowMargin + initHeight + windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        helpWindow = new UiWindow("Controls / Log", sidebarReservedLeft, windowMargin + initHeight + windowMargin, helpWidth, helpHeight, cast(float[4])helpBodyColor, cast(float[4])helpHeaderColor, cast(float[4])helpTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         helpContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         helpTitleLabel = new UiLabel("Keyboard and mouse controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
@@ -663,30 +741,38 @@ final class DemoUiScreen : UiScreen
 
     override void anchorWindows()
     {
+        if (sidebarWindow !is null)
+        {
+            sidebarWindow.x = 0.0f;
+            sidebarWindow.y = 0.0f;
+            sidebarWindow.width = sidebarWidth;
+            sidebarWindow.height = viewportHeight > 0.0f ? viewportHeight : sidebarFallbackHeight;
+        }
+
         if (!initAnchored)
         {
-            initWindow.x = windowMargin;
+            initWindow.x = sidebarReservedLeft;
             initWindow.y = windowMargin;
             initAnchored = true;
         }
 
         if (!helpAnchored)
         {
-            helpWindow.x = windowMargin;
+            helpWindow.x = sidebarReservedLeft;
             helpWindow.y = initWindow.y + initWindow.height + windowMargin;
             helpAnchored = true;
         }
 
         if (!statusAnchored)
         {
-            statusWindow.x = viewportWidth > statusWindow.width ? viewportWidth - statusWindow.width - windowMargin : windowMargin;
+            statusWindow.x = viewportWidth > statusWindow.width + sidebarReservedLeft ? viewportWidth - statusWindow.width - windowMargin : sidebarReservedLeft;
             statusWindow.y = windowMargin;
             statusAnchored = true;
         }
 
         if (!settingsAnchored)
         {
-            settingsWindow.x = viewportWidth > settingsWindow.width ? viewportWidth - settingsWindow.width - windowMargin : windowMargin;
+            settingsWindow.x = viewportWidth > settingsWindow.width + sidebarReservedLeft ? viewportWidth - settingsWindow.width - windowMargin : sidebarReservedLeft;
             settingsWindow.y = viewportHeight > settingsWindow.height ? viewportHeight - settingsWindow.height - windowMargin : windowMargin;
             settingsAnchored = true;
         }
@@ -800,8 +886,10 @@ unittest
 {
     DemoUiScreen screen = new DemoUiScreen();
     screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
 
     assert(screen.containsPointer(20.0f, 20.0f));
+    assert(screen.initWindow.x >= sidebarReservedLeft, format("init x %.1f, reserved %.1f", screen.initWindow.x, sidebarReservedLeft));
     screen.toggleSettingsWindow();
     assert(screen.settingsWindow.visible);
     screen.toggleSettingsWindow();
@@ -810,4 +898,40 @@ unittest
     assert(screen.windowsInFrontToBack().length >= 5);
     screen.spawnChromeDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 6);
+}
+
+@("DemoUiScreen sidebar reveals and spawns demo windows")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    assert(screen.sidebarWindow.visible);
+    assert(screen.sidebarWindow.x == 0.0f);
+    assert(screen.sidebarWindow.y == 0.0f);
+    assert(screen.sidebarWindow.width == sidebarWidth);
+    assert(screen.sidebarWindow.height == 600.0f);
+    assert(screen.initWindow.x >= sidebarReservedLeft, format("init x %.1f, reserved %.1f", screen.initWindow.x, sidebarReservedLeft));
+    assert(screen.helpWindow.x >= sidebarReservedLeft, format("help x %.1f, reserved %.1f", screen.helpWindow.x, sidebarReservedLeft));
+
+    assert(!screen.helpWindow.visible);
+    screen.sidebarHelpButton.onClick();
+    assert(screen.helpWindow.visible);
+
+    assert(!screen.statusWindow.visible);
+    screen.sidebarStatusButton.onClick();
+    assert(screen.statusWindow.visible);
+
+    assert(!screen.settingsWindow.visible);
+    screen.sidebarSettingsButton.onClick();
+    assert(screen.settingsWindow.visible);
+
+    const testCount = screen.testWindows.length;
+    screen.sidebarWidgetButton.onClick();
+    assert(screen.testWindows.length == testCount + 1);
+
+    const chromeCount = screen.chromeWindows.length;
+    screen.sidebarChromeButton.onClick();
+    assert(screen.chromeWindows.length == chromeCount + 1);
 }

@@ -108,7 +108,7 @@ The reusable UI package currently provides these retained widgets:
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include `UiSidebar`, `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The first sidebar implementation can be composed from a chrome-less `UiWindow`, `UiVBox`, and icon-style buttons before it becomes a reusable class.
+Planned widgets and widget variants include reusable `UiSidebar`, `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact text-placeholder buttons; it can become a reusable class after icon assets and expanded-label behavior exist.
 
 `UiSurfaceBox` should not become the scrollable content solution. It should remain a simple content/frame box and probably be renamed. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars.
 

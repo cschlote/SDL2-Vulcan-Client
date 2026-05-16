@@ -48,6 +48,8 @@ class UiScreen
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
     {
+        viewportWidth_ = 0.0f;
+        viewportHeight_ = 0.0f;
         fontAtlases_ = liveFonts;
         windows_ = [];
         activeDragWindow = null;
