@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added widget documentation and planning notes for a chrome-less left-edge UI sidebar.
 - Added documentation for current and planned demo windows and the future retained UI animation model.
 - Added a demo custom inspect cursor for Widget Demo probe boxes.
 - Added optional bitmap cursor definitions and SDL custom cursor registration hooks.

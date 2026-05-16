@@ -36,6 +36,8 @@ Reusable UI engine code lives in [source/vulkan/ui/](../source/vulkan/ui):
 
 Demo-specific UI lives in [source/demo/demo_ui.d](../source/demo/demo_ui.d). That file currently contains `DemoUiScreen`, which builds the demo windows using the reusable UI engine.
 
+The widget catalog in [UI Widgets](ui-widgets.md) documents current widgets, planned widgets, expected demo coverage, and open implementation questions.
+
 ## UiScreen
 
 `UiScreen` represents the content area of the SDL window. It is the logical owner above `UiWindow`.
@@ -83,6 +85,8 @@ Window content should be ordinary widgets. Application code should build a windo
 
 Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from this chrome ring so application widgets do not overlap resize affordances.
 
+The next window variant is a chrome-less dock/sidebar window. It should allow the header, title, close button, resize ring, border thickness, and content padding to be configured independently. In that mode the content root fills the usable window rectangle, making a left-edge launcher bar possible without inventing a separate top-level owner.
+
 ## Current Widget Set
 
 The reusable UI package currently provides these retained widgets:
@@ -103,6 +107,8 @@ The reusable UI package currently provides these retained widgets:
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiSurfaceBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
+
+Planned widgets and widget variants include `UiSidebar`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The first sidebar implementation can be composed from a chrome-less `UiWindow`, `UiVBox`, and icon-style buttons before it becomes a reusable class.
 
 ## Context-Sensitive Cursors
 
@@ -224,6 +230,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - Should future color or animated cursors be represented as theme assets, renderer textures, SDL surfaces, or a backend-specific extension?
 - How should keyboard navigation, tab traversal, and modal windows be represented?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
+- Should the left-edge UI sidebar reserve viewport space, overlay the scene, or support both modes?
 - Which UI pieces are stable enough for the first public engine module?
 
 ## Related Files
@@ -236,5 +243,6 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - [source/demo/demo_ui.d](../source/demo/demo_ui.d)
 - [source/vulkan/engine/renderer.d](../source/vulkan/engine/renderer.d)
 - [docs/demo-ui-plan.md](demo-ui-plan.md)
+- [docs/ui-widgets.md](ui-widgets.md)
 - [docs/demo-windows.md](demo-windows.md)
 - [docs/ui-animation-plan.md](ui-animation-plan.md)

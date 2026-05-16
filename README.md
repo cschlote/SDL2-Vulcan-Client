@@ -16,6 +16,7 @@ This repository is a compact D codebase for building a small game-engine spine w
 - [docs/vulkan-quickstart.md](docs/vulkan-quickstart.md) for the frame lifecycle and Vulkan object model.
 - [docs/rendering-architecture.md](docs/rendering-architecture.md) for the renderer's layered frame composition.
 - [docs/ui-architecture.md](docs/ui-architecture.md) for the retained UI engine direction.
+- [docs/ui-widgets.md](docs/ui-widgets.md) for existing and planned UI widgets.
 - [docs/demo-windows.md](docs/demo-windows.md) for the current and planned demo windows that exercise UI classes.
 - [docs/ui-animation-plan.md](docs/ui-animation-plan.md) for the planned widget animation and window transition model.
 - [docs/audio-architecture.md](docs/audio-architecture.md) for the planned audio event, mixer, and music architecture.
