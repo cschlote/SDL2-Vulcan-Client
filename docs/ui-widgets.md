@@ -156,7 +156,7 @@ Required behavior:
 - vertical layout of actions with stable 32 x 32 icon slots
 - action widgets fill the available sidebar width in compact and expanded modes
 - support a growable spacer between primary launcher actions and bottom system actions
-- bottom system actions should include Help, Settings, and Exit in the demo sidebar
+- bottom system actions should include Help, Status, Settings, Close All, and Exit in the demo sidebar
 - keep the visible action count limited until the upper action group can scroll
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
@@ -179,7 +179,8 @@ Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
 - The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact and expanded labels.
-- The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Settings, and Exit actions to the bottom.
+- The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
+- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers and postpones a general `UiWindow` unique-id mechanism until a real engine use case needs it.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
 Open questions:

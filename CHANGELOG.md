@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Moved Status into the sidebar bottom action group and added a Close All action for singleton and repeatable demo windows.
 - Added a repeatable Selection Demo window for dropdown popups, edge popup placement, and list callbacks.
 - Added `UiSeparator` and used it to group controls in the Widget Demo.
 - Added a visible `UiTabBar` selection example to the Widget Demo.

@@ -546,6 +546,7 @@ final class DemoUiScreen : UiScreen
     private UiButton sidebarInputButton;
     private UiButton sidebarSelectionButton;
     private UiButton sidebarAudioButton;
+    private UiButton sidebarCloseAllButton;
     private UiButton sidebarExitButton;
     private UiWindow dropdownPopupWindow;
 
@@ -743,13 +744,13 @@ final class DemoUiScreen : UiScreen
         sidebarInputButton = buildSidebarButton("I", &spawnInputDemoWindow);
         sidebarSelectionButton = buildSidebarButton("Sel", &spawnSelectionDemoWindow);
         sidebarAudioButton = buildSidebarButton("A", &spawnAudioDemoWindow);
+        sidebarCloseAllButton = buildSidebarButton("All", &closeAllDemoWindows);
         sidebarExitButton = buildSidebarButton("X", &requestQuit);
         auto sidebarBottomSpacer = new UiSpacer(0.0f, 0.0f);
         sidebarBottomSpacer.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 0.0f, 1.0f);
 
         sidebarContent.add(sidebarExpandButton);
         sidebarContent.add(new UiSpacer(0.0f, sidebarSpacing));
-        sidebarContent.add(sidebarStatusButton);
         sidebarContent.add(sidebarWidgetButton);
         sidebarContent.add(sidebarChromeButton);
         sidebarContent.add(sidebarInputButton);
@@ -757,7 +758,9 @@ final class DemoUiScreen : UiScreen
         sidebarContent.add(sidebarAudioButton);
         sidebarContent.add(sidebarBottomSpacer);
         sidebarContent.add(sidebarHelpButton);
+        sidebarContent.add(sidebarStatusButton);
         sidebarContent.add(sidebarSettingsButton);
+        sidebarContent.add(sidebarCloseAllButton);
         sidebarContent.add(sidebarExitButton);
         sidebarWindow.add(sidebarContent);
         sidebarWindow.visible = true;
@@ -807,6 +810,7 @@ final class DemoUiScreen : UiScreen
         sidebarInputButton.setCaption(sidebarExpanded ? "I  Input" : "I");
         sidebarSelectionButton.setCaption(sidebarExpanded ? "Sel Select" : "Sel");
         sidebarAudioButton.setCaption(sidebarExpanded ? "A  Audio" : "A");
+        sidebarCloseAllButton.setCaption(sidebarExpanded ? "All Close" : "All");
         sidebarExitButton.setCaption(sidebarExpanded ? "X  Exit" : "X");
         applySidebarButtonLayout(sidebarExpandButton);
         applySidebarButtonLayout(sidebarHelpButton);
@@ -817,6 +821,7 @@ final class DemoUiScreen : UiScreen
         applySidebarButtonLayout(sidebarInputButton);
         applySidebarButtonLayout(sidebarSelectionButton);
         applySidebarButtonLayout(sidebarAudioButton);
+        applySidebarButtonLayout(sidebarCloseAllButton);
         applySidebarButtonLayout(sidebarExitButton);
     }
 
@@ -1137,8 +1142,19 @@ final class DemoUiScreen : UiScreen
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
         statusRotationLabel.text = format("Rotation: Yaw %.1f deg, Pitch %.1f deg", yawDegrees, pitchDegrees);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
-        helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length + inputWindows.length + selectionWindows.length + audioWindows.length));
+        updateOpenDemoWindowCountLabel();
         updateSettingsSummary();
+    }
+
+    uint openDemoWindowCount() const
+    {
+        return cast(uint)(testWindows.length + chromeWindows.length + inputWindows.length + selectionWindows.length + audioWindows.length);
+    }
+
+    void updateOpenDemoWindowCountLabel()
+    {
+        if (helpIntroLabel !is null)
+            helpIntroLabel.text = format("Open demo windows: %u", openDemoWindowCount());
     }
 
     override void anchorWindows()
@@ -1215,6 +1231,7 @@ final class DemoUiScreen : UiScreen
             placeWindowWithoutOverlap(demoWindow.window);
         }
         logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
     }
 
     void removeLayoutDemoWindow(LayoutDemoWindow demoWindow)
@@ -1232,6 +1249,7 @@ final class DemoUiScreen : UiScreen
         }
 
         removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
     }
 
     void spawnChromeDemoWindow()
@@ -1256,6 +1274,7 @@ final class DemoUiScreen : UiScreen
             placeWindowWithoutOverlap(demoWindow.window);
         }
         logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
     }
 
     void removeChromeDemoWindow(ChromeDemoWindow demoWindow)
@@ -1273,6 +1292,7 @@ final class DemoUiScreen : UiScreen
         }
 
         removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
     }
 
     void spawnInputDemoWindow()
@@ -1297,6 +1317,7 @@ final class DemoUiScreen : UiScreen
             placeWindowWithoutOverlap(demoWindow.window);
         }
         logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
     }
 
     void removeInputDemoWindow(InputDemoWindow demoWindow)
@@ -1314,6 +1335,7 @@ final class DemoUiScreen : UiScreen
         }
 
         removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
     }
 
     void spawnSelectionDemoWindow()
@@ -1338,6 +1360,7 @@ final class DemoUiScreen : UiScreen
             placeWindowWithoutOverlap(demoWindow.window);
         }
         logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
     }
 
     void removeSelectionDemoWindow(SelectionDemoWindow demoWindow)
@@ -1355,6 +1378,7 @@ final class DemoUiScreen : UiScreen
         }
 
         removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
     }
 
     void spawnAudioDemoWindow()
@@ -1384,6 +1408,7 @@ final class DemoUiScreen : UiScreen
             placeWindowWithoutOverlap(demoWindow.window);
         }
         logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
     }
 
     void removeAudioDemoWindow(AudioDemoWindow demoWindow)
@@ -1401,6 +1426,32 @@ final class DemoUiScreen : UiScreen
         }
 
         removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
+    }
+
+    void closeAllDemoWindows()
+    {
+        dismissActivePopup();
+
+        hideWindow(helpWindow, false);
+        hideWindow(statusWindow, false);
+        hideWindow(settingsWindow, false);
+
+        while (testWindows.length > 0)
+            removeLayoutDemoWindow(testWindows[$ - 1]);
+        while (chromeWindows.length > 0)
+            removeChromeDemoWindow(chromeWindows[$ - 1]);
+        while (inputWindows.length > 0)
+            removeInputDemoWindow(inputWindows[$ - 1]);
+        while (selectionWindows.length > 0)
+            removeSelectionDemoWindow(selectionWindows[$ - 1]);
+        while (audioWindows.length > 0)
+            removeAudioDemoWindow(audioWindows[$ - 1]);
+
+        if (sidebarWindow !is null)
+            bringWindowToFront(sidebarWindow);
+        updateOpenDemoWindowCountLabel();
+        logLine("UiSidebar close all windows");
     }
 }
 
@@ -1446,6 +1497,7 @@ unittest
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarStatusButton.y > screen.sidebarAudioButton.y);
     assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
     assert(screen.helpShapeLabel.text == "+/- switch 3D model; F/T/W/H switch render modes.");
@@ -1511,6 +1563,24 @@ unittest
     screen.audioWindows[$ - 1].uiClickButton.onClick();
     assert(audioEvents == 1);
     assert(audioKind == DemoAudioPreviewKind.ui);
+
+    screen.sidebarHelpButton.onClick();
+    screen.sidebarStatusButton.onClick();
+    screen.sidebarSettingsButton.onClick();
+    assert(screen.helpWindow.visible);
+    assert(screen.statusWindow.visible);
+    assert(screen.settingsWindow.visible);
+
+    screen.sidebarCloseAllButton.onClick();
+    assert(!screen.helpWindow.visible);
+    assert(!screen.statusWindow.visible);
+    assert(!screen.settingsWindow.visible);
+    assert(screen.testWindows.length == 0);
+    assert(screen.chromeWindows.length == 0);
+    assert(screen.inputWindows.length == 0);
+    assert(screen.selectionWindows.length == 0);
+    assert(screen.audioWindows.length == 0);
+    assert(screen.helpIntroLabel.text == "Open demo windows: 0");
 
     assert(!screen.quitRequested);
     screen.sidebarExitButton.onClick();
@@ -1670,10 +1740,14 @@ unittest
     assert(screen.sidebarHelpButton.caption == "?  Help Desk");
     assert(screen.sidebarInputButton.caption == "I  Input");
     assert(screen.sidebarAudioButton.caption == "A  Audio");
+    assert(screen.sidebarStatusButton.caption == "S  Status");
+    assert(screen.sidebarCloseAllButton.caption == "All Close");
     assert(screen.sidebarExitButton.caption == "X  Exit");
     UiLayoutContext context;
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarExpandedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarStatusButton.y > screen.sidebarAudioButton.y);
+    assert(screen.sidebarCloseAllButton.y > screen.sidebarSettingsButton.y);
     assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
 
     screen.sidebarExpandButton.onClick();
@@ -1682,9 +1756,13 @@ unittest
     assert(screen.sidebarHelpButton.caption == "?");
     assert(screen.sidebarInputButton.caption == "I");
     assert(screen.sidebarAudioButton.caption == "A");
+    assert(screen.sidebarStatusButton.caption == "S");
+    assert(screen.sidebarCloseAllButton.caption == "All");
     assert(screen.sidebarExitButton.caption == "X");
     screen.sidebarWindow.layoutWindow(context);
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
+    assert(screen.sidebarStatusButton.y > screen.sidebarAudioButton.y);
+    assert(screen.sidebarCloseAllButton.y > screen.sidebarSettingsButton.y);
     assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
 }
 

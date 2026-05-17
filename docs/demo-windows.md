@@ -26,7 +26,8 @@ Current behavior:
 - spawns repeatable windows such as Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
-- exposes bottom system actions for Help, Settings, and Exit
+- exposes bottom system actions for Help, Status, Settings, Close All, and Exit
+- hides singleton windows and removes repeatable demo-window instances through the Close All action
 - keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
@@ -35,7 +36,8 @@ Useful regression checks:
 - content root really fills the chrome-less window
 - icon slots stay stable at compact width
 - compact and expanded action buttons fill the available sidebar width
-- the growable spacer keeps Help, Settings, and Exit aligned to the bottom edge after viewport resizing
+- the growable spacer keeps Help, Status, Settings, Close All, and Exit aligned to the bottom edge after viewport resizing
+- Close All hides the singleton Help Desk, Status, and Settings windows and destroys repeatable demo windows without relying on window titles
 - expanding the sidebar updates the reserved left edge for demo windows
 - viewport resizing keeps the bar attached to the left edge
 - shrinking to the minimum SDL window height must shrink the growable spacer instead of clipping bottom actions
