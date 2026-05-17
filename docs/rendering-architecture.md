@@ -36,7 +36,7 @@ They are useful because they exercise the important engine paths:
 
 ## UI Layer
 
-The foreground UI is a retained widget system rendered in native window pixels. It is not a screenshot texture or an immediate-mode debug overlay. Widgets generate panel and text geometry, and the renderer uploads that geometry into per-frame overlay buffers.
+The foreground UI is a retained widget system rendered in native window pixels. It is not a screenshot texture or an immediate-mode debug overlay. Widgets generate panel, image, and text geometry, and the renderer uploads that geometry into per-frame overlay buffers.
 
 The ownership split is:
 
@@ -70,6 +70,7 @@ Reusable engine candidates:
 - `source/vulkan/font/`: font atlas and text geometry support
 - `source/vulkan/engine/instance.d`, `device.d`, `swapchain.d`, and `pipeline.d`: Vulkan setup helpers after API boundaries are tightened
 - renderer-facing UI draw data in `source/vulkan/ui/ui_geometry.d`
+- UI image asset-id mapping and simple PPM decode support in `source/vulkan/ui/ui_image_assets.d`; it currently maps retained ids to atlas regions, overlays `assets/ui/` demo files into generated fallback cells, and should later be backed by a real image package loader
 - mesh and asset-facing abstractions after placeholder geometry is replaced
 
 Demo-only candidates:

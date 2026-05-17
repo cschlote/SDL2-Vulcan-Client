@@ -55,6 +55,7 @@ Generic responsibilities belong in `UiScreen`:
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
+- resolve tooltip text through `UiScreen.tooltipAt` for future tooltip popups
 - place windows in free screen space when possible
 - start normal window open and close transitions through shared show, hide, and toggle helpers
 - animate programmatic window move and resize requests through shared bounds helpers
@@ -101,11 +102,13 @@ Modal dialog conventions are attached to `UiWindow` through optional default and
 
 The reusable UI package currently provides these retained widgets:
 
-- `UiWindow`: framed, draggable, resizeable or chrome-less top-level window with an internal content root, optional backfill, and viewport-edge pinning
+- `UiWindow`: framed, draggable, resizeable or chrome-less top-level window with an internal content root, optional backfill, backdrop layering, and viewport-edge pinning
+- `UiWindow` can be marked input-transparent for visible overlays such as delayed, frameless tooltips that should not intercept hit testing.
 - `UiLabel`: single-line text label
 - `UiTextBlock`: text block placeholder for multi-line text rendering
 - `UiButton`: framed button with optional icon and label content row
-- `UiImage`: compact framed image/icon placeholder
+- `UiSidebarAction`: fixed icon-slot launcher row for sidebar and dock actions
+- `UiImage`: compact framed image/icon placeholder with optional texture asset id, image draw intent, renderer-side atlas registry, generated fallback atlas cells, and first low-resolution file-backed PPM demo assets
 - `UiSpacer`: invisible layout spacer
 - `UiContentBox`: padded content root used by windows and other containers
 - `UiFrameBox`: visible framed content box for grouping content
@@ -122,7 +125,7 @@ The reusable UI package currently provides these retained widgets:
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, `UiIconButton`, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
+Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, `UiIconButton`, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and `UiSidebarAction` rows. Those rows already keep icon slot and expanded label region separate, show active singleton markers, and expose delayed collapsed-mode tooltips; the remaining sidebar work is a reusable sidebar container, scrollable launcher group, stronger visual design, and better authored image assets.
 
 `UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
 

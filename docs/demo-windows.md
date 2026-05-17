@@ -15,9 +15,9 @@ The implementation lives in [source/demo/demo_ui.d](../source/demo/demo_ui.d). R
 
 ## UI Sidebar
 
-The UI Sidebar is the persistent left-edge launcher for demo windows. It replaces the old Demo Control window and is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
+The UI Sidebar is the persistent left-edge launcher for demo windows. It replaces the old Demo Control window and is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 icon actions. Expanded mode widens the bar and shows text labels beside the fixed icon slots.
 
-The sidebar actions currently reuse `UiButton`, whose internal content row centers the label with flexible spacers on both sides. This keeps the bootstrap implementation small, but it is only a placeholder for the final launcher-row design. A later `UiIconButton` or `UiSidebarAction` should keep a fixed icon slot on the left and place expanded text in a separate label region.
+The sidebar actions use `UiSidebarAction`. This keeps a fixed icon slot on the left with 26 x 26 image content, places expanded text in a separate label region, keeps compact captions empty so old mnemonic placeholder letters are not shown beside real icons, animates sidebar expand/collapse through the window bounds-transition path, can show a slim active marker for open singleton windows, and shows collapsed-label tooltips after a hover delay through the generic screen tooltip hook and a small frameless input-transparent tooltip window above/right of the pointer.
 
 Current behavior:
 
@@ -51,7 +51,7 @@ Planned extensions:
 - show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
 - active or visible-state markers for target windows
 - tooltips for collapsed icon-only actions
-- texture-backed icons or placeholder icon widgets
+- texture-backed icons with generated fallback cells; the current low-resolution PPM files are placeholders until a coherent high-resolution icon set and package image loader exist
 - `UiIconButton` or equivalent icon-plus-label action rows with fixed icon slot and separate label region
 - optional animation support for expand/collapse
 
@@ -84,7 +84,7 @@ Planned extensions:
 
 ## Status Window
 
-The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiLabel`, per-frame text updates, viewport-edge pinning, and a chrome-less no-backfill presentation.
+The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, preferred-size measurement, per-frame text updates, viewport-edge pinning, and a chrome-less no-backfill presentation.
 
 Current behavior:
 
@@ -94,8 +94,12 @@ Current behavior:
 - displays current render mode
 - displays 3D object yaw and pitch angles
 - displays viewport size
-- pins to the top-right SDL viewport edge
+- pins to the top-right SDL viewport edge with configurable top/right margins
 - renders without header, border, resize chrome, or window backfill so only the status widgets are visible
+- is marked as a backdrop window so regular demo and dialog windows are drawn and routed above it
+- auto-sizes to the current key/value rows instead of reserving a fixed dialog-sized rectangle
+- re-measures after live text changes so longer build, scene, or render-mode strings grow the overlay before pinning is applied
+- uses muted captions and brighter value colors so the compact overlay remains scannable
 
 Useful regression checks:
 
@@ -104,6 +108,7 @@ Useful regression checks:
 - changing render mode or scene shape updates the status text immediately
 - keyboard or mouse rotation updates the yaw/pitch text without moving the window
 - numeric text remains aligned enough to scan during rendering tests
+- longer build/version strings grow the window only as far as needed
 
 Planned extensions:
 
@@ -150,13 +155,14 @@ Planned extensions:
 
 ## Widget Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
 - contains a layout and box section with nested probe boxes and a padded content-box example
 - contains a retained-controls section with buttons, toggle, slider, dropdown, list, tab, and text field examples
+- contains placeholder image/icon examples with asset ids and an icon-plus-label button
 - groups related control rows with non-interactive separators
 - updates a progress bar from the Amount slider
 - updates a summary label from the list selection
@@ -176,15 +182,16 @@ Useful regression checks:
 
 Planned extensions:
 
-- add image widgets and future controls to the gallery
+- replace placeholder image widgets with texture-backed image assets once the renderer exposes them to UI widgets
+- add future controls to the gallery
 - wrap the gallery in `UiScrollArea` after renderer clipping exists
 - add popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
 
-## Chrome Demo Window
+## UiWindow / Chrome Demo Window
 
-The Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, `UiToggle`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
+The UiWindow / Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, optional window backfill, viewport-edge pinning, `UiDropdown`, `UiToggle`, `UiButton`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
 
 Current behavior:
 
@@ -193,6 +200,10 @@ Current behavior:
 - toggles header dragging
 - toggles middle-click front/back stacking
 - toggles header, title, and border visibility
+- toggles body/header backfill rendering
+- toggles viewport-edge pinning on each edge
+- offers presets for default windows, transparent overlays, docked status-like windows, tool palettes, and dialogs
+- resets all demo settings to defaults from a button
 - updates a summary label from toggle callbacks
 - spawns as independent windows and removes itself when closed
 
@@ -202,6 +213,9 @@ Useful regression checks:
 - disabling close hides or blocks only close behavior, not window visibility management elsewhere
 - disabling the resize grips removes resize cursor regions and resize gestures
 - disabling the header moves content to the top chrome inset, while disabling the border lets content fill the full window area
+- disabling backfill leaves child widgets visible and interactive
+- pinning follows SDL viewport resize without making API move/resize unavailable
+- presets are ordinary control changes and leave the user free to continue editing individual toggles
 - chrome controls receive pointer buttons before generic window stacking fallback
 - content remains inset away from resize grips when sizeability changes
 
