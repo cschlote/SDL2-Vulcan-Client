@@ -692,7 +692,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiListBox` shows selectable text rows. It is currently used as the reusable option surface inside dropdown popups.
+`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Widget Demo.
 
 Common use cases:
 
@@ -715,7 +715,7 @@ Required behavior:
 Demo coverage:
 
 - Settings dropdown popups.
-- Widget Demo dropdown popup.
+- Widget Demo visible list selection and dropdown popup.
 - planned Selection Demo.
 
 ### UiSeparator

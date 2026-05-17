@@ -131,14 +131,22 @@ final class LayoutDemoWindow
         progressBar.setLayoutHint(0.0f, 24.0f, 0.0f, 24.0f, float.max, 24.0f, 1.0f, 0.0f);
         amountSlider.onChanged = (value) { progressBar.setValue(value); };
         controlsBody.add(progressBar);
+        auto selectionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        selectionRow.setLayoutHint(0.0f, 78.0f, 0.0f, 78.0f, float.max, 78.0f, 1.0f, 0.0f);
+        auto listBox = new UiListBox(["Alpha", "Beta", "Gamma"], 1, 0.0f, 0.0f, 150.0f, 72.0f, UiTextStyle.medium, 24.0f);
+        auto listSummary = new UiLabel("List selection: Beta", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        listBox.onChanged = (index, value) { listSummary.text = format("List selection: %s", value); };
+        selectionRow.add(listBox);
+        selectionRow.add(listSummary);
+        controlsBody.add(selectionRow);
         auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
         actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
         actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
         controlsBody.add(actionRow);
 
-        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 182.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        controlsSection.setLayoutHint(0.0f, 182.0f, 0.0f, 182.0f, float.max, 182.0f, 1.0f, 0.0f);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 268.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 268.0f, 0.0f, 268.0f, float.max, 268.0f, 1.0f, 0.0f);
         controlsSection.add(controlsBody);
 
         content.add(layoutSection);
