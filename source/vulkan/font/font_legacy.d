@@ -810,7 +810,7 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
         const lineWidth = renderedRight - renderedLeft;
         widestWidth = lineWidth > widestWidth ? lineWidth : widestWidth;
 
-        logLineVerbose("measureTextWidth line ", lineCount, ": width=", lineWidth, ", renderedLeft=", renderedLeft, ", renderedRight=", renderedRight);
+        // logLineVerbose("measureTextWidth line ", lineCount, ": width=", lineWidth, ", renderedLeft=", renderedLeft, ", renderedRight=", renderedRight);
         lineCount++;
 
         cursorX = 0.0f;
@@ -893,8 +893,8 @@ float measureTextWidth(ref const(FontAtlas) atlas, string text)
     const renderedLeft = lineLeft < 0.0f ? lineLeft : 0.0f;
     const renderedRight = lineRight > cursorX ? lineRight : cursorX;
     const lineWidth = renderedRight - renderedLeft;
-    logLineVerbose("measureTextWidth final line ", lineCount, ": width=", lineWidth, ", text chars=", text.length);
-    logLineVerbose("measureTextWidth result: widestWidth=", (lineWidth > widestWidth ? lineWidth : widestWidth), ", lines=", text.length == 0 ? 0 : lineCount);
+    // logLineVerbose("measureTextWidth final line ", lineCount, ": width=", lineWidth, ", text chars=", text.length);
+    // logLineVerbose("measureTextWidth result: widestWidth=", (lineWidth > widestWidth ? lineWidth : widestWidth), ", lines=", text.length == 0 ? 0 : lineCount);
     return lineWidth > widestWidth ? lineWidth : widestWidth;
 }
 
@@ -924,7 +924,7 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
     dchar previousChar = '\0';
     const vertexCountBefore = vertices.length;
 
-    logLineVerbose("appendText: text chars=", text.length, ", start=", x, ",", y, ", baselineOffset=", baselineOffset, ", atlas=", atlas.width, "x", atlas.height);
+    // logLineVerbose("appendText: text chars=", text.length, ", start=", x, ",", y, ", baselineOffset=", baselineOffset, ", atlas=", atlas.width, "x", atlas.height);
 
     foreach (ch; text)
     {
@@ -963,7 +963,7 @@ void appendText(ref Vertex[] vertices, const(FontAtlas) atlas, string text, floa
         previousChar = ch;
     }
 
-    logLineVerbose("appendText: emitted vertices=", vertices.length - vertexCountBefore, ", quads=", (vertices.length - vertexCountBefore) / 6, ", final cursor=", cursorX, ",", cursorY);
+    // logLineVerbose("appendText: emitted vertices=", vertices.length - vertexCountBefore, ", quads=", (vertices.length - vertexCountBefore) / 6, ", final cursor=", cursorX, ",", cursorY);
 }
 
 /** Pixel-space bounds of rendered text geometry. */
