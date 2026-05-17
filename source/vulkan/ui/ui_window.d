@@ -597,7 +597,7 @@ protected:
     {
         updateChromeLayout();
 
-        const headerFill = showHeader ? headerColor : bodyColor;
+        const headerFill = showHeader ? headerFillColor() : bodyColor;
         const bodyFill = bodyColor;
         const renderedHeaderHeight = showHeader ? headerHeight : 0.0f;
 
@@ -618,7 +618,7 @@ protected:
         if (showHeader && showTitle)
         {
             const titleX = activeResizeRing() ? resizeGripHitSize + 6.0f : 10.0f;
-            const titleY = max(0.0f, (headerHeight - titleTextHeight(context)) * 0.5f);
+            const titleY = max(0.0f, (headerHeight - titleMetricHeight(context)) * 0.5f);
             appendTextLine(context, UiTextStyle.large, title, titleX, titleY, focusedTitleColor(), context.depthBase - 0.001f);
         }
 
@@ -677,10 +677,18 @@ private:
     }
 
     /** Returns the draw-time title text height used for vertical centering. */
-    float titleTextHeight(ref UiRenderContext context) const
+    float titleMetricHeight(ref UiRenderContext context) const
     {
         const atlas = context.atlasFor(UiTextStyle.large);
-        return atlas is null ? fallbackTitleTextHeight : max(atlas.lineHeight, atlas.ascent + atlas.descent);
+        return atlas is null ? fallbackTitleTextHeight : atlas.ascent + atlas.descent;
+    }
+
+    /** Returns the header color with the same transparency as the window body. */
+    float[4] headerFillColor() const
+    {
+        float[4] color = headerColor;
+        color[3] = bodyColor[3];
+        return color;
     }
 
     /** Returns the title color adjusted for an active keyboard focus owner. */

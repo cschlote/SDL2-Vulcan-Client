@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Matched window header transparency to the body fill and centered titles by font ascent/descent metrics.
 - Kept keyboard focus inside open dropdown popups and lowered synthetic UI audio preview gain.
 - Added visible `UiScrollArea` scrollbar thumbs and edge overflow indicators.
 - Made focused window titles visually distinct, opened focused dropdowns with Enter, and rendered settings tabs as attached tab-strip tabs.

@@ -43,18 +43,28 @@ void appendWindowFrame(ref UiRenderContext context, float left, float top, float
     if (right <= left || bottom <= top)
         return;
 
-    appendQuad(context, left, top, right, bottom, z, bodyColor);
-
     if (headerHeight <= 0.0f)
+    {
+        appendQuad(context, left, top, right, bottom, z, bodyColor);
         return;
+    }
+
+    const effectiveHeaderHeight = headerHeight < bottom - top ? headerHeight : bottom - top;
+    const headerBottom = top + effectiveHeaderHeight;
+    if (headerBottom < bottom)
+        appendQuad(context, left, headerBottom, right, bottom, z, bodyColor);
 
     const headerLeft = left + headerLeftInset;
     const headerRight = right - headerRightInset;
+    if (headerLeft > left)
+        appendQuad(context, left, top, headerLeft, headerBottom, z, bodyColor);
+    if (headerRight < right)
+        appendQuad(context, headerRight, top, right, headerBottom, z, bodyColor);
     if (headerRight > headerLeft)
-        appendQuad(context, headerLeft, top, headerRight, top + headerHeight, z - 0.001f, headerColor);
+        appendQuad(context, headerLeft, top, headerRight, headerBottom, z - 0.001f, headerColor);
 
-    appendQuad(context, left, top + headerHeight - 2.0f, right, top + headerHeight - 1.0f, z - 0.002f, [0.10f, 0.10f, 0.12f, 0.70f]);
-    appendQuad(context, left, top + headerHeight - 1.0f, right, top + headerHeight, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.48f]);
+    appendQuad(context, left, headerBottom - 2.0f, right, headerBottom - 1.0f, z - 0.002f, [0.10f, 0.10f, 0.12f, 0.70f]);
+    appendQuad(context, left, headerBottom - 1.0f, right, headerBottom, z - 0.002f, [0.98f, 0.98f, 1.0f, 0.48f]);
 }
 
 /** Appends the outer border quads for a retained window frame. */
