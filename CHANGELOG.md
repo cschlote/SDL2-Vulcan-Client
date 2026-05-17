@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added decoded audio clip and active voice primitives with looped/non-looped mixing into float buffers.
 - Added a float audio mixer scaffold for silent output buffers, interleaved block mixing, bus gain, and sample clamping.
 - Added an SDL audio device owner scaffold with requested and actual playback format state.
 - Added visible retained UI keyboard focus rings and focused-window header highlighting.
