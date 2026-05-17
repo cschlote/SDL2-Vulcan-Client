@@ -11,16 +11,24 @@
  */
 module vulkan.ui.ui_image;
 
+import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext;
+import vulkan.ui.ui_geometry : UiImageDrawCommand;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
-import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
+import vulkan.ui.ui_widget_helpers : appendImageQuad, appendSurfaceFrame;
 
 enum float defaultImageSize = 12.0f;
 
 /** Small retained image placeholder rendered as a framed square. */
 final class UiImage : UiWidget
 {
+    /** Optional renderer-facing texture asset id. Empty keeps placeholder-only rendering. */
+    string assetId;
+    /** Tint color applied to the texture-backed image quad. */
+    float[4] tintColor;
+    /** UV rectangle inside the bound asset, ordered u0, v0, u1, v1. */
+    float[4] uvRect;
     /** Interior fill color. */
     float[4] fillColor;
     /** Border color around the image surface. */
@@ -39,6 +47,21 @@ final class UiImage : UiWidget
         super(0.0f, 0.0f, width, height);
         this.fillColor = fillColor;
         this.borderColor = borderColor;
+        tintColor = [1.0f, 1.0f, 1.0f, 1.0f];
+        uvRect = [0.0f, 0.0f, 1.0f, 1.0f];
+    }
+
+    /** Assigns the texture asset id requested during rendering. */
+    void setAsset(string assetId, float[4] uvRect = [0.0f, 0.0f, 1.0f, 1.0f])
+    {
+        this.assetId = assetId;
+        this.uvRect = uvRect;
+    }
+
+    /** Returns true when this image requests a texture-backed renderer path. */
+    bool hasTextureAsset() const
+    {
+        return assetId.length != 0;
     }
 
 protected:
@@ -52,6 +75,8 @@ protected:
 
     override void renderSelf(ref UiRenderContext context)
     {
+        if (hasTextureAsset())
+            appendImageQuad(context, assetId, 0.0f, 0.0f, width, height, context.depthBase - 0.0005f, tintColor, fillColor, uvRect);
         appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
     }
 }
@@ -66,4 +91,24 @@ unittest
 
     assert(size.width == 14.0f);
     assert(size.height == 9.0f);
+}
+
+@("UiImage emits image draw intent while keeping placeholder fallback")
+unittest
+{
+    UiRenderContext context;
+    context.extentWidth = 100.0f;
+    context.extentHeight = 100.0f;
+    Vertex[] panels;
+    UiImageDrawCommand[] images;
+    context.panels = &panels;
+    context.images = &images;
+
+    auto image = new UiImage(16.0f, 12.0f);
+    image.setAsset("demo/icon");
+    image.render(context);
+
+    assert(images.length == 1);
+    assert(images[0].assetId == "demo/icon");
+    assert(panels.length > 0);
 }
