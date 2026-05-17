@@ -547,7 +547,7 @@ Required behavior:
 Demo coverage:
 
 - Settings.
-- planned Audio Demo and Animation Demo.
+- Audio Demo and planned Animation Demo.
 
 ### UiDropdown
 
@@ -576,7 +576,7 @@ Demo coverage:
 
 - Settings.
 - Widget Demo.
-- planned Selection Demo.
+- Selection Demo.
 
 ### UiTextField
 
@@ -603,7 +603,7 @@ Required behavior:
 Demo coverage:
 
 - Settings width and height fields.
-- planned Input Demo.
+- Input Demo.
 
 ## Visual And Media Widgets
 
@@ -742,7 +742,7 @@ Demo coverage:
 
 - Settings dropdown popups.
 - Widget Demo visible list selection and dropdown popup.
-- planned Selection Demo.
+- Selection Demo.
 
 ### UiSeparator
 
