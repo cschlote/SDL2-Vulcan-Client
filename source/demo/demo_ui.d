@@ -33,7 +33,7 @@ import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEven
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_image : UiImage;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiScrollArea, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiGrid, UiHBox, UiScrollArea, UiSeparator, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
 import vulkan.ui.ui_sidebar_action : UiSidebarAction;
@@ -62,11 +62,11 @@ private final class LayoutDemoProbeBox : UiWidget
         super(0.0f, 0.0f, width, height);
         this.fillColor = fillColor;
         this.borderColor = borderColor;
+        setLayoutHint(width, height, width, height, width, height, 0.0f, 0.0f);
     }
 
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
-        setLayoutHint(preferredWidth, preferredHeight, preferredWidth, preferredHeight, preferredWidth, preferredHeight, 0.0f, 0.0f);
         return UiLayoutSize(preferredWidth, preferredHeight);
     }
 
@@ -81,15 +81,15 @@ private final class LayoutDemoProbeBox : UiWidget
     }
 }
 
-/** Builds a retained layout demo window that can be spawned repeatedly. */
-final class LayoutDemoWindow
+/** Builds a retained custom-widget demo window that can be spawned repeatedly. */
+final class CustomDemoWindow
 {
     UiWindow window;
     UiVBox content;
 
     this(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
     {
-        const windowTitle = format("Layout Demo #%u", serial);
+        const windowTitle = format("Custom Demo #%u", serial);
         window = new UiWindow(windowTitle, 36.0f, 36.0f, 390.0f, 260.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
@@ -103,9 +103,12 @@ final class LayoutDemoWindow
         layoutSectionBody.add(new UiLabel("Layout probes and container bounds", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
         layoutSectionBody.add(topRow);
         layoutSectionBody.add(new UiSpacer(0.0f, 4.0f));
-        auto contentBox = new UiContentBox(0.0f, 0.0f, 0.0f, 44.0f, 8.0f, 8.0f, 8.0f, 8.0f);
-        contentBox.setLayoutHint(0.0f, 44.0f, 0.0f, 44.0f, float.max, 44.0f, 1.0f, 0.0f);
-        contentBox.add(new LayoutDemoProbeBox(260.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        auto contentBox = new UiContentBox(0.0f, 0.0f, 0.0f, 54.0f, 8.0f, 8.0f, 8.0f, 8.0f);
+        contentBox.setLayoutHint(0.0f, 54.0f, 0.0f, 54.0f, float.max, 54.0f, 1.0f, 0.0f);
+        auto contentInnerRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        contentInnerRow.add(new LayoutDemoProbeBox(220.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        contentInnerRow.add(new UiSpacer());
+        contentBox.add(contentInnerRow);
         layoutSectionBody.add(contentBox);
         auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 164.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
         layoutSection.setLayoutHint(0.0f, 164.0f, 0.0f, 164.0f, float.max, 164.0f, 1.0f, 0.0f);
@@ -139,6 +142,98 @@ final class LayoutDemoWindow
     void layout(ref UiLayoutContext context)
     {
         window.layoutWindow(context);
+    }
+}
+
+/** Builds a retained layout-system demo with live layout controls. */
+final class LayoutDemoWindow
+{
+    UiWindow window;
+    UiVBox content;
+    private UiHBox previewRow;
+    private UiVBox previewColumn;
+    private UiGrid previewGrid;
+    private UiSpacer rowSpacer;
+    private UiSpacer columnSpacer;
+    private LayoutDemoProbeBox rowGrowBox;
+    private LayoutDemoProbeBox columnGrowBox;
+    private UiLabel summaryLabel;
+
+    this(uint serial)
+    {
+        const windowTitle = format("Layout Demo #%u", serial);
+        window = new UiWindow(windowTitle, 38.0f, 38.0f, 520.0f, 420.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+        content.add(new UiLabel("HBox, VBox, Grid, Spacer", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+
+        previewRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        previewRow.setLayoutHint(0.0f, 54.0f, 0.0f, 54.0f, float.max, 54.0f, 1.0f, 0.0f);
+        previewRow.add(new LayoutDemoProbeBox(64.0f, 36.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
+        rowGrowBox = new LayoutDemoProbeBox(86.0f, 36.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB);
+        rowGrowBox.setLayoutHint(40.0f, 36.0f, 86.0f, 36.0f, float.max, 36.0f, 1.0f, 0.0f);
+        previewRow.add(rowGrowBox);
+        rowSpacer = new UiSpacer(20.0f, 0.0f);
+        rowSpacer.setLayoutHint(0.0f, 0.0f, 20.0f, 0.0f, float.max, 0.0f, 1.0f, 0.0f);
+        previewRow.add(rowSpacer);
+        previewRow.add(new LayoutDemoProbeBox(64.0f, 36.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC));
+        auto rowFrame = new UiFrameBox(0.0f, 0.0f, 0.0f, 76.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 10.0f, 10.0f, 10.0f);
+        rowFrame.setLayoutHint(0.0f, 76.0f, 0.0f, 76.0f, float.max, 76.0f, 1.0f, 0.0f);
+        rowFrame.add(previewRow);
+        content.add(rowFrame);
+
+        previewColumn = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
+        previewColumn.setLayoutHint(0.0f, 110.0f, 0.0f, 110.0f, float.max, 110.0f, 1.0f, 0.0f);
+        previewColumn.add(new LayoutDemoProbeBox(0.0f, 22.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
+        columnSpacer = new UiSpacer(0.0f, 12.0f);
+        columnSpacer.setLayoutHint(0.0f, 0.0f, 0.0f, 12.0f, 0.0f, float.max, 0.0f, 1.0f);
+        previewColumn.add(columnSpacer);
+        columnGrowBox = new LayoutDemoProbeBox(0.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD);
+        columnGrowBox.setLayoutHint(0.0f, 24.0f, 0.0f, 28.0f, float.max, float.max, 1.0f, 1.0f);
+        previewColumn.add(columnGrowBox);
+        auto columnFrame = new UiFrameBox(0.0f, 0.0f, 0.0f, 132.0f, [0.10f, 0.14f, 0.17f, 0.92f], [0.34f, 0.62f, 0.78f, 1.00f], 10.0f, 10.0f, 10.0f, 10.0f);
+        columnFrame.setLayoutHint(0.0f, 132.0f, 0.0f, 132.0f, float.max, 132.0f, 1.0f, 0.0f);
+        columnFrame.add(previewColumn);
+
+        previewGrid = new UiGrid(2, 3, 0.0f, 0.0f, 0.0f, 110.0f, 8.0f, 8.0f);
+        previewGrid.setLayoutHint(0.0f, 110.0f, 0.0f, 110.0f, float.max, 110.0f, 1.0f, 0.0f);
+        previewGrid.add(new LayoutDemoProbeBox(0.0f, 0.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA), 0, 0);
+        previewGrid.add(new LayoutDemoProbeBox(0.0f, 0.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB), 0, 1, 1, 2);
+        previewGrid.add(new LayoutDemoProbeBox(0.0f, 0.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC), 1, 0, 1, 2);
+        previewGrid.add(new LayoutDemoProbeBox(0.0f, 0.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD), 1, 2);
+        auto gridFrame = new UiFrameBox(0.0f, 0.0f, 0.0f, 132.0f, [0.12f, 0.12f, 0.16f, 0.92f], [0.58f, 0.50f, 0.78f, 1.00f], 10.0f, 10.0f, 10.0f, 10.0f);
+        gridFrame.setLayoutHint(0.0f, 132.0f, 0.0f, 132.0f, float.max, 132.0f, 1.0f, 0.0f);
+        gridFrame.add(previewGrid);
+
+        auto lowerRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        lowerRow.setLayoutHint(0.0f, 132.0f, 0.0f, 132.0f, float.max, 132.0f, 1.0f, 0.0f);
+        lowerRow.add(columnFrame);
+        lowerRow.add(gridFrame);
+        content.add(lowerRow);
+
+        auto controlRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        controlRow.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
+        auto spacingSlider = new UiSlider("Spacing", 0.0f, 24.0f, previewRow.spacing, 0.0f, 0.0f, 190.0f, 34.0f);
+        auto growSlider = new UiSlider("Grow", 0.0f, 3.0f, rowGrowBox.flexGrowX, 0.0f, 0.0f, 160.0f, 34.0f);
+        auto gridSpacingSlider = new UiSlider("Grid", 0.0f, 18.0f, previewGrid.spacingX, 0.0f, 0.0f, 160.0f, 34.0f);
+        spacingSlider.onChanged = (value) { previewRow.spacing = value; previewColumn.spacing = value * 0.5f; updateSummary(); };
+        growSlider.onChanged = (value) { rowGrowBox.flexGrowX = value; columnGrowBox.flexGrowY = value; updateSummary(); };
+        gridSpacingSlider.onChanged = (value) { previewGrid.spacingX = value; previewGrid.spacingY = value; updateSummary(); };
+        controlRow.add(spacingSlider);
+        controlRow.add(growSlider);
+        controlRow.add(gridSpacingSlider);
+        content.add(new UiSeparator());
+        content.add(controlRow);
+        summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.small, cast(float[4])helpTextColor);
+        content.add(summaryLabel);
+        updateSummary();
+
+        window.add(content);
+        window.visible = true;
+    }
+
+    private void updateSummary()
+    {
+        summaryLabel.text = format("HBox spacing %.1f, grow %.1f, grid spacing %.1f", previewRow.spacing, rowGrowBox.flexGrowX, previewGrid.spacingX);
     }
 }
 
@@ -585,15 +680,15 @@ final class SelectionDemoWindow
     }
 }
 
-/** Creates a new retained layout demo window. */
-LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
+/** Creates a new retained custom-widget demo window. */
+CustomDemoWindow buildCustomDemoWindow(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
 {
-    return new LayoutDemoWindow(serial, onClose, onHeaderDragStart, onHeaderDragMove, onHeaderDragEnd, onResizeStart, onResizeMove, onResizeEnd);
+    return new CustomDemoWindow(serial, onClose, onHeaderDragStart, onHeaderDragMove, onHeaderDragEnd, onResizeStart, onResizeMove, onResizeEnd);
 }
 
 private enum float windowMargin = 10.0f;
 private enum float sidebarCollapsedWidth = 44.0f;
-private enum float sidebarExpandedWidth = 124.0f;
+private enum float sidebarExpandedWidth = 116.0f;
 private enum float sidebarButtonSize = 32.0f;
 private enum float sidebarIconSize = 26.0f;
 private enum float sidebarPadding = 5.0f;
@@ -618,8 +713,10 @@ private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 282.0f;
 private enum float settingsPageHeight = 138.0f;
 private enum float dropdownPopupRowHeight = 28.0f;
-private enum float layoutDemoWidth = 390.0f;
-private enum float layoutDemoHeight = 260.0f;
+private enum float layoutDemoWidth = 520.0f;
+private enum float layoutDemoHeight = 420.0f;
+private enum float customDemoWidth = 390.0f;
+private enum float customDemoHeight = 270.0f;
 private enum float contentSpacing = 6.0f;
 private enum float sectionSpacing = 8.0f;
 private enum float probeSpacing = 10.0f;
@@ -685,6 +782,7 @@ final class DemoUiScreen : UiScreen
     private UiWindow settingsWindow;
     private UiWindow tooltipWindow;
     private LayoutDemoWindow[] testWindows;
+    private CustomDemoWindow[] customWindows;
     private ScrollAreaDemoWindow[] scrollWindows;
     private ControlsDemoWindow[] controlsWindows;
     private ChromeDemoWindow[] chromeWindows;
@@ -708,6 +806,7 @@ final class DemoUiScreen : UiScreen
     private UiSidebarAction sidebarInputButton;
     private UiSidebarAction sidebarSelectionButton;
     private UiSidebarAction sidebarAudioButton;
+    private UiSidebarAction sidebarCustomButton;
     private UiSidebarAction sidebarCloseAllButton;
     private UiSidebarAction sidebarExitButton;
     private UiWindow dropdownPopupWindow;
@@ -747,8 +846,6 @@ final class DemoUiScreen : UiScreen
     private UiTextField settingsHeightField;
     private UiToggle settingsVsyncToggle;
     private UiSlider settingsScaleSlider;
-    private UiDropdown settingsThemeDropdown;
-    private UiToggle settingsCompactToggle;
     private UiSlider settingsMasterVolumeSlider;
     private UiSlider settingsMusicVolumeSlider;
     private UiSlider settingsEffectsVolumeSlider;
@@ -764,6 +861,7 @@ final class DemoUiScreen : UiScreen
     private float tooltipHoverSeconds;
 
     private uint nextTestWindowSerial = 1;
+    private uint nextCustomWindowSerial = 1;
     private uint nextScrollWindowSerial = 1;
     private uint nextControlsWindowSerial = 1;
     private uint nextChromeWindowSerial = 1;
@@ -780,6 +878,7 @@ final class DemoUiScreen : UiScreen
         sceneMouseDragging = false;
         sidebarExpanded = false;
         testWindows = [];
+        customWindows = [];
         scrollWindows = [];
         controlsWindows = [];
         chromeWindows = [];
@@ -946,13 +1045,14 @@ final class DemoUiScreen : UiScreen
         sidebarHelpButton = buildSidebarButton("", "sidebar/help", "Help Desk", cast(float[4])sidebarIconCool, &toggleHelpWindow);
         sidebarStatusButton = buildSidebarButton("", "sidebar/status", "Status", cast(float[4])sidebarIconGreen, &toggleStatusWindow);
         sidebarSettingsButton = buildSidebarButton("", "sidebar/settings", "Settings", cast(float[4])sidebarIconWarm, () { toggleSettingsDialog(null); });
-        sidebarLayoutButton = buildSidebarButton("", "sidebar/widgets", "Layout Demo", cast(float[4])sidebarIconGreen, &spawnLayoutTestWindow);
+        sidebarLayoutButton = buildSidebarButton("", "sidebar/widgets", "Layout Demo", cast(float[4])sidebarIconGreen, &spawnLayoutDemoWindow);
         sidebarScrollButton = buildSidebarButton("", "sidebar/widgets", "ScrollArea Demo", cast(float[4])sidebarIconWarm, &spawnScrollAreaDemoWindow);
         sidebarControlsButton = buildSidebarButton("", "sidebar/widgets", "Controls Demo", cast(float[4])sidebarIconCool, &spawnControlsDemoWindow);
         sidebarChromeButton = buildSidebarButton("", "sidebar/window", "Window Demo", cast(float[4])sidebarIconViolet, &spawnChromeDemoWindow);
         sidebarInputButton = buildSidebarButton("", "sidebar/input", "Input Demo", cast(float[4])sidebarIconCool, &spawnInputDemoWindow);
         sidebarSelectionButton = buildSidebarButton("", "sidebar/selection", "Selection Demo", cast(float[4])sidebarIconWarm, &spawnSelectionDemoWindow);
         sidebarAudioButton = buildSidebarButton("", "sidebar/audio", "Audio Demo", cast(float[4])sidebarIconViolet, &spawnAudioDemoWindow);
+        sidebarCustomButton = buildSidebarButton("", "sidebar/custom", "Custom Demo", cast(float[4])sidebarIconGreen, &spawnCustomDemoWindow);
         sidebarCloseAllButton = buildSidebarButton("", "sidebar/close-all", "Close all windows", cast(float[4])sidebarIconWarm, &closeAllDemoWindows);
         sidebarExitButton = buildSidebarButton("", "sidebar/exit", "Exit demo", cast(float[4])sidebarIconDanger, &requestQuit);
         auto sidebarBottomSpacer = new UiSpacer(0.0f, 0.0f);
@@ -967,6 +1067,7 @@ final class DemoUiScreen : UiScreen
         sidebarContent.add(sidebarInputButton);
         sidebarContent.add(sidebarSelectionButton);
         sidebarContent.add(sidebarAudioButton);
+        sidebarContent.add(sidebarCustomButton);
         sidebarContent.add(sidebarBottomSpacer);
         sidebarContent.add(sidebarHelpButton);
         sidebarContent.add(sidebarStatusButton);
@@ -1031,6 +1132,7 @@ final class DemoUiScreen : UiScreen
         sidebarInputButton.setCaption(sidebarExpanded ? "Input" : "");
         sidebarSelectionButton.setCaption(sidebarExpanded ? "Selection" : "");
         sidebarAudioButton.setCaption(sidebarExpanded ? "Audio" : "");
+        sidebarCustomButton.setCaption(sidebarExpanded ? "Custom" : "");
         sidebarCloseAllButton.setCaption(sidebarExpanded ? "Close All" : "");
         sidebarExitButton.setCaption(sidebarExpanded ? "Exit" : "");
         applySidebarButtonLayout(sidebarExpandButton);
@@ -1044,6 +1146,7 @@ final class DemoUiScreen : UiScreen
         applySidebarButtonLayout(sidebarInputButton);
         applySidebarButtonLayout(sidebarSelectionButton);
         applySidebarButtonLayout(sidebarAudioButton);
+        applySidebarButtonLayout(sidebarCustomButton);
         applySidebarButtonLayout(sidebarCloseAllButton);
         applySidebarButtonLayout(sidebarExitButton);
         refreshSidebarActiveStates();
@@ -1193,8 +1296,6 @@ final class DemoUiScreen : UiScreen
         settingsHeightField = new UiTextField("", "Height", 0.0f, 0.0f, 104.0f, 28.0f);
         settingsVsyncToggle = new UiToggle("VSync", false, 0.0f, 0.0f, 220.0f, 28.0f);
         settingsScaleSlider = new UiSlider("UI Scale", 0.50f, 2.00f, 1.00f, 0.0f, 0.0f, 220.0f, 32.0f);
-        settingsThemeDropdown = new UiDropdown("Theme", ["midnight", "classic", "contrast"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
-        settingsCompactToggle = new UiToggle("Compact Windows", false, 0.0f, 0.0f, 220.0f, 28.0f);
         settingsMasterVolumeSlider = new UiSlider("Master", 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, 220.0f, 32.0f);
         settingsMusicVolumeSlider = new UiSlider("Music", 0.0f, 1.0f, 0.8f, 0.0f, 0.0f, 220.0f, 32.0f);
         settingsEffectsVolumeSlider = new UiSlider("Effects", 0.0f, 1.0f, 0.8f, 0.0f, 0.0f, 220.0f, 32.0f);
@@ -1208,9 +1309,6 @@ final class DemoUiScreen : UiScreen
         settingsHeightField.onChanged = (value) { settingsDraft.display.windowHeight = parseUintSetting(value, settingsDraft.display.windowHeight); updateSettingsSummary(); };
         settingsVsyncToggle.onChanged = (value) { settingsDraft.display.vsync = value; updateSettingsSummary(); };
         settingsScaleSlider.onChanged = (value) { settingsDraft.display.scale = value; updateSettingsSummary(); };
-        settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
-        settingsThemeDropdown.onOpenRequested = &openDropdownPopup;
-        settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
         settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; updateSettingsSummary(); };
         settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; updateSettingsSummary(); };
         settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; updateSettingsSummary(); };
@@ -1235,8 +1333,6 @@ final class DemoUiScreen : UiScreen
         settingsUiPage = new UiVBox(0.0f, 0.0f, 0.0f, settingsPageHeight, contentSpacing);
         settingsUiPage.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
         settingsUiPage.add(settingsScaleSlider);
-        settingsUiPage.add(settingsThemeDropdown);
-        settingsUiPage.add(settingsCompactToggle);
 
         settingsAudioPage = new UiVBox(0.0f, 0.0f, 0.0f, settingsPageHeight, contentSpacing);
         settingsAudioPage.setLayoutHint(0.0f, settingsPageHeight, 0.0f, settingsPageHeight, float.max, settingsPageHeight, 1.0f, 0.0f);
@@ -1286,8 +1382,6 @@ final class DemoUiScreen : UiScreen
         settingsHeightField.setText(format("%u", settingsDraft.display.windowHeight));
         settingsVsyncToggle.checked = settingsDraft.display.vsync;
         settingsScaleSlider.value = settingsDraft.display.scale;
-        settingsThemeDropdown.selectedIndex = optionIndex(settingsThemeDropdown.options, settingsDraft.ui.theme);
-        settingsCompactToggle.checked = settingsDraft.ui.compactWindows;
         settingsMasterVolumeSlider.value = settingsDraft.audio.masterVolume;
         settingsMusicVolumeSlider.value = settingsDraft.audio.musicVolume;
         settingsEffectsVolumeSlider.value = settingsDraft.audio.effectsVolume;
@@ -1318,8 +1412,6 @@ final class DemoUiScreen : UiScreen
         settingsDraft.display.windowHeight = parseUintSetting(settingsHeightField.text, settingsDraft.display.windowHeight);
         settingsDraft.display.vsync = settingsVsyncToggle.checked;
         settingsDraft.display.scale = settingsScaleSlider.value;
-        settingsDraft.ui.theme = settingsThemeDropdown.selectedText();
-        settingsDraft.ui.compactWindows = settingsCompactToggle.checked;
         settingsDraft.audio.masterVolume = settingsMasterVolumeSlider.value;
         settingsDraft.audio.musicVolume = settingsMusicVolumeSlider.value;
         settingsDraft.audio.effectsVolume = settingsEffectsVolumeSlider.value;
@@ -1379,7 +1471,7 @@ final class DemoUiScreen : UiScreen
         if (settingsProfileLabel is null)
             return;
 
-        settingsProfileLabel.text = format("Profil: %s, %ux%u, Theme %s", settingsDraft.display.windowMode, settingsDraft.display.windowWidth, settingsDraft.display.windowHeight, settingsDraft.ui.theme);
+        settingsProfileLabel.text = format("Profile: %s, %ux%u, scale %.2f", settingsDraft.display.windowMode, settingsDraft.display.windowWidth, settingsDraft.display.windowHeight, settingsDraft.display.scale);
     }
 
     static size_t optionIndex(string[] options, string value)
@@ -1523,7 +1615,7 @@ final class DemoUiScreen : UiScreen
 
     uint openDemoWindowCount() const
     {
-        return cast(uint)(testWindows.length + scrollWindows.length + controlsWindows.length + chromeWindows.length + inputWindows.length + selectionWindows.length + audioWindows.length);
+        return cast(uint)(testWindows.length + customWindows.length + scrollWindows.length + controlsWindows.length + chromeWindows.length + inputWindows.length + selectionWindows.length + audioWindows.length);
     }
 
     void updateOpenDemoWindowCountLabel()
@@ -1577,7 +1669,7 @@ final class DemoUiScreen : UiScreen
 
         foreach (index, demoWindow; chromeWindows)
         {
-            const offset = windowMargin + cast(float)(testWindows.length + scrollWindows.length + controlsWindows.length + index) * 22.0f;
+            const offset = windowMargin + cast(float)(testWindows.length + scrollWindows.length + controlsWindows.length + customWindows.length + index) * 22.0f;
             if (demoWindow.window.x <= 0.0f && demoWindow.window.y <= 0.0f)
             {
                 demoWindow.window.x = max(windowMargin * 2.0f + offset, windowMargin);
@@ -1586,9 +1678,9 @@ final class DemoUiScreen : UiScreen
         }
     }
 
-    void spawnLayoutTestWindow()
+    void spawnLayoutDemoWindow()
     {
-        LayoutDemoWindow demoWindow = buildLayoutDemoWindow(nextTestWindowSerial++);
+        LayoutDemoWindow demoWindow = new LayoutDemoWindow(nextTestWindowSerial++);
         const cascadeIndex = cast(float)(nextTestWindowSerial - 2);
         demoWindow.window.x += cascadeIndex * 28.0f;
         demoWindow.window.y += cascadeIndex * 24.0f;
@@ -1621,6 +1713,49 @@ final class DemoUiScreen : UiScreen
             if (testWindows[index] is demoWindow)
             {
                 testWindows = testWindows[0 .. index] ~ testWindows[index + 1 .. $];
+                break;
+            }
+        }
+
+        removeWindow(demoWindow.window);
+        updateOpenDemoWindowCountLabel();
+    }
+
+    void spawnCustomDemoWindow()
+    {
+        CustomDemoWindow demoWindow = buildCustomDemoWindow(nextCustomWindowSerial++);
+        const cascadeIndex = cast(float)(nextCustomWindowSerial - 2);
+        demoWindow.window.x += cascadeIndex * 28.0f;
+        demoWindow.window.y += cascadeIndex * 24.0f;
+        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, customDemoWidth, customDemoHeight);
+        demoWindow.window.onClose = ()
+        {
+            demoWindow.window.visible = false;
+            removeCustomDemoWindow(demoWindow);
+            logLine("UiWindow close: ", demoWindow.window.title);
+        };
+        registerWindowInteractionHandlers(demoWindow.window);
+        customWindows ~= demoWindow;
+        addWindow(demoWindow.window);
+        if (viewportWidth > 0.0f && viewportHeight > 0.0f)
+        {
+            ensureWindowLayout();
+            placeWindowWithoutOverlap(demoWindow.window);
+        }
+        logLine("UiWindow spawn: ", demoWindow.window.title);
+        updateOpenDemoWindowCountLabel();
+    }
+
+    void removeCustomDemoWindow(CustomDemoWindow demoWindow)
+    {
+        if (demoWindow is null)
+            return;
+
+        for (size_t index = 0; index < customWindows.length; ++index)
+        {
+            if (customWindows[index] is demoWindow)
+            {
+                customWindows = customWindows[0 .. index] ~ customWindows[index + 1 .. $];
                 break;
             }
         }
@@ -1903,6 +2038,8 @@ final class DemoUiScreen : UiScreen
 
         while (testWindows.length > 0)
             removeLayoutDemoWindow(testWindows[$ - 1]);
+        while (customWindows.length > 0)
+            removeCustomDemoWindow(customWindows[$ - 1]);
         while (scrollWindows.length > 0)
             removeScrollAreaDemoWindow(scrollWindows[$ - 1]);
         while (controlsWindows.length > 0)
@@ -1938,7 +2075,7 @@ unittest
     foreach (_; 0 .. 2)
         screen.tickUi(0.05f);
     assert(!screen.settingsWindow.visible);
-    screen.spawnLayoutTestWindow();
+    screen.spawnLayoutDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 5);
     screen.spawnScrollAreaDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 6);
@@ -1952,6 +2089,8 @@ unittest
     assert(screen.windowsInFrontToBack().length >= 10);
     screen.spawnAudioDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 11);
+    screen.spawnCustomDemoWindow();
+    assert(screen.windowsInFrontToBack().length >= 12);
 }
 
 @("DemoUiScreen sidebar reveals and spawns demo windows")
@@ -2024,6 +2163,10 @@ unittest
     const testCount = screen.testWindows.length;
     screen.sidebarLayoutButton.onClick();
     assert(screen.testWindows.length == testCount + 1);
+    auto layoutDemo = screen.testWindows[$ - 1];
+    layoutDemo.previewRow.spacing = 14.0f;
+    layoutDemo.rowGrowBox.flexGrowX = 2.0f;
+    assert(layoutDemo.previewRow.spacing == 14.0f);
 
     const scrollCount = screen.scrollWindows.length;
     screen.sidebarScrollButton.onClick();
@@ -2075,6 +2218,10 @@ unittest
     assert(audioEvents == 1);
     assert(audioKind == DemoAudioPreviewKind.ui);
 
+    const customCount = screen.customWindows.length;
+    screen.sidebarCustomButton.onClick();
+    assert(screen.customWindows.length == customCount + 1);
+
     screen.sidebarHelpButton.onClick();
     screen.sidebarStatusButton.onClick();
     screen.sidebarSettingsButton.onClick();
@@ -2087,6 +2234,7 @@ unittest
     assert(!screen.statusWindow.visible);
     assert(!screen.settingsWindow.visible);
     assert(screen.testWindows.length == 0);
+    assert(screen.customWindows.length == 0);
     assert(screen.scrollWindows.length == 0);
     assert(screen.controlsWindows.length == 0);
     assert(screen.chromeWindows.length == 0);
@@ -2169,7 +2317,7 @@ unittest
     screen.initialize([]);
     screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
 
-    screen.openDropdownPopup(screen.settingsThemeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
+    screen.openDropdownPopup(screen.settingsWindowModeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
 
     assert(screen.hasActivePopup());
     assert(screen.dropdownPopupWindow !is null);
@@ -2183,8 +2331,8 @@ unittest
     event.y = 238.0f;
 
     assert(screen.dispatchPointerEvent(event));
-    assert(screen.settingsThemeDropdown.selectedText() == "midnight");
-    assert(screen.settingsDraft.ui.theme == "midnight");
+    assert(screen.settingsWindowModeDropdown.selectedText() == "windowed");
+    assert(screen.settingsDraft.display.windowMode == "windowed");
 
     assert(!screen.hasActivePopup());
 }
@@ -2196,8 +2344,8 @@ unittest
     screen.initialize([]);
     screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
 
-    screen.settingsThemeDropdown.selectIndex(0);
-    screen.openDropdownPopup(screen.settingsThemeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
+    screen.settingsWindowModeDropdown.selectIndex(0);
+    screen.openDropdownPopup(screen.settingsWindowModeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
 
     assert(screen.hasActivePopup());
     auto popupFocus = screen.currentFocusedWidget();
@@ -2215,10 +2363,10 @@ unittest
     keyEvent.key = UiKeyCode.enter;
     assert(screen.dispatchKeyEvent(keyEvent));
 
-    assert(screen.settingsThemeDropdown.selectedText() == "classic");
-    assert(screen.settingsDraft.ui.theme == "classic");
+    assert(screen.settingsWindowModeDropdown.selectedText() == "fullscreen");
+    assert(screen.settingsDraft.display.windowMode == "fullscreen");
     assert(!screen.hasActivePopup());
-    assert(screen.currentFocusedWidget() is screen.settingsThemeDropdown);
+    assert(screen.currentFocusedWidget() is screen.settingsWindowModeDropdown);
 }
 
 @("DemoUiScreen switches settings pages with tabs")
@@ -2306,6 +2454,7 @@ unittest
     assert(screen.sidebarControlsButton.caption == "Controls");
     assert(screen.sidebarInputButton.caption == "Input");
     assert(screen.sidebarAudioButton.caption == "Audio");
+    assert(screen.sidebarCustomButton.caption == "Custom");
     assert(screen.sidebarStatusButton.caption == "Status");
     assert(screen.sidebarCloseAllButton.caption == "Close All");
     assert(screen.sidebarExitButton.caption == "Exit");
@@ -2330,6 +2479,7 @@ unittest
     assert(screen.sidebarControlsButton.caption.length == 0);
     assert(screen.sidebarInputButton.caption.length == 0);
     assert(screen.sidebarAudioButton.caption.length == 0);
+    assert(screen.sidebarCustomButton.caption.length == 0);
     assert(screen.sidebarStatusButton.caption.length == 0);
     assert(screen.sidebarCloseAllButton.caption.length == 0);
     assert(screen.sidebarExitButton.caption.length == 0);

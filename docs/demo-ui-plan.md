@@ -83,10 +83,11 @@ The demo should evolve from a test shell into a small application with clear win
 
 - UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
 - Status window: compact right-pinned overlay with configurable edge margins and fit-to-content sizing for app version, frame rate, active scene, current render mode, 3D object rotation, and viewport state.
-- Layout demo window: focused layout probes, content/frame boxes, preferred-size behavior, debug bounds, and custom cursor coverage.
+- Layout demo window: live HBox, VBox, Grid, Spacer, separator, size-hint, spacing, and grow-policy examples controlled by normal input widgets.
 - ScrollArea demo window: minimal viewport and oversized content for scroll offsets, clipping, scrollbar thumbs, and edge indicators.
 - Controls demo window: normal buttons, icon/image controls, toggles, sliders, progress bars, dropdowns, and text fields.
 - UiWindow Demo window: runtime toggles, presets, and reset controls for sizeable, closable, dragable, stackable, passive chrome visibility, optional backfill, and viewport-edge pinning so content-root insets and independent chrome interactions can be checked against active chrome elements.
+- Custom demo window: specialized custom `UiWidget` probes, diagnostic colors, and custom cursor coverage; kept at the end of the upper sidebar launcher group.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
 - Settings window: Display, UI, and Audio pages now; Controls and Gameplay pages are planned when editable settings exist.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
@@ -196,7 +197,7 @@ These items are considered baseline and should not be re-planned unless a regres
 - retained `UiScreen` owns generic window iteration, hit testing, layout, viewport clamping, focus, modal routing, popup windows, and overlay traversal
 - `UiWindow` has configurable chrome, backfill, generated ids, optional user tags, backdrop layering, viewport-edge pinning, and transition state
 - current widgets cover labels, text blocks, buttons, sidebar actions, images, spacers, content/frame boxes, row/column/grid layout, scroll areas, toggles, sliders, dropdowns, text fields, tabs, list boxes, progress bars, and separators
-- demo windows cover widget, window, input/focus, selection/popup, audio, settings, status, and help workflows
+- demo windows cover layout, custom widget probes, controls, window behavior, input/focus, selection/popup, audio, settings, status, and help workflows
 - context-sensitive SDL cursors, monochrome custom cursor overrides, keyboard focus traversal, visible focus rings, title tinting, text input, and modal focus containment exist
 - first audio scaffolding exists for SDL output, typed events, buses, volume settings, float mixing, in-memory clips, simple voices, synthetic UI clicks, and settings slider preview
 - asset decisions are documented: PNG for authored 2D/UI images, PPM for fallback/test data, glTF/GLB for 3D models, and gettext PO for localization
@@ -206,11 +207,13 @@ These items are considered baseline and should not be re-planned unless a regres
 These items unblock several existing windows and should be addressed before expanding the demo with more content:
 
 1. Add direct scrollbar dragging for `UiScrollArea`.
-2. Use scroll areas in long Help Desk, Settings, and future sidebar launcher overflow content.
-3. Extract a widget-level popup facade from the current screen-owned dropdown popup path.
-4. Move tooltip behavior onto that popup facade, including hover delay, placement, input transparency, and dismissal policy.
-5. Keep dropdowns, context menus, and tooltips on one shared popup placement/focus/stacking model.
-6. Add a modal/dialog demo slice covering default buttons, cancel buttons, blocked background routing, and focused-window title tinting.
+2. Rebuild Help Desk around scrollable help topics instead of a fixed compact label list.
+3. Rebuild Settings as a production settings dialog: remove placeholder controls unless they are applied, saved, and restored.
+4. Use scroll areas in long Help Desk, Settings, and future sidebar launcher overflow content.
+5. Extract a widget-level popup facade from the current screen-owned dropdown popup path.
+6. Move tooltip behavior onto that popup facade, including hover delay, placement, input transparency, and dismissal policy.
+7. Keep dropdowns, context menus, and tooltips on one shared popup placement/focus/stacking model.
+8. Add a modal/dialog demo slice covering default buttons, cancel buttons, blocked background routing, and focused-window title tinting.
 
 Rationale: scroll clipping and popup ownership are structural. Without them, every new long panel, help page, menu, tooltip, or selection widget risks growing its own special case.
 

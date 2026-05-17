@@ -45,7 +45,7 @@ Required behavior:
 
 Demo coverage:
 
-- Layout Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
+- Custom Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
 - Debug bounds overlay should reveal generic widget fallback outlines.
 
 Planned work:
@@ -189,7 +189,7 @@ Implementation direction:
 Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
-- The sidebar toggles Help Desk, Status, and Settings, and spawns Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo, with compact icon mode and expanded labels.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, Audio Demo, and Custom Demo, with compact icon mode and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
 - The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
 
@@ -233,7 +233,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, Layout Demo, Controls Demo, and UiWindow Demo.
+- Help Desk, Status, Settings, Layout Demo, Controls Demo, Custom Demo, and UiWindow Demo.
 
 ### UiHBox
 
@@ -258,7 +258,7 @@ Required behavior:
 Demo coverage:
 
 - Settings size row and action row.
-- Layout Demo and Controls Demo nested rows.
+- Layout Demo, Controls Demo, and Custom Demo nested rows.
 
 ## Layout Policy
 
@@ -287,7 +287,7 @@ Required behavior:
 
 Demo coverage:
 
-- debug color legend documents it; the Layout Demo should add a visible grid example.
+- Layout Demo shows visible grid placement and live grid spacing.
 
 ### UiSpacer
 
@@ -310,7 +310,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Layout Demo, Controls Demo, and UiWindow Demo.
+- Help Desk, Layout Demo, Controls Demo, Custom Demo, and UiWindow Demo.
 
 ### UiContentBox
 
@@ -336,7 +336,7 @@ Required behavior:
 Demo coverage:
 
 - current window content roots use `UiContentBox` internally.
-- Layout Demo shows an explicit padded `UiContentBox` example inside the layout-probe section.
+- Custom Demo shows an explicit padded `UiContentBox` example inside the custom-widget probe section.
 
 ### UiFrameBox
 
@@ -360,7 +360,7 @@ Required behavior:
 
 Demo coverage:
 
-- Layout Demo uses `UiFrameBox` sections for layout probes; Controls Demo should use framed groups again when it grows beyond the compact first pass.
+- Layout Demo uses `UiFrameBox` sections for live layout previews; Custom Demo uses a framed section for custom probe widgets.
 
 ### UiScrollArea
 

@@ -23,7 +23,7 @@ Current behavior:
 
 - anchors to the left edge of the SDL window
 - toggles singleton windows such as Help Desk, Status, and Settings
-- spawns repeatable windows such as Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
+- spawns repeatable windows such as Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, Audio Demo, and Custom Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - animates expand and collapse through the window bounds-transition path
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
@@ -33,7 +33,7 @@ Current behavior:
 - shows delayed tooltips for collapsed icon-only actions
 - keeps an opened tooltip visible while the pointer stays inside the same tooltip source region
 - keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
-- reserves the upper launcher group for at most eight direct actions at the current minimum SDL window height
+- keeps the upper launcher group at eight direct demo actions at the current minimum SDL window height; the Custom Demo is intentionally last because it is a specialized probe window
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
@@ -59,7 +59,7 @@ Planned extensions:
 
 ## Help Desk Window
 
-The Help Desk window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime. Later it should become the built-in help system with searchable documentation and an optional AI-agent interface for real questions about the demo and engine.
+The Help Desk window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime. Now that `UiScrollArea` exists, this window should be rebuilt into the built-in help system with scrollable topics, searchable documentation, and an optional AI-agent interface for real questions about the demo and engine.
 
 Current behavior:
 
@@ -77,6 +77,7 @@ Useful regression checks:
 
 Planned extensions:
 
+- replace the compact fixed label list with a scrollable help-topic view
 - add search over built-in help topics and documentation snippets
 - add an AI-agent style question interface after the help data model and safety boundaries are clear
 - add a scrolling log region after a text-area or text-block viewport exists
@@ -121,7 +122,7 @@ Planned extensions:
 
 ## Settings Window
 
-The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiContentBox`, `UiLabel`, `UiTabBar`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, grouped pages, and a fixed action row.
+The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiContentBox`, `UiLabel`, `UiTabBar`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, grouped pages, and a fixed action row. It should now be treated as a production settings dialog: only real settings that are read, applied, saved, and restored belong here.
 
 Current behavior:
 
@@ -131,8 +132,6 @@ Current behavior:
 - switches between Display, UI, and Audio pages with a visual tab strip
 - uses a `UiTabBar` that already supports overflow scrolling for later additional pages
 - adjusts UI scale with a slider
-- selects a theme placeholder
-- toggles compact-window placeholder behavior
 - adjusts persisted master, music, and effects volume settings
 - applies settings to the running application
 - saves settings only through an explicit Save action
@@ -150,37 +149,55 @@ Useful regression checks:
 
 Planned extensions:
 
-- add Controls and Gameplay pages once those settings become editable
 - place oversized page content into `UiScrollArea` instead of forcing the window to grow
+- add Controls and Gameplay pages only when those settings become editable and persisted
 - extract repeated popup wiring into a widget-level popup facade
 - add UI sound volume once the settings model exposes the existing UI audio bus separately
 - add validation feedback for invalid numeric fields
 
 ## Layout Demo Window
 
-The Layout Demo window isolates layout probes and content/frame boxes. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Layout Demo window isolates the actual retained layout objects. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiGrid`, `UiSpacer`, `UiFrameBox`, `UiSeparator`, `UiSlider`, preferred-size measurement, flex growth, spacing changes, nested layout, resize behavior, and debug bounds.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
-- contains nested probe boxes and a padded content-box example
-- uses varied fill and border colors to make layout movement visible
-- applies a custom crosshair cursor over probe boxes
+- contains separate HBox, VBox, and Grid preview areas
+- uses sliders to change row/column spacing, grow weights, and grid spacing at runtime
+- uses varied fill and border colors sparingly so layout movement remains visible
 - can be resized and stacked like normal windows
 - removes itself from the screen owner when closed
 
 Useful regression checks:
 
 - growing and then shrinking the window does not corrupt intrinsic preferred sizes
-- nested `UiHBox` and `UiVBox` containers preserve spacing
-- debug bounds show expected row, column, spacer, and widget outlines
-- custom cursor fallback and override behavior is visible at runtime
+- nested `UiHBox` and `UiVBox` containers preserve spacing while sliders change layout values
+- the growable spacer and growable probe boxes consume extra space predictably
+- debug bounds show expected row, column, grid, spacer, and widget outlines
 - multiple instances do not share mutable window state accidentally
 
 Planned extensions:
 
-- add a visible grid example once grid demos need more coverage
 - add shrink/grow edge cases when new layout policies are introduced
+
+## Custom Demo Window
+
+The Custom Demo window is the specialized custom-widget probe window. It exercises demo-only widgets derived from `UiWidget`, custom cursor registration, custom render code, content/frame boxes, and deliberately colorful diagnostic fills.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- contains custom `LayoutDemoProbeBox` instances with strong diagnostic colors
+- contains a padded content-box example with an inner row so the custom probe no longer sits on top of the surrounding frame
+- applies a custom crosshair cursor over probe boxes
+- can be resized and stacked like normal windows
+- sits at the end of the upper sidebar launcher group because it is useful for engine development but less central than the normal UI demos
+
+Useful regression checks:
+
+- custom widget rendering and cursor intent still work after reusable widget refactors
+- content/frame padding remains visually understandable
+- multiple instances do not share mutable window state accidentally
 
 ## ScrollArea Demo Window
 

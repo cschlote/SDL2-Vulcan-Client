@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rebuilt Layout Demo around live HBox, VBox, Grid, Spacer, and grow-policy controls, moved the old probe content to a Custom Demo, narrowed the expanded sidebar, and softened slider/tab colors.
 - Split the old Widget Demo into focused Layout Demo, ScrollArea Demo, and Controls Demo windows.
 - Added a visible `UiScrollArea` clipping and wheel-scroll example to the ScrollArea Demo.
 - Added retained UI clip rectangles and `UiScrollArea` child-geometry clipping for panel, image, and text draw commands.

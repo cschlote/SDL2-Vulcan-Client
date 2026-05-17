@@ -149,7 +149,7 @@ Expected cursor states include:
 
 The first custom-cursor hook is intentionally small. `UiCursorBitmap` describes a monochrome theme cursor for a `UiCursorKind`, and the SDL window wrapper can register that bitmap as an override for the matching system cursor slot. If no custom bitmap is registered, the existing SDL system cursor remains the fallback. A later asset pipeline can load these bitmap definitions from theme data without changing widget cursor intent.
 
-The current demo registers a small custom inspect cursor for `UiCursorKind.crosshair`; the layout probe boxes in the Layout Demo use that cursor so custom cursor registration can be checked at runtime.
+The current demo registers a small custom inspect cursor for `UiCursorKind.crosshair`; the probe boxes in the Custom Demo use that cursor so custom cursor registration can be checked at runtime.
 
 ## UiWidget Box Model
 

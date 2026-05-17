@@ -32,6 +32,8 @@ private enum float tabOverflowFadeWidth = 12.0f;
 private immutable float[4] defaultFillColor = [0.16f, 0.18f, 0.24f, 0.96f];
 private immutable float[4] defaultBorderColor = [0.20f, 0.56f, 0.98f, 1.00f];
 private immutable float[4] defaultAccentColor = [0.34f, 0.82f, 0.46f, 1.00f];
+private immutable float[4] defaultControlAccentColor = [0.54f, 0.62f, 0.70f, 1.00f];
+private immutable float[4] defaultSelectedTabColor = [0.22f, 0.25f, 0.31f, 0.98f];
 private immutable float[4] defaultTextColor = [1.00f, 1.00f, 1.00f, 1.00f];
 private immutable float[4] defaultMutedColor = [0.50f, 0.54f, 0.62f, 1.00f];
 private immutable float[4] defaultFadeColor = [0.02f, 0.03f, 0.04f, 0.42f];
@@ -222,7 +224,7 @@ final class UiSlider : UiWidget
         focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
-        accentColor = cast(float[4])defaultAccentColor;
+        accentColor = cast(float[4])defaultControlAccentColor;
         textColor = cast(float[4])defaultTextColor;
     }
 
@@ -391,7 +393,7 @@ final class UiProgressBar : UiWidget
         this.style = style;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
-        accentColor = cast(float[4])defaultAccentColor;
+        accentColor = cast(float[4])defaultControlAccentColor;
         textColor = cast(float[4])defaultTextColor;
     }
 
@@ -471,7 +473,7 @@ final class UiTabBar : UiWidget
         focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
-        selectedColor = cast(float[4])defaultAccentColor;
+        selectedColor = cast(float[4])defaultSelectedTabColor;
         textColor = cast(float[4])defaultTextColor;
     }
 
