@@ -83,7 +83,9 @@ The demo should evolve from a test shell into a small application with clear win
 
 - UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
 - Status window: compact right-pinned overlay with configurable edge margins and fit-to-content sizing for app version, frame rate, active scene, current render mode, 3D object rotation, and viewport state.
-- Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, tabs, lists, progress bars, separators, and future widgets.
+- Layout demo window: focused layout probes, content/frame boxes, preferred-size behavior, debug bounds, and custom cursor coverage.
+- ScrollArea demo window: minimal viewport and oversized content for scroll offsets, clipping, scrollbar thumbs, and edge indicators.
+- Controls demo window: normal buttons, icon/image controls, toggles, sliders, progress bars, dropdowns, and text fields.
 - UiWindow Demo window: runtime toggles, presets, and reset controls for sizeable, closable, dragable, stackable, passive chrome visibility, optional backfill, and viewport-edge pinning so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
 - Settings window: Display, UI, and Audio pages now; Controls and Gameplay pages are planned when editable settings exist.
@@ -204,7 +206,7 @@ These items are considered baseline and should not be re-planned unless a regres
 These items unblock several existing windows and should be addressed before expanding the demo with more content:
 
 1. Add direct scrollbar dragging for `UiScrollArea`.
-2. Use scroll areas in long Help Desk, Settings, Widget Demo, and future sidebar launcher overflow content.
+2. Use scroll areas in long Help Desk, Settings, and future sidebar launcher overflow content.
 3. Extract a widget-level popup facade from the current screen-owned dropdown popup path.
 4. Move tooltip behavior onto that popup facade, including hover delay, placement, input transparency, and dismissal policy.
 5. Keep dropdowns, context menus, and tooltips on one shared popup placement/focus/stacking model.
@@ -232,7 +234,7 @@ Once scrolling and popup infrastructure are stable, the visible demo can grow sa
 
 1. Add Controls and Gameplay pages to Settings when there are real editable values.
 2. Add the planned Presets/Shortcuts window after reusable command/action metadata exists.
-3. Expand the Widget Demo with state variants: disabled, focused, hovered, active, long text, narrow layout, and overflow cases.
+3. Expand Controls Demo with state variants: disabled, focused, hovered, active, long text, narrow layout, and overflow cases.
 4. Expand the UiWindow Demo with modal/dialog examples and clearer presets for common window roles.
 5. Add sidebar launcher scrolling only when the upper action count exceeds the current eight-action limit.
 6. Continue keeping every demo window documented in [Demo Windows](demo-windows.md).

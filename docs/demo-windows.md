@@ -23,7 +23,7 @@ Current behavior:
 
 - anchors to the left edge of the SDL window
 - toggles singleton windows such as Help Desk, Status, and Settings
-- spawns repeatable windows such as Widget Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
+- spawns repeatable windows such as Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - animates expand and collapse through the window bounds-transition path
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
@@ -156,21 +156,14 @@ Planned extensions:
 - add UI sound volume once the settings model exposes the existing UI audio bus separately
 - add validation feedback for invalid numeric fields
 
-## Widget Demo Window
+## Layout Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiScrollArea`, `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Layout Demo window isolates layout probes and content/frame boxes. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
-- contains a layout and box section with nested probe boxes and a padded content-box example
-- contains a retained-controls section with buttons, toggle, slider, dropdown, list, tab, and text field examples
-- contains placeholder image/icon examples with asset ids and an icon-plus-label button
-- groups related control rows with non-interactive separators
-- updates a progress bar from the Amount slider
-- updates a summary label from the list selection
-- updates a summary label from the tab selection
-- includes a compact `UiScrollArea` with larger colored child content to show clipping, wheel scrolling, scrollbar thumbs, and edge indicators
+- contains nested probe boxes and a padded content-box example
 - uses varied fill and border colors to make layout movement visible
 - applies a custom crosshair cursor over probe boxes
 - can be resized and stacked like normal windows
@@ -181,18 +174,58 @@ Useful regression checks:
 - growing and then shrinking the window does not corrupt intrinsic preferred sizes
 - nested `UiHBox` and `UiVBox` containers preserve spacing
 - debug bounds show expected row, column, spacer, and widget outlines
-- scrolling inside the compact scroll-area section clips oversized child geometry to the viewport
 - custom cursor fallback and override behavior is visible at runtime
 - multiple instances do not share mutable window state accidentally
 
 Planned extensions:
 
+- add a visible grid example once grid demos need more coverage
+- add shrink/grow edge cases when new layout policies are introduced
+
+## ScrollArea Demo Window
+
+The ScrollArea Demo window is intentionally small and focused. It exercises `UiScrollArea`, wheel routing, retained `scrollX`/`scrollY`, child-geometry clipping, scrollbar thumbs, and edge indicators without mixing in unrelated controls.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- shows one compact viewport with larger colored content
+- keeps the test content visually simple so clipping defects are easy to spot
+- can be resized and stacked like normal windows
+
+Useful regression checks:
+
+- wheel scrolling changes the visible content
+- oversized child geometry is clipped to the viewport
+- vertical and horizontal overflow indicators remain inside the viewport
+
+Planned extensions:
+
+- add direct scrollbar dragging after the scroll-area behavior lands
+- keep this window minimal; richer content should use Help Desk, Settings, or Controls Demo
+
+## Controls Demo Window
+
+The Controls Demo window groups normal form and action controls. It exercises `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, `UiTextField`, icon-plus-label buttons, callback wiring, and one-control-updates-another interaction.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- shows normal buttons, toggle, dropdown, slider, text field, progress bar, images, and an icon action button
+- updates a progress bar from the Amount slider
+- uses placeholder image/icon examples with asset ids
+- can be resized and stacked like normal windows
+
+Useful regression checks:
+
+- slider changes update the progress bar immediately
+- dropdown opens through the shared popup path
+- icon-backed controls still render fallback frames and atlas images
+
+Planned extensions:
+
 - replace the rough low-resolution placeholder image assets with a coherent higher-resolution icon/image set
 - move richer image browsing and animated-image examples into the planned Media Demo
-- add future controls to the gallery
-- wrap the whole gallery in `UiScrollArea` once the complete gallery grows beyond the available window height
-- add popup examples as those widgets land
-- add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
 
 ## UiWindow Demo Window

@@ -45,7 +45,7 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
+- Layout Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
 - Debug bounds overlay should reveal generic widget fallback outlines.
 
 Planned work:
@@ -189,7 +189,7 @@ Implementation direction:
 Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
-- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo, with compact icon mode and expanded labels.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo, with compact icon mode and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
 - The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
 
@@ -199,7 +199,7 @@ Window identity direction:
 - `UiWindow` has a generated stable `windowId` for lookup, saved layouts, and external registries.
 - `UiWindow.userTag` is an optional opaque integration value, but it stays secondary to engine-owned ids.
 - Pointer-sized tags or `void*`-style hooks need clear lifetime ownership because they can otherwise hide GC and object-reference coupling.
-- The Widget Demo should include sidebar button rows once icon widgets exist.
+- The Controls Demo should include generalized sidebar/action button rows once the icon-capable action widget exists.
 
 Open questions:
 
@@ -233,7 +233,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, Widget Demo, and UiWindow Demo.
+- Help Desk, Status, Settings, Layout Demo, Controls Demo, and UiWindow Demo.
 
 ### UiHBox
 
@@ -258,7 +258,7 @@ Required behavior:
 Demo coverage:
 
 - Settings size row and action row.
-- Widget Demo nested rows.
+- Layout Demo and Controls Demo nested rows.
 
 ## Layout Policy
 
@@ -287,7 +287,7 @@ Required behavior:
 
 Demo coverage:
 
-- debug color legend documents it; the Widget Demo should add a visible grid example.
+- debug color legend documents it; the Layout Demo should add a visible grid example.
 
 ### UiSpacer
 
@@ -310,7 +310,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Widget Demo, and UiWindow Demo.
+- Help Desk, Layout Demo, Controls Demo, and UiWindow Demo.
 
 ### UiContentBox
 
@@ -336,7 +336,7 @@ Required behavior:
 Demo coverage:
 
 - current window content roots use `UiContentBox` internally.
-- Widget Demo shows an explicit padded `UiContentBox` example inside the control gallery.
+- Layout Demo shows an explicit padded `UiContentBox` example inside the layout-probe section.
 
 ### UiFrameBox
 
@@ -360,7 +360,7 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses `UiFrameBox` sections for layout probes and retained controls.
+- Layout Demo uses `UiFrameBox` sections for layout probes; Controls Demo should use framed groups again when it grows beyond the compact first pass.
 
 ### UiScrollArea
 
@@ -400,7 +400,7 @@ Implementation direction:
 
 Demo coverage:
 
-- Widget Demo includes a compact `UiScrollArea` example with oversized colored child content for visible clipping and wheel scrolling.
+- ScrollArea Demo includes a compact `UiScrollArea` example with oversized colored child content for visible clipping and wheel scrolling.
 - Help Desk should use it for long help content after text-block content exists.
 - Settings should use it when tab pages or grouped settings exceed the current window height.
 
@@ -494,8 +494,8 @@ Required behavior:
 
 Demo coverage:
 
-- Settings and Widget Demo.
-- Widget Demo includes button examples in the retained-controls section.
+- Settings and Controls Demo.
+- Controls Demo includes button examples in a normal form/action-controls context.
 - Sidebar uses `UiSidebarAction` for fixed icon-slot launcher rows.
 - Ordinary icon-plus-label command buttons can continue to use `UiButton`.
 
@@ -575,7 +575,7 @@ Required behavior:
 Demo coverage:
 
 - Settings.
-- Widget Demo.
+- Controls Demo.
 - Selection Demo.
 
 ### UiTextField
@@ -611,7 +611,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiImage` is currently a compact framed image/icon placeholder with an optional renderer-facing texture asset id. It is used in the Widget Demo, in icon-plus-label buttons, and as the first visual marker for the demo sidebar. When an asset id is set, `UiImage` emits an image draw intent with UV coordinates; the renderer resolves that id through a small UI image asset registry, rewrites the UVs to an atlas cell, and draws the result through a dedicated UI image layer while the framed placeholder remains visible as fallback styling. The atlas starts with generated fallback cells and is then overlaid with simple file-backed PPM demo assets from `assets/ui/`. The documented asset direction is to replace authored UI artwork with PNG files decoded to engine-owned RGBA8 pixels, while PPM remains a fallback/test format. Details live in [Asset And Localization Pipeline](asset-and-localization-pipeline.md).
+`UiImage` is currently a compact framed image/icon placeholder with an optional renderer-facing texture asset id. It is used in the Controls Demo, in icon-plus-label buttons, and as the first visual marker for the demo sidebar. When an asset id is set, `UiImage` emits an image draw intent with UV coordinates; the renderer resolves that id through a small UI image asset registry, rewrites the UVs to an atlas cell, and draws the result through a dedicated UI image layer while the framed placeholder remains visible as fallback styling. The atlas starts with generated fallback cells and is then overlaid with simple file-backed PPM demo assets from `assets/ui/`. The documented asset direction is to replace authored UI artwork with PNG files decoded to engine-owned RGBA8 pixels, while PPM remains a fallback/test format. Details live in [Asset And Localization Pipeline](asset-and-localization-pipeline.md).
 
 Common use cases:
 
@@ -636,7 +636,7 @@ Demo coverage:
 
 - `UiImage` unit tests cover measurement and image draw intent emission.
 - button tests cover image-plus-label composition.
-- Widget Demo shows multiple placeholder image sizes and an icon action button.
+- Controls Demo shows multiple placeholder image sizes and an icon action button.
 - Sidebar uses file-backed atlas icon markers with generated fallback cells next to compact or expanded labels.
 - planned Media Demo covers richer PNG texture lookup and animated images.
 
@@ -669,7 +669,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window and Widget Demo.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window.
 
 Common use cases:
 
@@ -688,7 +688,7 @@ Required behavior:
 Demo coverage:
 
 - Settings window for Display, UI, and Audio pages.
-- Widget Demo visible tab selection.
+- Settings window tab selection and overflow behavior.
 - Unit coverage verifies pointer, keyboard, and overflow scrolling behavior.
 
 ### UiProgressBar
@@ -712,14 +712,14 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses an Amount slider to update a determinate progress bar.
+- Controls Demo uses an Amount slider to update a determinate progress bar.
 - planned Animation Demo.
 
 ### UiListBox
 
 Status: Partial.
 
-`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Widget Demo.
+`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Selection Demo.
 
 Common use cases:
 
@@ -742,7 +742,7 @@ Required behavior:
 Demo coverage:
 
 - Settings dropdown popups.
-- Widget Demo visible list selection and dropdown popup.
+- Selection Demo visible list selection and dropdown popup.
 - Selection Demo.
 
 ### UiSeparator
@@ -765,7 +765,7 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo groups related control rows with horizontal separators.
+- Settings groups related pages and action areas; Controls Demo should add visible separators again when it grows beyond the compact first pass.
 - Sidebar after grouped launcher sections exist.
 - Settings after tabs/grouped panels exist.
 
@@ -820,7 +820,7 @@ Required behavior:
 Demo coverage:
 
 - demo Sidebar renders collapsed action tooltips.
-- planned Widget Demo coverage once tooltip behavior becomes reusable.
+- planned Controls Demo coverage once tooltip behavior becomes reusable.
 
 ### Generalized Icon Action Button
 
@@ -875,4 +875,4 @@ Demo coverage:
 
 - demo sidebar uses `UiSidebarAction` for all launcher and bottom system actions.
 - unit tests cover icon/label separation, active state, collapsed-mode tooltip reporting, visible demo tooltip wiring, and keyboard activation.
-- Widget Demo once icon assets exist.
+- Controls Demo once generalized action-button assets exist.

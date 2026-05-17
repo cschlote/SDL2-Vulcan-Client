@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Added a visible `UiScrollArea` clipping and wheel-scroll example to the Widget Demo.
+- Split the old Widget Demo into focused Layout Demo, ScrollArea Demo, and Controls Demo windows.
+- Added a visible `UiScrollArea` clipping and wheel-scroll example to the ScrollArea Demo.
 - Added retained UI clip rectangles and `UiScrollArea` child-geometry clipping for panel, image, and text draw commands.
 - Documented the asset and localization pipeline direction: PNG for authored UI images, PPM as fallback/test data, glTF/GLB for 3D models, and gettext PO catalogs for localization.
 - Reprioritized the demo UI roadmap into grouped infrastructure, asset, demo, audio, 3D, localization, and package-boundary tracks.
