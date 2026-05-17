@@ -174,9 +174,8 @@ class VulkanRenderer
     private AudioMixer audioMixer;
     private AudioSystem audioSystem;
     private bool audioOutputAvailable;
-    private bool audioQueuedSilence;
     private enum size_t audioFramesPerPump = 512;
-    private enum int audioQueueTargetBytes = cast(int)audioFramesPerPump * 2 * cast(int)float.sizeof * 2;
+    private enum int audioQueuedLimitBytes = 48_000 * 2 * cast(int)float.sizeof / 8;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -1813,41 +1812,8 @@ class VulkanRenderer
         if (audioSystem is null)
             return;
 
-        logLineVerbose(
-            "Audio UI clip request: bus=",
-            audioBusName(bus),
-            ", output=",
-            audioOutputAvailable,
-            ", queuedBefore=",
-            audioDevice is null ? -1 : audioDevice.queuedBytes(),
-            ", activeBefore=",
-            audioSystem.activeVoiceCount(),
-            ", idleSilence=",
-            audioQueuedSilence);
-        discardIdleAudioSilence();
         audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, 1.0f));
         audioSystem.processEvents();
-        logLineVerbose(
-            "Audio UI clip scheduled: queuedAfterEvents=",
-            audioDevice is null ? -1 : audioDevice.queuedBytes(),
-            ", activeAfterEvents=",
-            audioSystem.activeVoiceCount());
-        pumpAudioOutput(true);
-    }
-
-    private void discardIdleAudioSilence()
-    {
-        if (!audioQueuedSilence || audioDevice is null)
-            return;
-
-        const queuedBefore = audioDevice.queuedBytes();
-        if (audioDevice.clearQueued())
-        {
-            audioQueuedSilence = false;
-            logLineVerbose("Audio idle silence discarded: queuedBefore=", queuedBefore, ", queuedAfter=", audioDevice.queuedBytes());
-        }
-        else
-            logLine("Audio idle silence discard failed: queuedBefore=", queuedBefore, ", sdlError=", sdlErrorText());
     }
 
     private AudioBusId audioPreviewBus(DemoAudioPreviewKind previewKind) const
@@ -1868,27 +1834,6 @@ class VulkanRenderer
         return radians * 180.0f / PI;
     }
 
-    private static string audioBusName(AudioBusId bus)
-    {
-        final switch (bus)
-        {
-            case AudioBusId.master:
-                return "master";
-            case AudioBusId.music:
-                return "music";
-            case AudioBusId.effects:
-                return "effects";
-            case AudioBusId.ui:
-                return "ui";
-        }
-    }
-
-    private static string sdlErrorText()
-    {
-        auto error = SDL_GetError();
-        return error is null ? "" : fromStringz(error).idup;
-    }
-
     /** Opens the SDL audio stream used for audible mixed output. */
     private void initializeAudioOutput()
     {
@@ -1899,121 +1844,32 @@ class VulkanRenderer
         if (!audioDevice.openStream(config))
         {
             audioOutputAvailable = false;
-            logLine("Audio output unavailable; continuing without sound. sdlError=", sdlErrorText());
+            logLine("Audio output unavailable; continuing without sound.");
             return;
         }
 
         audioOutputAvailable = audioDevice.resume();
         if (audioOutputAvailable)
-        {
-            auto actual = audioDevice.actual();
-            logLineVerbose(
-                "Audio output stream resumed: freq=",
-                actual.frequency,
-                ", channels=",
-                actual.channels,
-                ", format=",
-                actual.format,
-                ", sampleFrames=",
-                actual.sampleFrames,
-                ", queued=",
-                audioDevice.queuedBytes(),
-                ", paused=",
-                audioDevice.paused());
-            prefillAudioOutput();
-            logLineVerbose("Audio output stream ready: queued=", audioDevice.queuedBytes(), ", idleSilence=", audioQueuedSilence);
-        }
+            logLineVerbose("Audio output stream ready.");
         else
-            logLine("Audio output stream opened but could not be resumed. sdlError=", sdlErrorText());
-    }
-
-    /** Keeps the SDL stream warm without adding a large audible latency tail. */
-    private void prefillAudioOutput()
-    {
-        if (audioDevice is null || audioMixer is null)
-            return;
-
-        const queuedBefore = audioDevice.queuedBytes();
-        auto buffer = audioMixer.createBuffer(audioFramesPerPump);
-        while (audioDevice.queuedBytes() < audioQueueTargetBytes)
-        {
-            if (!audioDevice.queueInterleavedFloat(buffer.samples))
-            {
-                logLine("Audio prefill failed: queuedBefore=", queuedBefore, ", queuedNow=", audioDevice.queuedBytes(), ", sdlError=", sdlErrorText());
-                break;
-            }
-            audioQueuedSilence = true;
-        }
-        logLineVerbose(
-            "Audio prefill complete: queuedBefore=",
-            queuedBefore,
-            ", queuedAfter=",
-            audioDevice.queuedBytes(),
-            ", target=",
-            audioQueueTargetBytes);
+            logLine("Audio output stream opened but could not be resumed.");
     }
 
     /** Pushes mixed voice data into SDL when the stream needs data. */
-    private void pumpAudioOutput(bool trace = false)
+    private void pumpAudioOutput()
     {
         if (!audioOutputAvailable || audioDevice is null || audioSystem is null || audioMixer is null)
-        {
-            if (trace)
-                logLineVerbose(
-                    "Audio pump skipped: output=",
-                    audioOutputAvailable,
-                    ", device=",
-                    audioDevice !is null,
-                    ", system=",
-                    audioSystem !is null,
-                    ", mixer=",
-                    audioMixer !is null);
             return;
-        }
 
-        const queuedBefore = audioDevice.queuedBytes();
-        const activeBefore = audioSystem.activeVoiceCount();
-        if (queuedBefore >= audioQueueTargetBytes)
-        {
-            if (trace)
-                logLineVerbose(
-                    "Audio pump skipped: queuedBefore=",
-                    queuedBefore,
-                    ", target=",
-                    audioQueueTargetBytes,
-                    ", activeBefore=",
-                    activeBefore,
-                    ", idleSilence=",
-                    audioQueuedSilence);
+        if (audioSystem.activeVoiceCount() == 0)
             return;
-        }
+
+        if (audioDevice.queuedBytes() >= audioQueuedLimitBytes)
+            return;
 
         auto buffer = audioMixer.createBuffer(audioFramesPerPump);
-        if (activeBefore > 0)
-        {
-            audioSystem.mixVoices(buffer);
-            audioQueuedSilence = false;
-        }
-        else
-            audioQueuedSilence = true;
-        if (!audioDevice.queueInterleavedFloat(buffer.samples))
-        {
-            logLine("Audio pump queue failed: queuedBefore=", queuedBefore, ", activeBefore=", activeBefore, ", sdlError=", sdlErrorText());
-            return;
-        }
-
-        if (trace)
-            logLineVerbose(
-                "Audio pump queued: queuedBefore=",
-                queuedBefore,
-                ", queuedAfter=",
-                audioDevice.queuedBytes(),
-                ", activeBefore=",
-                activeBefore,
-                ", activeAfter=",
-                audioSystem.activeVoiceCount(),
-                ", idleSilence=",
-                audioQueuedSilence);
+        audioSystem.mixVoices(buffer);
+        audioDevice.queueInterleavedFloat(buffer.samples);
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

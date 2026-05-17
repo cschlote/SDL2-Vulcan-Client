@@ -1,6 +1,6 @@
 # Audio Architecture
 
-This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback stream ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. The runtime also registers a tiny synthetic `ui/click` clip until real UI sound assets exist, and the renderer queues it when retained buttons activate. The renderer pumps active voices or short silence blocks into an SDL audio stream when audio output is available, keeping the stream warm without a large latency queue. Queued idle silence is discarded before a new short UI sound so the sound does not sit behind buffered silence. File loading, voice limits, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
+This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback stream ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. The runtime also registers a tiny synthetic `ui/click` clip until real UI sound assets exist, and the renderer queues it when retained buttons activate. The renderer pumps active voices into an SDL audio stream when audio output is available. File loading, voice limits, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
 
 ## Goals
 
@@ -38,7 +38,7 @@ The expected event flow is:
 2. The main thread queues the event in the `AudioSystem`.
 3. The audio system resolves bus routing and playback parameters. Currently this applies bus-volume state, records fade targets, and maps `playClip` events to registered clips and active voices.
 4. The mixer owns active voices and produces interleaved samples for the device callback. The current mixer can clear output buffers, mix already-decoded interleaved float blocks with bus gain, and render simple clip voices scheduled by `AudioSystem`.
-5. The backend writes mixed samples to the platform audio device. The renderer currently opens an SDL audio stream, resumes it when possible, and keeps a small queue filled with mixed UI/event audio or silence so the stream does not need to restart after idle periods. When a new one-shot UI sound arrives after idle time, the renderer clears the known silence queue and immediately pumps the mixed sound block.
+5. The backend writes mixed samples to the platform audio device. The renderer currently opens an SDL audio stream, resumes it when possible, and pushes mixed UI/event audio blocks into it each frame when active voices exist.
 
 Audio events should stay small and serializable enough to log, test, or replay. Examples include `playUiClick`, `playEffect(assetId)`, `startMusic(trackId)`, `fadeBus(busId, targetVolume, duration)`, and `stopAll(busId)`. The current UI click path is intentionally synthetic: it proves the event-to-voice path without depending on a package asset or SDL callback yet.
 
@@ -85,3 +85,9 @@ Audio sliders in the Settings window also trigger a small preview path when the 
 - Should the settings model gain a separate UI volume now that the engine has a distinct `ui` bus?
 - How should audio assets be named and located before a real asset pipeline exists?
 - What voice limit and stealing policy should effects use?
+
+## Open Issue: Idle UI Click Latency
+
+On one tested XFCE4 desktop setup, isolated synthetic UI click sounds can become audible only after several clicks or roughly one second after a longer idle period. Verbose diagnostics did not show SDL errors, failed queue operations, or missing audio events. Temporary workarounds such as keeping the stream filled with silence, clearing known idle silence before one-shot sounds, and pumping directly from the event path did not solve the behavior reliably and were removed to keep the implementation simple and explainable.
+
+The current working assumption is that the desktop audio stack may suspend or mute silent/idle streams, or that the frame-driven SDL stream queue is not the right long-term model for low-latency one-shot UI sounds on every backend. This should be re-evaluated when real music or ambient audio keeps the device active, and again when deciding whether the first production audio backend should use an SDL callback, a dedicated audio thread, or another continuous mixer pump.
