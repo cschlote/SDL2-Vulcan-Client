@@ -160,7 +160,7 @@ Children should receive a well-defined content area. Chrome, border, and gutter 
 
 Layout follows the same broad idea as mature retained UI systems: a widget reports a natural content size, then the parent layout uses minimum, preferred, maximum, and grow hints to decide the arranged size. A control such as `UiButton` may therefore measure its caption as a compact natural width while still filling a sidebar or form row when its maximum width and horizontal grow hint allow stretching. Widgets should not silently turn their current arranged size into their future intrinsic size, because that makes later shrink layouts impossible.
 
-`UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. `Tab` and `Shift-Tab` move through visible focusable widgets in front-window traversal order. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes.
+`UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. `Tab` and `Shift-Tab` move through visible focusable widgets in front-window traversal order. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes. Focus ownership is visible: the focused widget draws a generic focus ring, and the window that owns that focused widget highlights its header.
 
 ## Font-Sensitive Layout
 

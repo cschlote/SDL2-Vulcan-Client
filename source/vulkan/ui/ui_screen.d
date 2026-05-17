@@ -675,6 +675,15 @@ protected:
 
         if (focusedWidget !is null)
             focusedWidget.setFocused(true);
+
+        refreshWindowFocusState();
+    }
+
+    /** Updates top-level window focus flags after focus ownership changes. */
+    void refreshWindowFocusState()
+    {
+        foreach (window; windows_)
+            window.hasKeyboardFocus = focusedWidget !is null && windowOwnsWidget(window, focusedWidget);
     }
 
     /** Returns true when the window is currently dragged or resized. */
@@ -1278,12 +1287,26 @@ unittest
     assert(screen.dispatchPointerEvent(event));
     assert(field.focused);
     assert(screen.hasKeyboardFocus());
+    assert(window.hasKeyboardFocus);
 
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.escape;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(!field.focused);
+    assert(!screen.hasKeyboardFocus());
+    assert(!window.hasKeyboardFocus);
+
+    event.x = 14.0f;
+    event.y = window.headerHeight + 14.0f;
+    assert(screen.dispatchPointerEvent(event));
+    assert(field.focused);
     event.x = 170.0f;
     event.y = 86.0f;
     assert(!screen.dispatchPointerEvent(event));
     assert(!field.focused);
     assert(!screen.hasKeyboardFocus());
+    assert(!window.hasKeyboardFocus);
 }
 
 @("UiScreen traverses focusable widgets with Tab")

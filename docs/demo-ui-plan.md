@@ -29,7 +29,7 @@ Implemented or partially implemented:
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data in `vulkan.ui`
 - D-key debug bounds overlay with color-coded widget and layout outlines
-- generic keyboard focus dispatch, SDL text input routing, and editable single-line text fields
+- generic keyboard focus dispatch, SDL text input routing, visible focus rings, focused-window header highlighting, and editable single-line text fields
 - audio settings data for master, music, and effects volumes
 - backend-neutral audio bus/event scaffolding with settings-to-volume mapping
 
@@ -124,7 +124,7 @@ Settings-style dialogs should split the window body into a growable content area
 
 `UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary stackable window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. This stacking behavior is independent of the dragable header flag. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
-`UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
+`UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. Focused controls draw a generic ring, and the owning window highlights its header so keyboard mode is visible. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
 
 Context-sensitive custom cursors should be resolved through `UiScreen`. Window chrome should report move and resize cursors, text fields should report a text insertion cursor, clickable controls should report an action cursor, and the application should fall back to the scene cursor outside UI. The SDL window layer should own platform cursor handles so widget code only reports cursor intent.
 
@@ -191,7 +191,7 @@ The next work should continue from reusable engine foundations toward demo polis
 7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Partial: dropdown popup behavior, reusable `UiListBox` text-row selection, and focused keyboard selection are implemented; scroll-backed long lists are still planned.
 9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages. Partial: Display, UI, and Audio pages are implemented; Controls and Gameplay remain planned.
-10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal, focused activation/adjustment keys, and modal focus containment.
+10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, visible focus state, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal, focused activation/adjustment keys, focus rings, focused-window header highlighting, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions. Done for `UiScreen` modal routing, blocked-background input, modal Enter/Escape button dispatch, and blocked background cursor feedback; concrete dialog widgets remain planned demo work.
 12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.

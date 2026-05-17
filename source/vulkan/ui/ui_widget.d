@@ -16,6 +16,7 @@ import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
 private immutable float[4] widgetDebugBoundsColor = [1.00f, 0.05f, 0.05f, 0.55f];
+private immutable float[4] widgetFocusRingColor = [0.34f, 0.82f, 0.46f, 0.95f];
 
 /** Base class for all retained UI widgets. */
 abstract class UiWidget
@@ -234,6 +235,9 @@ abstract class UiWidget
             const color = debugBoundsColor();
             appendSurfaceFrame(localContext, 0.0f, 0.0f, width, height, color, color, localContext.depthBase - 0.0005f, false, true);
         }
+
+        if (focused && focusable && width > 0.0f && height > 0.0f)
+            appendSurfaceFrame(localContext, 1.0f, 1.0f, width - 1.0f, height - 1.0f, widgetFocusRingColor, widgetFocusRingColor, localContext.depthBase - 0.004f, false, true);
     }
 
 protected:

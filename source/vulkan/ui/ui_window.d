@@ -29,6 +29,7 @@ private enum float chromeTopInset = 7.0f;
 private enum float defaultOpenTransitionSeconds = 0.12f;
 private enum float defaultCloseTransitionSeconds = 0.10f;
 private enum float defaultBoundsTransitionSeconds = 0.14f;
+private immutable float[4] windowFocusHeaderTint = [0.34f, 0.82f, 0.46f, 1.00f];
 
 /** Logical top-level window presentation state for future visual transitions. */
 enum UiWindowTransitionState
@@ -53,6 +54,7 @@ final class UiWindow : UiWidget
     bool showHeader = true;                         ///< True when the title/header band is rendered and hit-tested.
     bool showTitle = true;                          ///< True when the title text is rendered inside the header.
     bool showBorder = true;                         ///< True when the outer border is rendered and reserved for content.
+    bool hasKeyboardFocus;                          ///< True while one widget inside this window owns keyboard focus.
     bool dragTracking;                              ///< True while a drag gesture is active.
     bool resizeTracking;                            ///< True while a resize gesture is active.
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
@@ -588,7 +590,7 @@ protected:
     {
         updateChromeLayout();
 
-        const headerFill = showHeader ? headerColor : bodyColor;
+        const headerFill = showHeader ? focusedHeaderColor() : bodyColor;
         const bodyFill = bodyColor;
         const renderedHeaderHeight = showHeader ? headerHeight : 0.0f;
 
@@ -672,6 +674,19 @@ private:
     {
         const atlas = context.atlasFor(UiTextStyle.large);
         return atlas is null ? fallbackTitleTextHeight : max(atlas.lineHeight, atlas.ascent + atlas.descent);
+    }
+
+    /** Returns the header fill adjusted for an active keyboard focus owner. */
+    float[4] focusedHeaderColor() const
+    {
+        if (!hasKeyboardFocus)
+            return headerColor;
+
+        float[4] color;
+        foreach (index; 0 .. 3)
+            color[index] = headerColor[index] * 0.62f + windowFocusHeaderTint[index] * 0.38f;
+        color[3] = headerColor[3];
+        return color;
     }
 
     /** Draws the visual resize ring and corner markers around the window. */

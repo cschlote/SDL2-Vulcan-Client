@@ -24,7 +24,7 @@ Reusable implementations belong in [source/vulkan/ui/](../source/vulkan/ui/). De
 
 Status: Implemented.
 
-`UiWidget` is the retained base class for rectangular UI objects. It stores local position, size, preferred layout hints, children, focusability, pointer routing, cursor intent, and rendering hooks.
+`UiWidget` is the retained base class for rectangular UI objects. It stores local position, size, preferred layout hints, children, focusability, pointer routing, cursor intent, and rendering hooks. Focusable widgets draw a generic focus ring when they own keyboard focus, unless a later specialized control deliberately overrides that visual language.
 
 Common use cases:
 
@@ -37,7 +37,7 @@ Required behavior:
 
 - stable local-to-parent geometry
 - deterministic child traversal
-- optional focus ownership
+- optional focus ownership with visible focus ring
 - optional cursor preference through `cursorSelf`
 - local rendering through `renderSelf`
 - measuring and layout through `measureSelf` and layout hints
