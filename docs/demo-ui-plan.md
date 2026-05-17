@@ -41,6 +41,7 @@ Remaining migration debt:
 - settings tabs exist for Display, UI, and Audio; Controls and Gameplay pages are still planned once those settings are editable.
 - reusable sidebar container, shared tooltip popup policy, and richer icon assets are still planned; `UiSidebarAction` now covers fixed icon-slot sidebar rows with 26 x 26 images, animated expanded labels, active markers for singleton targets, collapsed-mode tooltip text hooks, and delayed demo-rendered tooltip popups placed above/right of the pointer.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
+- asset pipeline decisions are documented: PNG should become the normal authored UI/image format, PPM remains fallback/test data, glTF/GLB should become the normal 3D model format, and gettext PO files should become the localization source format.
 - asset-loaded clips, voice-limit policy, and music playback are still planned engine work; backend-neutral audio events, bus state, settings volume mapping, renderer-side settings application, SDL audio stream output, float block mixing, in-memory clips, simple voices, event-to-voice scheduling, and synthetic UI click events exist.
 - UI animation scheduling, basic window transition state/geometry application, demo singleton open/close wiring, and API-level bounds transitions exist; animated media widgets and broader demo transition coverage are still planned engine work.
 
@@ -68,7 +69,7 @@ Next widgets:
 - icon button for sidebar and toolbar actions
 - tooltip for collapsed icon-only controls
 - scroll area clipping plus draggable horizontal/vertical scrollbars
-- icon/image widget backed by renderer texture data; asset-id draw intents, a fixed UI image atlas, atlas-region registry, and first file-backed low-resolution PPM demo assets exist; high-resolution authored icons and PNG/JPEG-style package loading remain planned
+- icon/image widget backed by renderer texture data; asset-id draw intents, a fixed UI image atlas, atlas-region registry, and first file-backed low-resolution PPM demo assets exist; high-resolution authored PNG icons and package image loading remain planned
 - widget-level popup/menu facade for dropdowns, context menus, and tooltips
 - animated image/media widgets
 
@@ -98,6 +99,8 @@ The visible demo windows should serve different roles so the UI reads like a rea
 Detailed per-window maintenance notes live in [Demo Windows](demo-windows.md). Every visible demo window should have documented purpose, covered UI classes, regression checks, and planned extensions there.
 
 The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible widget paints a semi-transparent outline after its normal render pass so layout and nesting are inspectable at runtime. Layout containers use distinct colors for vertical stacks, horizontal rows, content/frame boxes, grids, and spacers.
+
+Asset and localization format decisions live in [Asset And Localization Pipeline](asset-and-localization-pipeline.md). The short version is: authored UI images should use PNG and decode to engine-owned RGBA8 pixels, PPM should stay as fallback/test data, 3D models should use glTF 2.0 or GLB exported from Blender, and localized UI strings should use gettext-style PO catalogs behind a small engine lookup service.
 
 `UiWindow` body content is laid out through the internal content root. A direct content widget should receive the full padded body area, and nested layout containers decide how their children consume that space. The content root must stay clear of chrome controls and the resize ring so window grips never overlap application widgets.
 
@@ -199,7 +202,7 @@ The next work should continue from reusable engine foundations toward demo polis
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for SDL device ownership, backend-neutral event queue, bus definitions, volume state, settings-to-bus mapping, renderer-side settings application, float block mixing, in-memory clips, simple voices, and event-to-voice scheduling.
 16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path, SDL stream output, and committed Settings slider preview via draft bus volumes. Open issue: isolated UI clicks can show idle-start latency on at least one XFCE4 audio setup; see `audio-architecture.md`.
-17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package. First UI image assets live under `assets/ui/` as simple low-resolution PPM demo files and should later be replaced or supplemented by authored high-resolution icons and a real image package pipeline.
+17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package. Done for the first documented direction: authored 2D images use PNG, PPM remains fallback/test data, 3D models use glTF/GLB, and localization uses gettext PO files. First UI image assets still live under `assets/ui/` as simple low-resolution PPM demo files and should later be replaced or supplemented by authored high-resolution PNG icons and a real image package pipeline.
 
 ## Near-Term Planning
 
@@ -209,11 +212,12 @@ The next implementation passes should reduce infrastructure gaps that block mult
 2. Extract a widget-level popup facade from the current screen-owned dropdown popup path so dropdowns, context menus, and tooltips share placement, dismissal, focus containment, and stacking policy.
 3. Add a modal/dialog demo slice to UiWindow Demo or a small dedicated dialog example, covering default/cancel buttons, blocked background routing, and focused-window title tinting.
 4. Move the demo tooltip popup into a reusable widget-level popup facade and generalize the current hover delay/dismissal policy.
-5. Replace the rough PPM placeholder images with a coherent higher-resolution icon set, then keep the PPM files only as fallback/test fixtures until a real package image loader exists.
+5. Add the first PNG image loader and replace the rough PPM placeholder images with a coherent higher-resolution PNG icon set; keep the PPM files only as fallback/test fixtures.
 6. Add Controls and Gameplay pages to Settings once there are real editable values; the current `UiTabBar` overflow support is ready for additional pages.
 7. Add the planned Presets/Shortcuts window after reusable command/action metadata exists, so it can expose layouts and render profiles without hard-coding another launcher.
 8. Continue audio with asset-backed short clips and a music stream path; keep the idle-click latency issue documented until continuous playback or a callback backend clarifies it.
 9. Add the Animation Demo after at least one widget-local animation exists, using the current window transition and bounds-transition foundation.
+10. Add the first asset/localization module boundary: decoded `ImageData` for PNG/PPM, a small glTF/GLB model-import spike, and gettext PO catalog lookup for demo UI strings.
 
 ## Implementation Order
 
@@ -233,7 +237,7 @@ The next implementation passes should reduce infrastructure gaps that block mult
 14. Remove the renderer's direct dependency on `DemoUiScreen` when a reusable app/screen boundary is ready.
 15. Add context-sensitive cursor intent to widgets, window chrome, `UiScreen`, and the SDL window layer. Done for SDL system cursors.
 16. Add theme/custom bitmap cursor support for project-specific cursor artwork. Done for monochrome bitmap overrides.
-17. Add a real theme/asset loading path for cursor definitions when the asset pipeline exists.
+17. Add a real theme/asset loading path for cursor definitions when the PNG-based asset pipeline exists.
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, singleton toggle actions, repeatable spawn actions, and bottom Help/Status/Settings/Close All/Exit actions. Done with `UiSidebarAction` rows.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
@@ -249,8 +253,9 @@ The next implementation passes should reduce infrastructure gaps that block mult
 30. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
 31. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup. Partial for SDL stream output, backend-neutral event queue, buses, bus-volume state, settings hookup, renderer application, basic mixer, in-memory clips, simple voices, and event-to-voice scheduling.
 32. Add UI and demo audio events, such as button click feedback and settings volume preview. Partial for retained button activation queuing the synthetic `ui/click` clip and committed Settings slider previews feeding SDL stream output.
-33. Add music playback with stream support, loop handling, fade in/out, and crossfade.
-34. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
+33. Add gettext PO based localization lookup and start moving visible demo UI strings behind stable ids.
+34. Add music playback with stream support, loop handling, fade in/out, and crossfade.
+35. Review package boundaries again after UI cursors, first animation support, the first asset/localization service, and the first audio service exist.
 
 ## Public Package Preparation
 
@@ -259,6 +264,8 @@ Before publishing on code.dlang.org, decide the package boundary:
 - reusable renderer modules
 - reusable UI modules
 - font atlas support
+- reusable asset loading for PNG images, glTF/GLB models, and later package containers
+- reusable localization catalog loading and lookup
 - reusable audio device, event, mixer, clip, and music modules
 - SDL2/Vulkan bootstrap helpers
 - demo-only executable and sample assets

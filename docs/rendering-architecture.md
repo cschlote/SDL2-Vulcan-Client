@@ -70,8 +70,9 @@ Reusable engine candidates:
 - `source/vulkan/font/`: font atlas and text geometry support
 - `source/vulkan/engine/instance.d`, `device.d`, `swapchain.d`, and `pipeline.d`: Vulkan setup helpers after API boundaries are tightened
 - renderer-facing UI draw data in `source/vulkan/ui/ui_geometry.d`
-- UI image asset-id mapping and simple PPM decode support in `source/vulkan/ui/ui_image_assets.d`; it currently maps retained ids to atlas regions, overlays `assets/ui/` demo files into generated fallback cells, and should later be backed by a real image package loader
-- mesh and asset-facing abstractions after placeholder geometry is replaced
+- UI image asset-id mapping and simple PPM decode support in `source/vulkan/ui/ui_image_assets.d`; it currently maps retained ids to atlas regions and overlays `assets/ui/` demo files into generated fallback cells. The planned asset service should add PNG decode into neutral RGBA8 image data before renderer upload.
+- mesh and asset-facing abstractions after placeholder geometry is replaced by glTF/GLB model loading
+- localization catalog lookup once visible demo text moves behind stable gettext PO backed ids
 
 Demo-only candidates:
 

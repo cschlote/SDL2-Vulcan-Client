@@ -54,7 +54,7 @@ Planned extensions:
 - decide whether dragging ordinary windows into the reserved sidebar strip should be blocked immediately or only corrected by relayout after sidebar expand/shrink
 - scroll the upper launcher action group with the mouse wheel once the number of demo entries exceeds the available height
 - show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
-- texture-backed icons with generated fallback cells; the current low-resolution PPM files are placeholders until a coherent high-resolution icon set and package image loader exist
+- texture-backed icons with generated fallback cells; the current low-resolution PPM files are placeholders until a coherent high-resolution PNG icon set and package image loader exist
 - generalize `UiSidebarAction` and ordinary button behavior into one configurable icon-capable action widget instead of adding another narrow button class
 
 ## Help Desk Window

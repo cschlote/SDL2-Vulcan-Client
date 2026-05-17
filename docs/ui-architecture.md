@@ -108,7 +108,7 @@ The reusable UI package currently provides these retained widgets:
 - `UiTextBlock`: text block placeholder for multi-line text rendering
 - `UiButton`: framed button with optional icon and label content row
 - `UiSidebarAction`: fixed icon-slot launcher row for sidebar and dock actions
-- `UiImage`: compact framed image/icon placeholder with optional texture asset id, image draw intent, renderer-side atlas registry, generated fallback atlas cells, and first low-resolution file-backed PPM demo assets
+- `UiImage`: compact framed image/icon placeholder with optional texture asset id, image draw intent, renderer-side atlas registry, generated fallback atlas cells, and first low-resolution file-backed PPM demo assets; authored UI artwork should move to PNG-backed assets once the image loader exists
 - `UiSpacer`: invisible layout spacer
 - `UiContentBox`: padded content root used by windows and other containers
 - `UiFrameBox`: visible framed content box for grouping content

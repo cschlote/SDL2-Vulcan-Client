@@ -611,7 +611,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiImage` is currently a compact framed image/icon placeholder with an optional renderer-facing texture asset id. It is used in the Widget Demo, in icon-plus-label buttons, and as the first visual marker for the demo sidebar. When an asset id is set, `UiImage` emits an image draw intent with UV coordinates; the renderer resolves that id through a small UI image asset registry, rewrites the UVs to an atlas cell, and draws the result through a dedicated UI image layer while the framed placeholder remains visible as fallback styling. The atlas starts with generated fallback cells and is then overlaid with simple file-backed PPM demo assets from `assets/ui/`. Later it should support package-managed PNG/JPEG-style assets and animated image content.
+`UiImage` is currently a compact framed image/icon placeholder with an optional renderer-facing texture asset id. It is used in the Widget Demo, in icon-plus-label buttons, and as the first visual marker for the demo sidebar. When an asset id is set, `UiImage` emits an image draw intent with UV coordinates; the renderer resolves that id through a small UI image asset registry, rewrites the UVs to an atlas cell, and draws the result through a dedicated UI image layer while the framed placeholder remains visible as fallback styling. The atlas starts with generated fallback cells and is then overlaid with simple file-backed PPM demo assets from `assets/ui/`. The documented asset direction is to replace authored UI artwork with PNG files decoded to engine-owned RGBA8 pixels, while PPM remains a fallback/test format. Details live in [Asset And Localization Pipeline](asset-and-localization-pipeline.md).
 
 Common use cases:
 
@@ -628,6 +628,7 @@ Required behavior:
 - optional texture or atlas asset id with UV rectangle
 - renderer-side asset registry that maps retained ids to atlas regions
 - file-backed demo assets that can override generated atlas fallback cells
+- PNG-backed authored image loading through a neutral decoded image representation
 - visible placeholder fallback when the renderer cannot resolve the asset id
 - optional frame selection for animated images
 
@@ -637,7 +638,7 @@ Demo coverage:
 - button tests cover image-plus-label composition.
 - Widget Demo shows multiple placeholder image sizes and an icon action button.
 - Sidebar uses file-backed atlas icon markers with generated fallback cells next to compact or expanded labels.
-- planned Media Demo covers richer texture lookup and animated images.
+- planned Media Demo covers richer PNG texture lookup and animated images.
 
 ### UiVideo
 
