@@ -10,6 +10,9 @@
  */
 module vulkan.audio.audio_system;
 
+import vulkan.audio.audio_mixer : AudioMixBuffer;
+import vulkan.audio.audio_voice : AudioClip, AudioVoice, mixVoice;
+
 private enum size_t audioBusCount = 4;
 
 /** Logical audio routing groups used by the first engine audio model. */
@@ -152,6 +155,8 @@ final class AudioSystem
 {
     private AudioBusState[audioBusCount] buses;
     private AudioEvent[] pendingEvents;
+    private AudioClip[string] clips;
+    private AudioVoice[] voices;
 
     /** Creates an audio system with all buses at full volume. */
     this()
@@ -163,6 +168,8 @@ final class AudioSystem
     void reset()
     {
         pendingEvents.length = 0;
+        clips.clear();
+        voices.length = 0;
         foreach (index; 0 .. buses.length)
         {
             buses[index] = AudioBusState(cast(AudioBusId)index, 1.0f, 1.0f, 0.0f);
@@ -186,6 +193,50 @@ final class AudioSystem
     void clearEvents()
     {
         pendingEvents.length = 0;
+    }
+
+    /** Registers or replaces an in-memory clip by its asset id. */
+    bool registerClip(AudioClip clip)
+    {
+        if (clip.id.length == 0 || !clip.isValid())
+            return false;
+
+        clips[clip.id] = clip;
+        return true;
+    }
+
+    /** Removes a registered clip by id. Active voices keep their copied clip. */
+    bool unregisterClip(string id)
+    {
+        if (id !in clips)
+            return false;
+
+        clips.remove(id);
+        return true;
+    }
+
+    /** Returns true when a clip id is known to the audio system. */
+    bool hasClip(string id) const
+    {
+        return (id in clips) !is null;
+    }
+
+    /** Returns the number of registered clips. */
+    size_t clipCount() const
+    {
+        return clips.length;
+    }
+
+    /** Returns the number of currently active voices. */
+    size_t activeVoiceCount() const
+    {
+        size_t count;
+        foreach (voice; voices)
+        {
+            if (voice.active)
+                ++count;
+        }
+        return count;
     }
 
     /** Queues volume changes that match the existing demo settings model.
@@ -244,6 +295,17 @@ final class AudioSystem
         return buses[busIndex(bus)];
     }
 
+    /** Renders active voices into an existing mix buffer and prunes finished voices. */
+    size_t mixVoices(ref AudioMixBuffer output)
+    {
+        size_t touchedFrames;
+        foreach (ref voice; voices)
+            touchedFrames += mixVoice(output, voice, this);
+
+        pruneInactiveVoices();
+        return touchedFrames;
+    }
+
     private void applyEvent(AudioEvent event)
     {
         normalizeEvent(event);
@@ -261,11 +323,51 @@ final class AudioSystem
                     buses[index].volume = event.targetVolume;
                 break;
             case AudioEventKind.playClip:
+                startClipVoice(event);
+                break;
             case AudioEventKind.stopAll:
+                stopVoicesOnBus(event.bus);
+                break;
             case AudioEventKind.startMusic:
             case AudioEventKind.stopMusic:
                 break;
         }
+    }
+
+    private bool startClipVoice(const AudioEvent event)
+    {
+        auto clip = event.assetId in clips;
+        if (clip is null)
+            return false;
+
+        auto voice = AudioVoice.play(*clip, event.bus, event.gain, event.loop);
+        if (!voice.active)
+            return false;
+
+        voices ~= voice;
+        return true;
+    }
+
+    private void stopVoicesOnBus(AudioBusId bus)
+    {
+        foreach (ref voice; voices)
+        {
+            if (voice.bus == bus)
+                voice.stop();
+        }
+
+        pruneInactiveVoices();
+    }
+
+    private void pruneInactiveVoices()
+    {
+        AudioVoice[] activeVoices;
+        foreach (voice; voices)
+        {
+            if (voice.active)
+                activeVoices ~= voice;
+        }
+        voices = activeVoices;
     }
 }
 
@@ -299,6 +401,8 @@ private void normalizeEvent(ref AudioEvent event)
 
 version (unittest)
 {
+    import vulkan.audio.audio_mixer : AudioMixer;
+
     private void assertNear(float actual, float expected)
     {
         const delta = actual > expected ? actual - expected : expected - actual;
@@ -349,4 +453,56 @@ unittest
 
     audio.clearEvents();
     assert(audio.pendingEventCount() == 0);
+}
+
+unittest
+{
+    auto audio = new AudioSystem();
+    audio.applyVolumeSettings(0.5f, 1.0f, 0.5f);
+    assert(audio.processEvents() == 4);
+
+    assert(audio.registerClip(AudioClip.fromInterleaved("ui/click", [0.8f, -0.8f], 2)));
+    assert(audio.hasClip("ui/click"));
+    assert(audio.clipCount() == 1);
+
+    audio.emit(AudioEvent.playClip("ui/click", AudioBusId.ui, 1.0f));
+    assert(audio.processEvents() == 1);
+    assert(audio.activeVoiceCount() == 1);
+
+    auto mixer = new AudioMixer();
+    auto buffer = mixer.createBuffer(1);
+    assert(audio.mixVoices(buffer) == 1);
+    assert(audio.activeVoiceCount() == 0);
+    assertNear(buffer.samples[0], 0.2f);
+    assertNear(buffer.samples[1], -0.2f);
+}
+
+unittest
+{
+    auto audio = new AudioSystem();
+    assert(audio.registerClip(AudioClip.fromInterleaved("effect/loop", [0.5f, -0.5f], 2)));
+
+    auto event = AudioEvent.playClip("effect/loop", AudioBusId.effects, 1.0f);
+    event.loop = true;
+    audio.emit(event);
+    audio.processEvents();
+    assert(audio.activeVoiceCount() == 1);
+
+    auto mixer = new AudioMixer();
+    auto buffer = mixer.createBuffer(2);
+    assert(audio.mixVoices(buffer) == 2);
+    assert(audio.activeVoiceCount() == 1);
+
+    audio.emit(AudioEvent.stopAll(AudioBusId.effects));
+    audio.processEvents();
+    assert(audio.activeVoiceCount() == 0);
+}
+
+unittest
+{
+    auto audio = new AudioSystem();
+
+    audio.emit(AudioEvent.playClip("missing", AudioBusId.effects, 1.0f));
+    assert(audio.processEvents() == 1);
+    assert(audio.activeVoiceCount() == 0);
 }
