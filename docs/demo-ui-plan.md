@@ -84,7 +84,7 @@ Detailed widget notes live in [UI Widgets](ui-widgets.md). Each existing or plan
 The demo should evolve from a test shell into a small application with clear windows:
 
 - UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
-- Status window: app version, frame rate, active scene, current render mode, and viewport state.
+- Status window: app version, frame rate, active scene, current render mode, 3D object rotation, and viewport state.
 - Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
@@ -132,7 +132,7 @@ UI elements should also leave room for future animation. Local widget animation 
 
 ## Audio Direction
 
-The engine now has a first reusable audio-system scaffold for typed events, queued processing, master/music/effects/UI bus state, settings-to-bus volume mapping, renderer-side application of startup/Apply/Save settings, SDL audio stream output, a basic float block mixer, in-memory clips, simple active voices, event-to-voice scheduling for registered clips, and a synthetic UI click path for retained button activation. The next target is better short-sound behavior, asset-backed clips, and streamed music.
+The engine now has a first reusable audio-system scaffold for typed events, queued processing, master/music/effects/UI bus state, settings-to-bus volume mapping, renderer-side application of startup/Apply/Save settings, SDL audio stream output with a small silence warm-up queue, a basic float block mixer, in-memory clips, simple active voices, event-to-voice scheduling for registered clips, and a synthetic UI click path for retained button activation. The next target is better short-sound behavior, asset-backed clips, and streamed music.
 
 The usual split is:
 
@@ -197,7 +197,7 @@ The next work should continue from reusable engine foundations toward demo polis
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for SDL device ownership, backend-neutral event queue, bus definitions, volume state, settings-to-bus mapping, renderer-side settings application, float block mixing, in-memory clips, simple voices, and event-to-voice scheduling.
-16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path, SDL stream output, and Settings slider preview via draft bus volumes.
+16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path, SDL stream output with idle silence warm-up, and committed Settings slider preview via draft bus volumes.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
 ## Implementation Order
@@ -232,7 +232,7 @@ The next work should continue from reusable engine foundations toward demo polis
 28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch, widget-local tick hooks, window transition state/progress, renderer-facing window presentation parameters, generated-geometry application, singleton window transition wiring, and API move/resize bounds transitions.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
 30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup. Partial for SDL stream output, backend-neutral event queue, buses, bus-volume state, settings hookup, renderer application, basic mixer, in-memory clips, simple voices, and event-to-voice scheduling.
-31. Add UI and demo audio events, such as button click feedback and settings volume preview. Partial for retained button activation queuing the synthetic `ui/click` clip and feeding it to SDL stream output.
+31. Add UI and demo audio events, such as button click feedback and settings volume preview. Partial for retained button activation queuing the synthetic `ui/click` clip and committed Settings slider previews feeding SDL stream output.
 32. Add music playback with stream support, loop handling, fade in/out, and crossfade.
 33. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
 

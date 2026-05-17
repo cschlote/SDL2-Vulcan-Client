@@ -89,6 +89,7 @@ Current behavior:
 - displays current FPS
 - displays current scene shape
 - displays current render mode
+- displays 3D object yaw and pitch angles
 - displays viewport size
 - anchors near the top-right viewport corner
 
@@ -97,6 +98,7 @@ Useful regression checks:
 - per-frame label updates do not allocate window objects repeatedly
 - viewport changes keep the window visible and clamped
 - changing render mode or scene shape updates the status text immediately
+- keyboard or mouse rotation updates the yaw/pitch text without moving the window
 - numeric text remains aligned enough to scan during rendering tests
 
 Planned extensions:

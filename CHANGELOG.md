@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added live 3D rotation angles to the Status window.
+- Changed audio settings slider previews to play once on pointer commit instead of cascading during drag.
+- Kept the SDL audio stream warm with a small silence queue to reduce idle/startup click latency.
 - Added audio settings slider previews through draft bus-volume updates and the synthetic UI click clip.
 - Added SDL audio stream output and renderer-side pumping of mixed UI click voices.
 - Added a synthetic builtin UI click clip and queued it from activated retained UI buttons.

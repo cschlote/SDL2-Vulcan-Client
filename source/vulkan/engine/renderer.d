@@ -25,7 +25,7 @@ import std.stdio : writeln;
 import std.string : fromStringz;
 
 import demo.demo_settings : DemoSettings, saveDemoSettings;
-import demo.demo_ui : DemoUiScreen;
+import demo.demo_ui : DemoAudioPreviewKind, DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.audio.audio_device : AudioDevice, AudioDeviceConfig;
@@ -175,7 +175,7 @@ class VulkanRenderer
     private AudioSystem audioSystem;
     private bool audioOutputAvailable;
     private enum size_t audioFramesPerPump = 512;
-    private enum int audioQueuedLimitBytes = 48_000 * 2 * cast(int)float.sizeof / 8;
+    private enum int audioQueueTargetBytes = cast(int)audioFramesPerPump * 2 * cast(int)float.sizeof * 2;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -323,7 +323,15 @@ class VulkanRenderer
         createFontResources();
         uiScreen.initialize(fontAtlases[]);
         uiScreen.setSettingsDraft(demoSettings);
-        uiScreen.syncViewport(cast(float)swapchain.extent.width, cast(float)swapchain.extent.height, cast(float)fpsValue, currentShapeName, currentRenderModeName, buildVersion);
+        uiScreen.syncViewport(
+            cast(float)swapchain.extent.width,
+            cast(float)swapchain.extent.height,
+            cast(float)fpsValue,
+            currentShapeName,
+            currentRenderModeName,
+            buildVersion,
+            angleDegrees(yawAngle),
+            angleDegrees(pitchAngle));
         registerDemoCursors();
         createUniformBuffers();
         createDescriptorPoolAndSets();
@@ -1295,6 +1303,8 @@ class VulkanRenderer
             currentShapeName,
             currentRenderModeName,
             buildVersion,
+            angleDegrees(yawAngle),
+            angleDegrees(pitchAngle),
             uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
@@ -1324,6 +1334,8 @@ class VulkanRenderer
                     currentShapeName,
                     currentRenderModeName,
                     buildVersion,
+                    angleDegrees(yawAngle),
+                    angleDegrees(pitchAngle)
                 );
             }
 
@@ -1755,7 +1767,7 @@ class VulkanRenderer
     }
 
     /** Applies the audio settings draft and queues a short audible preview. */
-    private void previewAudioSettingsDialog()
+    private void previewAudioSettingsDialog(DemoAudioPreviewKind previewKind)
     {
         if (audioSystem is null)
             return;
@@ -1764,7 +1776,7 @@ class VulkanRenderer
             uiScreen.settingsDraft.audio.masterVolume,
             uiScreen.settingsDraft.audio.musicVolume,
             uiScreen.settingsDraft.audio.effectsVolume);
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
+        audioSystem.emit(AudioEvent.playClip(uiClickClipId, audioPreviewBus(previewKind), 1.0f));
         audioSystem.processEvents();
     }
 
@@ -1797,6 +1809,24 @@ class VulkanRenderer
         audioSystem.processEvents();
     }
 
+    private AudioBusId audioPreviewBus(DemoAudioPreviewKind previewKind) const
+    {
+        final switch (previewKind)
+        {
+            case DemoAudioPreviewKind.master:
+                return AudioBusId.ui;
+            case DemoAudioPreviewKind.music:
+                return AudioBusId.music;
+            case DemoAudioPreviewKind.effects:
+                return AudioBusId.effects;
+        }
+    }
+
+    private static float angleDegrees(float radians)
+    {
+        return radians * 180.0f / PI;
+    }
+
     /** Opens the SDL audio stream used for audible mixed output. */
     private void initializeAudioOutput()
     {
@@ -1813,9 +1843,26 @@ class VulkanRenderer
 
         audioOutputAvailable = audioDevice.resume();
         if (audioOutputAvailable)
+        {
+            prefillAudioOutput();
             logLineVerbose("Audio output stream ready.");
+        }
         else
             logLine("Audio output stream opened but could not be resumed.");
+    }
+
+    /** Keeps the SDL stream warm without adding a large audible latency tail. */
+    private void prefillAudioOutput()
+    {
+        if (audioDevice is null || audioMixer is null)
+            return;
+
+        auto buffer = audioMixer.createBuffer(audioFramesPerPump);
+        while (audioDevice.queuedBytes() < audioQueueTargetBytes)
+        {
+            if (!audioDevice.queueInterleavedFloat(buffer.samples))
+                break;
+        }
     }
 
     /** Pushes mixed voice data into SDL when the stream needs data. */
@@ -1824,14 +1871,12 @@ class VulkanRenderer
         if (!audioOutputAvailable || audioDevice is null || audioSystem is null || audioMixer is null)
             return;
 
-        if (audioSystem.activeVoiceCount() == 0)
-            return;
-
-        if (audioDevice.queuedBytes() >= audioQueuedLimitBytes)
+        if (audioDevice.queuedBytes() >= audioQueueTargetBytes)
             return;
 
         auto buffer = audioMixer.createBuffer(audioFramesPerPump);
-        audioSystem.mixVoices(buffer);
+        if (audioSystem.activeVoiceCount() > 0)
+            audioSystem.mixVoices(buffer);
         audioDevice.queueInterleavedFloat(buffer.samples);
     }
 

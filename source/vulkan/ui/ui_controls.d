@@ -189,7 +189,10 @@ final class UiSlider : UiWidget
     float[4] textColor;
     /** Called after user interaction or `setValue` changes `value`. */
     void delegate(float) onChanged;
+    /** Called when a pointer drag or direct pointer click commits the value. */
+    void delegate(float) onCommitted;
     private bool dragging;
+    private bool commitPending;
 
     /** Creates a retained horizontal slider.
      *
@@ -219,12 +222,17 @@ final class UiSlider : UiWidget
         textColor = cast(float[4])defaultTextColor;
     }
 
-    /** Sets the slider value and emits `onChanged`. */
-    void setValue(float newValue)
+    /** Sets the slider value and emits `onChanged` when it changed. */
+    bool setValue(float newValue)
     {
-        value = clampFloat(newValue, minimum, maximum);
+        const clampedValue = clampFloat(newValue, minimum, maximum);
+        if (clampedValue == value)
+            return false;
+
+        value = clampedValue;
         if (onChanged !is null)
             onChanged(value);
+        return true;
     }
 
     override bool dispatchPointerEvent(ref UiPointerEvent event)
@@ -263,7 +271,11 @@ protected:
     {
         if (event.kind == UiPointerEventKind.buttonUp && event.button == 1)
         {
+            const shouldCommit = dragging && commitPending;
             dragging = false;
+            commitPending = false;
+            if (shouldCommit && onCommitted !is null)
+                onCommitted(value);
             return true;
         }
 
@@ -272,7 +284,7 @@ protected:
             if (!dragging)
                 return false;
 
-            updateValueFromPointer(event.x);
+            commitPending = updateValueFromPointer(event.x) || commitPending;
             return true;
         }
 
@@ -280,7 +292,7 @@ protected:
             return dragging;
 
         dragging = true;
-        updateValueFromPointer(event.x);
+        commitPending = updateValueFromPointer(event.x);
         return true;
     }
 
@@ -289,10 +301,10 @@ protected:
         return UiCursorKind.pointer;
     }
 
-    void updateValueFromPointer(float pointerX)
+    bool updateValueFromPointer(float pointerX)
     {
         const ratio = width > 0.0f ? clampFloat(pointerX / width, 0.0f, 1.0f) : 0.0f;
-        setValue(minimum + (maximum - minimum) * ratio);
+        return setValue(minimum + (maximum - minimum) * ratio);
     }
 
     override bool handleKeyEvent(ref UiKeyEvent event)
@@ -969,6 +981,8 @@ unittest
 unittest
 {
     auto slider = new UiSlider("Scale", 0.0f, 10.0f, 0.0f, 0.0f, 0.0f, 200.0f, 28.0f);
+    uint commits;
+    slider.onCommitted = (value) { ++commits; };
 
     UiPointerEvent event;
     event.kind = UiPointerEventKind.buttonDown;
@@ -984,6 +998,7 @@ unittest
 
     event.kind = UiPointerEventKind.buttonUp;
     assert(slider.dispatchPointerEvent(event));
+    assert(commits == 1);
 }
 
 @("UiDropdown requests popup anchors and selects by index")

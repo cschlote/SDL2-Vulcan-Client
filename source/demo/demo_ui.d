@@ -39,6 +39,13 @@ import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 import vulkan.ui.ui_window : UiWindow;
 
+enum DemoAudioPreviewKind
+{
+    master,
+    music,
+    effects
+}
+
 private final class LayoutDemoProbeBox : UiWidget
 {
     private float[4] fillColor;
@@ -243,7 +250,7 @@ private enum float sidebarFallbackHeight = 260.0f;
 private enum float helpWidth = 462.0f;
 private enum float helpHeight = 252.0f;
 private enum float statusWidth = 348.0f;
-private enum float statusHeight = 184.0f;
+private enum float statusHeight = 210.0f;
 private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 282.0f;
 private enum float settingsPageHeight = 138.0f;
@@ -299,7 +306,7 @@ final class DemoUiScreen : UiScreen
     bool sceneMouseDragging;
     void delegate() onApplySettings;
     void delegate() onSaveSettings;
-    void delegate() onPreviewAudioSettings;
+    void delegate(DemoAudioPreviewKind) onPreviewAudioSettings;
 
     private UiWindow sidebarWindow;
     private UiWindow helpWindow;
@@ -341,6 +348,7 @@ final class DemoUiScreen : UiScreen
     private UiLabel statusFpsLabel;
     private UiLabel statusSceneLabel;
     private UiLabel statusModeLabel;
+    private UiLabel statusRotationLabel;
     private UiLabel statusViewportLabel;
 
     private UiLabel settingsTitleLabel;
@@ -393,16 +401,16 @@ final class DemoUiScreen : UiScreen
         updateWindowState();
     }
 
-    void syncViewport(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion)
+    void syncViewport(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, float yawDegrees = 0.0f, float pitchDegrees = 0.0f)
     {
         super.syncViewport(extentWidth, extentHeight);
-        updateStatusText(fps, currentShapeName, currentRenderModeName, buildVersion);
+        updateStatusText(fps, currentShapeName, currentRenderModeName, buildVersion, yawDegrees, pitchDegrees);
         ensureWindowLayout();
     }
 
-    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, bool debugWidgetBounds = false)
+    UiOverlayGeometry buildOverlayVertices(float extentWidth, float extentHeight, float fps, string currentShapeName, string currentRenderModeName, string buildVersion, float yawDegrees = 0.0f, float pitchDegrees = 0.0f, bool debugWidgetBounds = false)
     {
-        syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion);
+        syncViewport(extentWidth, extentHeight, fps, currentShapeName, currentRenderModeName, buildVersion, yawDegrees, pitchDegrees);
         return buildOverlayGeometry(debugWidgetBounds, overlayWindowDepth);
     }
 
@@ -634,12 +642,14 @@ final class DemoUiScreen : UiScreen
         statusFpsLabel = new UiLabel("FPS: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusTextColor);
         statusSceneLabel = new UiLabel("Szene: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusTextColor);
         statusModeLabel = new UiLabel("Modus: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusTextColor);
+        statusRotationLabel = new UiLabel("Rotation: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusTextColor);
         statusViewportLabel = new UiLabel("Viewport: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusAccentColor);
 
         statusContent.add(statusBuildLabel);
         statusContent.add(statusFpsLabel);
         statusContent.add(statusSceneLabel);
         statusContent.add(statusModeLabel);
+        statusContent.add(statusRotationLabel);
         statusContent.add(statusViewportLabel);
         statusWindow.add(statusContent);
         statusWindow.visible = false;
@@ -684,9 +694,12 @@ final class DemoUiScreen : UiScreen
         settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
         settingsThemeDropdown.onOpenRequested = &openDropdownPopup;
         settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
-        settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; previewAudioSettingsFromDialog(); };
-        settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; previewAudioSettingsFromDialog(); };
-        settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; previewAudioSettingsFromDialog(); };
+        settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; updateSettingsSummary(); };
+        settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; updateSettingsSummary(); };
+        settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; updateSettingsSummary(); };
+        settingsMasterVolumeSlider.onCommitted = (value) { previewAudioSettingsFromDialog(DemoAudioPreviewKind.master); };
+        settingsMusicVolumeSlider.onCommitted = (value) { previewAudioSettingsFromDialog(DemoAudioPreviewKind.music); };
+        settingsEffectsVolumeSlider.onCommitted = (value) { previewAudioSettingsFromDialog(DemoAudioPreviewKind.effects); };
         settingsApplyButton.onClick = &applySettingsFromDialog;
         settingsSaveButton.onClick = &saveSettingsFromDialog;
 
@@ -795,11 +808,11 @@ final class DemoUiScreen : UiScreen
         updateSettingsSummary();
     }
 
-    void previewAudioSettingsFromDialog()
+    void previewAudioSettingsFromDialog(DemoAudioPreviewKind kind)
     {
         updateSettingsSummary();
         if (onPreviewAudioSettings !is null)
-            onPreviewAudioSettings();
+            onPreviewAudioSettings(kind);
     }
 
     void updateSettingsPageVisibility()
@@ -876,12 +889,13 @@ final class DemoUiScreen : UiScreen
         }
     }
 
-    void updateStatusText(float fps, string currentShapeName, string currentRenderModeName, string buildVersion)
+    void updateStatusText(float fps, string currentShapeName, string currentRenderModeName, string buildVersion, float yawDegrees, float pitchDegrees)
     {
         statusBuildLabel.text = format("Build: %s", buildVersion);
         statusFpsLabel.text = format("FPS: %.1f", fps);
         statusSceneLabel.text = format("Szene: %s", currentShapeName);
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
+        statusRotationLabel.text = format("Rotation: Yaw %.1f deg, Pitch %.1f deg", yawDegrees, pitchDegrees);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
         helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length));
         updateSettingsSummary();
@@ -1147,10 +1161,24 @@ unittest
     assert(screen.settingsAudioPage.visible);
 
     uint previews;
-    screen.onPreviewAudioSettings = () { ++previews; };
+    DemoAudioPreviewKind lastPreview;
+    screen.onPreviewAudioSettings = (kind) { ++previews; lastPreview = kind; };
     screen.settingsMasterVolumeSlider.setValue(0.42f);
     assert(screen.settingsDraft.audio.masterVolume > 0.41f && screen.settingsDraft.audio.masterVolume < 0.43f);
+    assert(previews == 0);
+    screen.previewAudioSettingsFromDialog(DemoAudioPreviewKind.master);
     assert(previews == 1);
+    assert(lastPreview == DemoAudioPreviewKind.master);
+}
+
+@("DemoUiScreen shows rotation in status window")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test", 12.5f, -7.25f);
+
+    assert(screen.statusRotationLabel.text == "Rotation: Yaw 12.5 deg, Pitch -7.2 deg");
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")
