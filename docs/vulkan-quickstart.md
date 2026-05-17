@@ -48,7 +48,7 @@ This explicit order is intentional. Simulation and UI state produce geometry; ge
 
 - The scene layer renders selectable Platonic solids as placeholder meshes.
 - The overlay layer renders retained UI windows in native window pixels.
-- Panel quads and text quads are uploaded to separate overlay buffers and drawn with separate descriptor sets.
+- Panel quads, image quads, and text quads are uploaded to separate overlay buffers and drawn with separate descriptor sets. UI image quads resolve retained asset ids into a small atlas that combines generated fallback cells with `assets/ui/` PPM demo files. PNG-backed authored UI images are the planned replacement path; see [Asset And Localization Pipeline](asset-and-localization-pipeline.md).
 
 ## Practical Vulkan Concepts
 

@@ -17,6 +17,9 @@ private enum size_t audioBusCount = 4;
 
 /** Builtin synthetic UI click clip id used before the asset pipeline exists. */
 enum string uiClickClipId = "ui/click";
+enum string uiMasterPreviewClipId = "ui/preview-master";
+enum string uiMusicPreviewClipId = "ui/preview-music";
+enum string uiEffectsPreviewClipId = "ui/preview-effects";
 
 /** Logical audio routing groups used by the first engine audio model. */
 enum AudioBusId
@@ -245,17 +248,26 @@ final class AudioSystem
     /** Registers small synthetic UI clips used until real assets exist. */
     void registerBuiltinClips()
     {
+        registerClip(makeBuiltinPulseClip(uiClickClipId, 512, 6, 0.18f, 1.0f));
+        registerClip(makeBuiltinPulseClip(uiMasterPreviewClipId, 720, 14, 0.16f, 0.8f));
+        registerClip(makeBuiltinPulseClip(uiMusicPreviewClipId, 960, 22, 0.14f, 0.5f));
+        registerClip(makeBuiltinPulseClip(uiEffectsPreviewClipId, 640, 4, 0.16f, 1.0f));
+    }
+
+    private AudioClip makeBuiltinPulseClip(string id, size_t frames, size_t halfPeriod, float gain, float rightScale)
+    {
         float[] samples;
-        samples.length = 512 * 2;
-        foreach (frame; 0 .. 512)
+        samples.length = frames * 2;
+        const period = halfPeriod == 0 ? cast(size_t)1 : halfPeriod;
+        foreach (frame; 0 .. frames)
         {
-            const envelope = 1.0f - cast(float)frame / 512.0f;
-            const sign = (frame / 6) % 2 == 0 ? 1.0f : -1.0f;
-            const value = sign * envelope * 0.18f;
+            const envelope = 1.0f - cast(float)frame / cast(float)frames;
+            const sign = (frame / period) % 2 == 0 ? 1.0f : -1.0f;
+            const value = sign * envelope * gain;
             samples[frame * 2] = value;
-            samples[frame * 2 + 1] = value;
+            samples[frame * 2 + 1] = value * rightScale;
         }
-        registerClip(AudioClip.fromInterleaved(uiClickClipId, samples, 2));
+        return AudioClip.fromInterleaved(id, samples, 2);
     }
 
     /** Queues volume changes that match the existing demo settings model.
@@ -522,6 +534,9 @@ unittest
     auto audio = new AudioSystem();
     audio.registerBuiltinClips();
     assert(audio.hasClip(uiClickClipId));
+    assert(audio.hasClip(uiMasterPreviewClipId));
+    assert(audio.hasClip(uiMusicPreviewClipId));
+    assert(audio.hasClip(uiEffectsPreviewClipId));
 
     audio.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
     assert(audio.processEvents() == 1);

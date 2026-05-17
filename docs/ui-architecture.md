@@ -55,6 +55,7 @@ Generic responsibilities belong in `UiScreen`:
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
+- resolve tooltip text through `UiScreen.tooltipAt`; reusable tooltip popup presentation is still planned
 - place windows in free screen space when possible
 - start normal window open and close transitions through shared show, hide, and toggle helpers
 - animate programmatic window move and resize requests through shared bounds helpers
@@ -89,7 +90,9 @@ Window content should be ordinary widgets. Application code should build a windo
 
 Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from active chrome, border, and resize ring so application widgets do not overlap window affordances.
 
-`UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
+`UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, border, and backfill visibility define how much passive chrome and background is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border. A window can also hide body/header backfill entirely or set RGBA body/header fill colors, which covers the "no backfill" and translucent-window use cases without changing input or layout ownership.
+
+Windows can be pinned to viewport edges. `UiScreen` applies pinned edges after subclass anchoring and before viewport clamping, so a right-pinned or bottom-pinned window stays attached when the SDL window is resized. Pinning opposite edges on the same axis stretches the window across the remaining viewport space, bounded by its minimum size.
 
 Each `UiWindow` has a generated stable `windowId` for title-independent lookup through `UiScreen.windowById`. The visible title remains presentation text. `UiWindow.userTag` is available as an optional pointer-sized application integration value, but engine code should prefer generated ids and owned collections for identity.
 
@@ -99,30 +102,34 @@ Modal dialog conventions are attached to `UiWindow` through optional default and
 
 The reusable UI package currently provides these retained widgets:
 
-- `UiWindow`: framed, draggable, resizeable top-level window with an internal content root
+- `UiWindow`: framed, draggable, resizeable or chrome-less top-level window with an internal content root, optional backfill, backdrop layering, and viewport-edge pinning
+- `UiWindow` can be marked input-transparent for visible overlays such as delayed, frameless tooltips that should not intercept hit testing.
 - `UiLabel`: single-line text label
 - `UiTextBlock`: text block placeholder for multi-line text rendering
 - `UiButton`: framed button with optional icon and label content row
-- `UiImage`: compact framed image/icon placeholder
+- `UiSidebarAction`: fixed icon-slot launcher row for sidebar and dock actions
+- `UiImage`: compact framed image/icon placeholder with optional texture asset id, image draw intent, renderer-side atlas registry, generated fallback atlas cells, and first low-resolution file-backed PPM demo assets; authored UI artwork should move to PNG-backed assets once the image loader exists
 - `UiSpacer`: invisible layout spacer
 - `UiContentBox`: padded content root used by windows and other containers
 - `UiFrameBox`: visible framed content box for grouping content
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
-- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, scrollbar thumbs, and edge indicators
+- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, child-geometry clipping, scrollbar thumbs, and edge indicators
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
 - `UiTabBar`: horizontal page selector with keyboard navigation and first-pass overflow scrolling
 - `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
 - `UiListBox`: selectable text-row list used by popup-backed dropdowns
+- `UiProgressBar`: determinate progress indicator with optional percent text
+- `UiSeparator`: non-interactive horizontal or vertical divider for grouped content
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, `UiIconButton`, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
+Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior, a generalized icon-capable action button, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and `UiSidebarAction` rows. Those rows already keep icon slot and expanded label region separate, show active singleton markers, and expose delayed collapsed-mode tooltips; the remaining sidebar work is a reusable sidebar container, scrollable launcher group, stronger visual design, and better authored image assets.
 
-`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
+`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The current `UiScrollArea` implementation owns retained offsets, wheel handling, child-geometry clipping, visible scrollbar thumbs, and edge indicators; direct scrollbar dragging is still open.
 
 ## Context-Sensitive Cursors
 
@@ -142,7 +149,7 @@ Expected cursor states include:
 
 The first custom-cursor hook is intentionally small. `UiCursorBitmap` describes a monochrome theme cursor for a `UiCursorKind`, and the SDL window wrapper can register that bitmap as an override for the matching system cursor slot. If no custom bitmap is registered, the existing SDL system cursor remains the fallback. A later asset pipeline can load these bitmap definitions from theme data without changing widget cursor intent.
 
-The current demo registers a small custom inspect cursor for `UiCursorKind.crosshair`; the layout probe boxes in the Widget Demo use that cursor so custom cursor registration can be checked at runtime.
+The current demo registers a small custom inspect cursor for `UiCursorKind.crosshair`; the probe boxes in the Custom Demo use that cursor so custom cursor registration can be checked at runtime.
 
 ## UiWidget Box Model
 

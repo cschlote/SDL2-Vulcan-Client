@@ -15,20 +15,25 @@ The implementation lives in [source/demo/demo_ui.d](../source/demo/demo_ui.d). R
 
 ## UI Sidebar
 
-The UI Sidebar is the persistent left-edge launcher for demo windows. It replaces the old Demo Control window and is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 text-placeholder actions. Expanded mode widens the bar and shows text labels beside the short action markers.
+The UI Sidebar is the persistent left-edge launcher for demo windows. It replaces the old Demo Control window and is currently implemented as a chrome-less `UiWindow` whose content root fills the usable window area. Compact mode shows a vertical stack of roughly 32 x 32 icon actions. Expanded mode widens the bar and shows text labels beside the fixed icon slots.
 
-The sidebar actions currently reuse `UiButton`, whose internal content row centers the label with flexible spacers on both sides. This keeps the bootstrap implementation small, but it is only a placeholder for the final launcher-row design. A later `UiIconButton` or `UiSidebarAction` should keep a fixed icon slot on the left and place expanded text in a separate label region.
+The sidebar actions use `UiSidebarAction`. This keeps a fixed icon slot on the left with 26 x 26 image content, places expanded text in a separate label region, keeps compact captions empty so old mnemonic placeholder letters are not shown beside real icons, animates sidebar expand/collapse through the window bounds-transition path, can show a slim active marker for open singleton windows, and shows collapsed-label tooltips after a hover delay through the generic screen tooltip hook and a small frameless input-transparent tooltip window above/right of the pointer.
 
 Current behavior:
 
 - anchors to the left edge of the SDL window
 - toggles singleton windows such as Help Desk, Status, and Settings
-- spawns repeatable windows such as Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
+- spawns repeatable windows such as Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, Audio Demo, and Custom Demo when that action policy is useful
 - toggles between compact and expanded label modes
+- animates expand and collapse through the window bounds-transition path
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
 - exposes bottom system actions for Help, Status, Settings, Close All, and Exit
 - hides singleton windows and removes repeatable demo-window instances through the Close All action
+- shows active markers for visible singleton target windows
+- shows delayed tooltips for collapsed icon-only actions
+- keeps an opened tooltip visible while the pointer stays inside the same tooltip source region
 - keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
+- keeps the upper launcher group at eight direct demo actions at the current minimum SDL window height; the Custom Demo is intentionally last because it is a specialized probe window
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
@@ -49,15 +54,13 @@ Planned extensions:
 - decide whether dragging ordinary windows into the reserved sidebar strip should be blocked immediately or only corrected by relayout after sidebar expand/shrink
 - scroll the upper launcher action group with the mouse wheel once the number of demo entries exceeds the available height
 - show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
-- active or visible-state markers for target windows
-- tooltips for collapsed icon-only actions
-- texture-backed icons or placeholder icon widgets
-- `UiIconButton` or equivalent icon-plus-label action rows with fixed icon slot and separate label region
-- optional animation support for expand/collapse
+- texture-backed icons with generated fallback cells; the current low-resolution PPM files are placeholders until a coherent high-resolution PNG icon set and package image loader exist
+- repeatable demo/test window actions already have distinct low-resolution PPM placeholder icons so they are easier to distinguish while the final PNG icon set is still pending
+- generalize `UiSidebarAction` and ordinary button behavior into one configurable icon-capable action widget instead of adding another narrow button class
 
 ## Help Desk Window
 
-The Help Desk window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime. Later it should become the built-in help system with searchable documentation and an optional AI-agent interface for real questions about the demo and engine.
+The Help Desk window is currently a compact reference panel. It exercises `UiWindow`, `UiVBox`, `UiLabel`, `UiSpacer`, text measurement, and live label updates. It also documents the debug bounds overlay color map at runtime. Now that `UiScrollArea` exists, this window should be rebuilt into the built-in help system with scrollable topics, searchable documentation, and an optional AI-agent interface for real questions about the demo and engine.
 
 Current behavior:
 
@@ -75,16 +78,17 @@ Useful regression checks:
 
 Planned extensions:
 
+- replace the compact fixed label list with a scrollable help-topic view
 - add search over built-in help topics and documentation snippets
 - add an AI-agent style question interface after the help data model and safety boundaries are clear
 - add a scrolling log region after a text-area or text-block viewport exists
-- use `UiScrollArea` for long help and log content once renderer clipping exists
+- use `UiScrollArea` for long help and log content once text-block content is ready
 - add filter controls for input, UI, renderer, and audio messages
 - add a copy/export command after clipboard support exists
 
 ## Status Window
 
-The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiLabel`, per-frame text updates, and viewport-aware anchoring.
+The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, preferred-size measurement, per-frame text updates, viewport-edge pinning, backdrop layering, and a chrome-less nearly transparent backfill presentation.
 
 Current behavior:
 
@@ -94,15 +98,22 @@ Current behavior:
 - displays current render mode
 - displays 3D object yaw and pitch angles
 - displays viewport size
-- anchors near the top-right viewport corner
+- starts visible so the demo has immediate runtime feedback after launch
+- pins to the top-right SDL viewport edge with configurable top/right margins
+- renders without header, border, or resize chrome and uses a very weak backfill so the status widgets stay readable without becoming a normal opaque panel
+- is marked as a backdrop window so regular demo and dialog windows are drawn and routed above it
+- auto-sizes to the current key/value rows instead of reserving a fixed dialog-sized rectangle
+- re-measures after live text changes so longer build, scene, or render-mode strings grow the overlay before pinning is applied
+- uses muted captions and brighter value colors so the compact overlay remains scannable
 
 Useful regression checks:
 
 - per-frame label updates do not allocate window objects repeatedly
-- viewport changes keep the window visible and clamped
+- viewport changes keep the window attached to the top-right edge and clamped
 - changing render mode or scene shape updates the status text immediately
 - keyboard or mouse rotation updates the yaw/pitch text without moving the window
 - numeric text remains aligned enough to scan during rendering tests
+- longer build/version strings grow the window only as far as needed
 
 Planned extensions:
 
@@ -112,7 +123,7 @@ Planned extensions:
 
 ## Settings Window
 
-The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiContentBox`, `UiLabel`, `UiTabBar`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, grouped pages, and a fixed action row.
+The Settings window is the current dialog-style form. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiContentBox`, `UiLabel`, `UiTabBar`, `UiDropdown`, `UiListBox`, `UiTextField`, `UiToggle`, `UiSlider`, `UiButton`, keyboard focus, text input, callbacks, popup-backed selection, grouped pages, and a fixed action row. It should now be treated as a production settings dialog: only real settings that are read, applied, saved, and restored belong here.
 
 Current behavior:
 
@@ -122,8 +133,6 @@ Current behavior:
 - switches between Display, UI, and Audio pages with a visual tab strip
 - uses a `UiTabBar` that already supports overflow scrolling for later additional pages
 - adjusts UI scale with a slider
-- selects a theme placeholder
-- toggles compact-window placeholder behavior
 - adjusts persisted master, music, and effects volume settings
 - applies settings to the running application
 - saves settings only through an explicit Save action
@@ -141,49 +150,110 @@ Useful regression checks:
 
 Planned extensions:
 
-- add Controls and Gameplay pages once those settings become editable
 - place oversized page content into `UiScrollArea` instead of forcing the window to grow
+- add Controls and Gameplay pages only when those settings become editable and persisted
 - extract repeated popup wiring into a widget-level popup facade
 - add UI sound volume once the settings model exposes the existing UI audio bus separately
 - add validation feedback for invalid numeric fields
 
-## Widget Demo Window
+## Layout Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Layout Demo window isolates the actual retained layout objects. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiGrid`, `UiSpacer`, `UiFrameBox`, `UiSeparator`, `UiSlider`, preferred-size measurement, flex growth, spacing changes, nested layout, resize behavior, and debug bounds.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
-- contains a layout and box section with nested probe boxes and a padded content-box example
-- contains a retained-controls section with buttons, toggle, slider, dropdown, list, tab, and text field examples
-- groups related control rows with non-interactive separators
-- updates a progress bar from the Amount slider
-- updates a summary label from the list selection
-- updates a summary label from the tab selection
-- uses varied fill and border colors to make layout movement visible
-- applies a custom crosshair cursor over probe boxes
+- contains separate HBox, VBox, and Grid preview areas
+- uses sliders to change row/column spacing, grow weights, and grid spacing at runtime
+- includes a Defaults button and short labels that state which layout objects each slider affects
+- uses varied fill and border colors sparingly so layout movement remains visible
 - can be resized and stacked like normal windows
 - removes itself from the screen owner when closed
 
 Useful regression checks:
 
 - growing and then shrinking the window does not corrupt intrinsic preferred sizes
-- nested `UiHBox` and `UiVBox` containers preserve spacing
-- debug bounds show expected row, column, spacer, and widget outlines
-- custom cursor fallback and override behavior is visible at runtime
+- nested `UiHBox` and `UiVBox` containers preserve spacing while sliders change layout values
+- the growable spacer and growable probe boxes consume extra space predictably
+- sliders embedded in horizontal rows still use their own local pointer coordinates
+- grid spacing is subtracted from the available cell area so children do not overflow when the window is shrunk
+- debug bounds show expected row, column, grid, spacer, and widget outlines
 - multiple instances do not share mutable window state accidentally
 
 Planned extensions:
 
-- add image widgets and future controls to the gallery
-- wrap the gallery in `UiScrollArea` after renderer clipping exists
-- add popup examples as those widgets land
-- add interaction examples where one control changes another widget's value or visibility
+- add shrink/grow edge cases when new layout policies are introduced
+
+## Custom Demo Window
+
+The Custom Demo window is the specialized custom-widget probe window. It exercises demo-only widgets derived from `UiWidget`, custom cursor registration, custom render code, content/frame boxes, and deliberately colorful diagnostic fills.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- contains custom `LayoutDemoProbeBox` instances with strong diagnostic colors
+- uses a visible `UiFrameBox` as a manually composed demo group, not as window chrome
+- contains a padded content-box example with an inner row so the custom probe no longer sits on top of the surrounding frame
+- applies a custom crosshair cursor over probe boxes
+- can be resized and stacked like normal windows
+- sits at the end of the upper sidebar launcher group because it is useful for engine development but less central than the normal UI demos
+
+Useful regression checks:
+
+- custom widget rendering and cursor intent still work after reusable widget refactors
+- content/frame padding remains visually understandable
+- the yellow content probe remains inside the blue framed demo group at minimum useful window size
+- multiple instances do not share mutable window state accidentally
+
+## ScrollArea Demo Window
+
+The ScrollArea Demo window is intentionally small and focused. It exercises `UiScrollArea`, wheel routing, retained `scrollX`/`scrollY`, child-geometry clipping, scrollbar thumbs, and edge indicators without mixing in unrelated controls.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- shows one compact viewport with larger colored content
+- keeps the test content visually simple so clipping defects are easy to spot
+- can be resized and stacked like normal windows
+
+Useful regression checks:
+
+- wheel scrolling changes the visible content
+- oversized child geometry is clipped to the viewport
+- vertical and horizontal overflow indicators remain inside the viewport
+
+Planned extensions:
+
+- add direct scrollbar dragging after the scroll-area behavior lands
+- keep this window minimal; richer content should use Help Desk, Settings, or Controls Demo
+
+## Controls Demo Window
+
+The Controls Demo window groups normal form and action controls. It exercises `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, `UiTextField`, icon-plus-label buttons, callback wiring, and one-control-updates-another interaction.
+
+Current behavior:
+
+- spawns as independent windows with serial titles
+- shows normal buttons, toggle, dropdown, slider, text field, progress bar, images, and an icon action button
+- updates a progress bar from the Amount slider
+- uses placeholder image/icon examples with asset ids
+- can be resized and stacked like normal windows
+
+Useful regression checks:
+
+- slider changes update the progress bar immediately
+- dropdown opens through the shared popup path
+- icon-backed controls still render fallback frames and atlas images
+
+Planned extensions:
+
+- replace the rough low-resolution placeholder image assets with a coherent higher-resolution icon/image set
+- move richer image browsing and animated-image examples into the planned Media Demo
 - add disabled, focused, hover, pressed, and validation states for each control family
 
-## Chrome Demo Window
+## UiWindow Demo Window
 
-The Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, `UiToggle`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
+The UiWindow Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, optional window backfill, viewport-edge pinning, `UiDropdown`, `UiToggle`, `UiButton`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
 
 Current behavior:
 
@@ -192,6 +262,10 @@ Current behavior:
 - toggles header dragging
 - toggles middle-click front/back stacking
 - toggles header, title, and border visibility
+- toggles body/header backfill rendering
+- toggles viewport-edge pinning on each edge
+- offers presets for default windows, transparent overlays, docked status-like windows, tool palettes, and dialogs
+- resets all demo settings to defaults from a button
 - updates a summary label from toggle callbacks
 - spawns as independent windows and removes itself when closed
 
@@ -201,6 +275,9 @@ Useful regression checks:
 - disabling close hides or blocks only close behavior, not window visibility management elsewhere
 - disabling the resize grips removes resize cursor regions and resize gestures
 - disabling the header moves content to the top chrome inset, while disabling the border lets content fill the full window area
+- disabling backfill leaves child widgets visible and interactive
+- pinning follows SDL viewport resize without making API move/resize unavailable
+- presets are ordinary control changes and leave the user free to continue editing individual toggles
 - chrome controls receive pointer buttons before generic window stacking fallback
 - content remains inset away from resize grips when sizeability changes
 
@@ -331,7 +408,7 @@ The Audio Demo exercises the current audio service from ordinary retained UI con
 Current behavior:
 
 - button click sound event
-- one-shot preview buttons for UI, master, music, and effects bus routing
+- one-shot preview buttons for UI, master, music, and effects bus routing with distinct synthetic clips until real audio assets exist
 - repeatable window instances from the sidebar
 - no direct dependency on SDL audio backend code
 

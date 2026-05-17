@@ -38,6 +38,7 @@ abstract class UiWidget
     bool visible = true;
     bool focusable;
     bool focused;
+    string tooltipText;
     UiWidget parent;
     UiWidget[] children;
 
@@ -157,7 +158,12 @@ abstract class UiWidget
             }
         }
 
-        return handlePointerEvent(event);
+        auto localEvent = event;
+        localEvent.x -= x;
+        localEvent.y -= y;
+        const handled = handlePointerEvent(localEvent);
+        event.actionActivated = event.actionActivated || localEvent.actionActivated;
+        return handled;
     }
 
     /** Returns the deepest focusable widget at the given point in parent space. */
@@ -202,6 +208,28 @@ abstract class UiWidget
         }
 
         return cursorSelf(localX, localY);
+    }
+
+    /** Returns the tooltip text at the given point in parent space, or empty. */
+    string tooltipAt(float localX, float localY)
+    {
+        if (!visible)
+            return "";
+
+        if (width > 0.0f && height > 0.0f && !contains(localX, localY))
+            return "";
+
+        const childX = localX - x - childOffsetX;
+        const childY = localY - y - childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            const tooltip = children[cast(size_t)index].tooltipAt(childX, childY);
+            if (tooltip.length != 0)
+                return tooltip;
+        }
+
+        return tooltipSelf(localX, localY);
     }
 
     /** Updates the widget focus flag. Screens call this when focus ownership changes. */
@@ -257,7 +285,7 @@ abstract class UiWidget
         auto localContext = context.offset(x, y);
         renderSelf(localContext);
 
-        auto childContext = localContext.offset(childOffsetX, childOffsetY);
+        auto childContext = childRenderContext(localContext.offset(childOffsetX, childOffsetY));
         foreach (index, child; children)
         {
             childContext.depthBase = localContext.depthBase - cast(float)(index + 1) * 0.001f;
@@ -288,6 +316,12 @@ protected:
 
     abstract void renderSelf(ref UiRenderContext context);
 
+    /** Allows containers to alter the render context used for children. */
+    UiRenderContext childRenderContext(UiRenderContext context)
+    {
+        return context;
+    }
+
     /** Returns the debug bounds color for this widget type. */
     float[4] debugBoundsColor() const
     {
@@ -298,6 +332,12 @@ protected:
     UiCursorKind cursorSelf(float localX, float localY)
     {
         return UiCursorKind.default_;
+    }
+
+    /** Returns this widget's own tooltip text after children were checked. */
+    string tooltipSelf(float localX, float localY)
+    {
+        return tooltipText;
     }
 
     /** Handles a pointer event after children had a chance to consume it. */
@@ -404,4 +444,45 @@ unittest
 
     assert(child.screenX() == 133.0f);
     assert(child.screenY() == 74.0f);
+}
+
+@("UiWidget dispatches own pointer events in widget-local coordinates")
+unittest
+{
+    final class PointerWidget : UiWidget
+    {
+        float lastX;
+        float lastY;
+
+        this(float x = 0.0f, float y = 0.0f)
+        {
+            super(x, y, 20.0f, 20.0f);
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+
+        override bool handlePointerEvent(ref UiPointerEvent event)
+        {
+            lastX = event.x;
+            lastY = event.y;
+            return true;
+        }
+    }
+
+    auto root = new PointerWidget();
+    root.width = 100.0f;
+    root.height = 100.0f;
+    auto child = new PointerWidget(30.0f, 40.0f);
+    root.add(child);
+
+    UiPointerEvent event;
+    event.x = 35.0f;
+    event.y = 46.0f;
+
+    assert(root.dispatchPointerEvent(event));
+    assert(child.lastX == 5.0f);
+    assert(child.lastY == 6.0f);
 }

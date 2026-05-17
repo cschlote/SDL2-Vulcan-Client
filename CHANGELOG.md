@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Fixed nested pointer-coordinate dispatch for controls inside horizontal layouts, corrected `UiGrid` spacing allocation during relayout, added Layout Demo reset/help affordances, kept the Custom Demo probes inside their frame, and gave Audio Demo preview buttons distinct synthetic clips.
+- Added distinct file-backed sidebar placeholder icons for the repeatable demo/test windows.
+- Rebuilt Layout Demo around live HBox, VBox, Grid, Spacer, and grow-policy controls, moved the old probe content to a Custom Demo, narrowed the expanded sidebar, and softened slider/tab colors.
+- Split the old Widget Demo into focused Layout Demo, ScrollArea Demo, and Controls Demo windows.
+- Added a visible `UiScrollArea` clipping and wheel-scroll example to the ScrollArea Demo.
+- Added retained UI clip rectangles and `UiScrollArea` child-geometry clipping for panel, image, and text draw commands.
+- Documented the asset and localization pipeline direction: PNG for authored UI images, PPM as fallback/test data, glTF/GLB for 3D models, and gettext PO catalogs for localization.
+- Reprioritized the demo UI roadmap into grouped infrastructure, asset, demo, audio, 3D, localization, and package-boundary tracks.
+- Added optional `UiWindow` backfill rendering, viewport-edge pinning, and a chrome-less right-pinned Status window.
+
 ## Release 26.20.9540
 
 - Reviewed documentation consistency and updated the near-term UI/audio planning order.

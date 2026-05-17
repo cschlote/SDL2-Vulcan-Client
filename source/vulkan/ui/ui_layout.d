@@ -11,6 +11,7 @@
 module vulkan.ui.ui_layout;
 
 import std.algorithm : max;
+import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
@@ -627,6 +628,11 @@ protected:
         return scrollX != oldScrollX || scrollY != oldScrollY;
     }
 
+    override UiRenderContext childRenderContext(UiRenderContext context)
+    {
+        return context.clipped(paddingLeft + scrollX, paddingTop + scrollY, paddingLeft + scrollX + innerWidth(), paddingTop + scrollY + innerHeight());
+    }
+
     override float[4] debugBoundsColor() const
     {
         return cast(float[4])scrollAreaDebugBoundsColor;
@@ -675,6 +681,35 @@ unittest
     area.scrollTo(50.0f, 60.0f);
     assert(area.horizontalThumbLeft() == 25.0f);
     assert(area.verticalThumbTop() == 24.0f);
+}
+
+@("UiScrollArea clips child panel geometry to its viewport")
+unittest
+{
+    auto area = new UiScrollArea(0.0f, 0.0f, 100.0f, 80.0f);
+    auto content = new UiFrameBox(0.0f, 0.0f, 100.0f, 160.0f, [0.1f, 0.2f, 0.3f, 1.0f], [0.4f, 0.5f, 0.6f, 1.0f]);
+    content.setLayoutHint(100.0f, 160.0f, 100.0f, 160.0f);
+    area.add(content);
+
+    UiLayoutContext layoutContext;
+    area.layout(layoutContext);
+
+    Vertex[] panels;
+    UiRenderContext renderContext;
+    renderContext.extentWidth = 200.0f;
+    renderContext.extentHeight = 200.0f;
+    renderContext.panels = &panels;
+    area.render(renderContext);
+
+    assert(panels.length > 0);
+    float maxPixelY = 0.0f;
+    foreach (vertex; panels)
+    {
+        const pixelY = (vertex.position[1] + 1.0f) * 0.5f * renderContext.extentHeight;
+        if (pixelY > maxPixelY)
+            maxPixelY = pixelY;
+    }
+    assert(maxPixelY <= 80.001f);
 }
 
 /** Vertical stack container. */
@@ -881,6 +916,10 @@ protected:
 
         const totalWidth = innerWidth();
         const totalHeight = innerHeight();
+        const totalSpacingX = columnWeights.length > 1 ? spacingX * cast(float)(columnWeights.length - 1) : 0.0f;
+        const totalSpacingY = rowWeights.length > 1 ? spacingY * cast(float)(rowWeights.length - 1) : 0.0f;
+        const cellAreaWidth = max(totalWidth - totalSpacingX, 0.0f);
+        const cellAreaHeight = max(totalHeight - totalSpacingY, 0.0f);
 
         float columnWeightSum = 0.0f;
         foreach (weight; columnWeights)
@@ -902,7 +941,7 @@ protected:
         float usedWidth = 0.0f;
         foreach (index, weight; columnWeights)
         {
-            const columnSize = columnWeightSum > 0.0f ? totalWidth * (weight / columnWeightSum) : 0.0f;
+            const columnSize = columnWeightSum > 0.0f ? cellAreaWidth * (weight / columnWeightSum) : 0.0f;
             columnSizes[index] = columnSize;
             columnOffsets[index] = usedWidth;
             usedWidth += columnSize + spacingX;
@@ -911,7 +950,7 @@ protected:
         float usedHeight = 0.0f;
         foreach (index, weight; rowWeights)
         {
-            const rowSize = rowWeightSum > 0.0f ? totalHeight * (weight / rowWeightSum) : 0.0f;
+            const rowSize = rowWeightSum > 0.0f ? cellAreaHeight * (weight / rowWeightSum) : 0.0f;
             rowSizes[index] = rowSize;
             rowOffsets[index] = usedHeight;
             usedHeight += rowSize + spacingY;
@@ -937,15 +976,45 @@ protected:
 
             child.x = childX;
             child.y = childY;
-            if (child.width <= 0.0f)
-                child.width = childWidth;
-            if (child.height <= 0.0f)
-                child.height = childHeight;
+            child.width = max(childWidth, 0.0f);
+            child.height = max(childHeight, 0.0f);
         }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        layoutChildren();
+        foreach (child; children)
+            child.layout(context);
     }
 
     override float[4] debugBoundsColor() const
     {
         return cast(float[4])gridLayoutDebugBoundsColor;
     }
+}
+
+@("UiGrid subtracts spacing from available cell area and relayouts children")
+unittest
+{
+    auto grid = new UiGrid(1, 2, 0.0f, 0.0f, 100.0f, 20.0f, 10.0f, 0.0f);
+    auto left = new UiSpacer();
+    auto right = new UiSpacer();
+    grid.add(left, 0, 0);
+    grid.add(right, 0, 1);
+
+    UiLayoutContext context;
+    grid.layout(context);
+
+    assert(left.x == 0.0f);
+    assert(left.width == 45.0f);
+    assert(right.x == 55.0f);
+    assert(right.width == 45.0f);
+
+    grid.spacingX = 20.0f;
+    grid.layout(context);
+
+    assert(left.width == 40.0f);
+    assert(right.x == 60.0f);
+    assert(right.width == 40.0f);
 }

@@ -11,6 +11,7 @@ module vulkan.ui.ui_context;
 
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.engine.pipeline : Vertex;
+import vulkan.ui.ui_geometry : UiImageDrawCommand;
 
 /** Selects the font size used by a widget. */
 enum UiTextStyle
@@ -58,8 +59,20 @@ struct UiRenderContext
     const(FontAtlas)*[7] fonts;
     /** Destination vertex list for window and panel quads. */
     Vertex[]* panels;
+    /** Destination list for texture-backed image/icon draw intents. */
+    UiImageDrawCommand[]* images;
     /** Destination vertex lists indexed by UiTextStyle. */
     Vertex[]*[7] textLayers;
+    /** Whether emitted geometry should be clipped to the active rectangle. */
+    bool clipEnabled;
+    /** Active clip rectangle in screen pixels. */
+    float clipLeft;
+    /** Active clip rectangle in screen pixels. */
+    float clipTop;
+    /** Active clip rectangle in screen pixels. */
+    float clipRight;
+    /** Active clip rectangle in screen pixels. */
+    float clipBottom;
 
     /** Creates a child context relative to the current origin. */
     UiRenderContext offset(float deltaX, float deltaY)
@@ -67,6 +80,32 @@ struct UiRenderContext
         auto next = this;
         next.originX += deltaX;
         next.originY += deltaY;
+        return next;
+    }
+
+    /** Returns a child context clipped to a local rectangle. */
+    UiRenderContext clipped(float left, float top, float right, float bottom)
+    {
+        auto next = this;
+        const absoluteLeft = originX + left;
+        const absoluteTop = originY + top;
+        const absoluteRight = originX + right;
+        const absoluteBottom = originY + bottom;
+
+        if (!clipEnabled)
+        {
+            next.clipEnabled = true;
+            next.clipLeft = absoluteLeft;
+            next.clipTop = absoluteTop;
+            next.clipRight = absoluteRight;
+            next.clipBottom = absoluteBottom;
+            return next;
+        }
+
+        next.clipLeft = absoluteLeft > clipLeft ? absoluteLeft : clipLeft;
+        next.clipTop = absoluteTop > clipTop ? absoluteTop : clipTop;
+        next.clipRight = absoluteRight < clipRight ? absoluteRight : clipRight;
+        next.clipBottom = absoluteBottom < clipBottom ? absoluteBottom : clipBottom;
         return next;
     }
 

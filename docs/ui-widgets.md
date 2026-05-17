@@ -45,12 +45,12 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
+- Custom Demo uses custom `LayoutDemoProbeBox` widgets derived from `UiWidget`.
 - Debug bounds overlay should reveal generic widget fallback outlines.
 
 Planned work:
 
-- add local animation tick hooks
+- add concrete widget-local animations on top of the existing `tick` hook
 - add explicit disabled state
 - add accessibility or semantic metadata if the project grows in that direction
 
@@ -112,17 +112,23 @@ Required behavior:
 - direct content widgets receive the useful body area
 - chrome flags can independently control sizeability, closability, draggability, and stackability
 - chrome visibility can independently control header, title, and border
+- backfill visibility can hide all body/header background quads while preserving content, hit testing, and optional border rendering
 - cursor regions match resize, move, action, and blocked states
 - close/hide/destroy behavior remains distinguishable
 - generated `windowId` remains stable when titles change or when multiple windows share the same title
 - optional opaque `userTag` never replaces engine-owned identity
+- viewport-edge pinning keeps docked windows attached during SDL window resizing
 
 Implemented chrome attributes:
 
 - header visibility
 - title visibility
 - border visibility and thickness
+- body/header backfill visibility and RGBA color values
 - content padding per side
+- viewport-edge pinning with per-edge margins
+- fit-to-content sizing for live overlays that should grow and shrink from current measured content
+- backdrop window layering for passive overlays that must stay behind normal windows
 
 Planned chrome attributes:
 
@@ -132,7 +138,7 @@ Planned chrome attributes:
 Demo coverage:
 
 - all current UI windows are `UiWindow` instances.
-- Chrome Demo toggles current behavior and visibility flags.
+- UiWindow Demo toggles current behavior flags, passive visibility flags, optional backfill, viewport-edge pinning, reset behavior, and common presets.
 - unit coverage verifies generated ids, title-independent lookup, and opaque tags.
 - the current demo sidebar exercises chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
@@ -141,9 +147,9 @@ Demo coverage:
 
 Status: Partial as demo composition; reusable class planned.
 
-`UiSidebar` is the planned reusable left-edge UI bar inspired by application launchers such as EVE Online side panels or the Ubuntu GNOME dock. The current demo implements the first version as a chrome-less `UiWindow` whose content root fills the window. The content stacks compact text-placeholder actions vertically, can expand to show text labels, and can show, raise, or spawn demo windows.
+`UiSidebar` is the planned reusable left-edge UI bar inspired by application launchers such as EVE Online side panels or the Ubuntu GNOME dock. The current demo implements the first version as a chrome-less `UiWindow` whose content root fills the window. The content stacks compact `UiSidebarAction` rows vertically, can expand to show text labels, and can show, raise, or spawn demo windows.
 
-The current sidebar actions intentionally reuse `UiButton` as a temporary compound widget. A `UiButton` centers its label by placing it inside an internal `UiHBox` with flexible spacer widgets on both sides. That is acceptable for the first text-placeholder sidebar, but it is not the target structure for a launcher row.
+The current sidebar actions use `UiSidebarAction`, which keeps a fixed icon slot and a separate expanded label region. In compact mode the caption is empty and only the icon slot is visible, so the sidebar behaves like a real icon dock instead of a centered caption button. Expanded mode shows clean text labels without the old mnemonic letters. The first sidebar uses 32 x 32 actions with 26 x 26 image content. Singleton actions can show a slim active marker while the target window is open. Collapsed actions expose tooltip text through the generic widget tooltip hook, and the demo renders that text after a hover delay in a small input-transparent tooltip window above/right of the pointer.
 
 Common use cases:
 
@@ -158,14 +164,14 @@ Required behavior:
 - anchor to the left edge of the SDL viewport
 - default compact width around one 32 px icon plus padding
 - expanded width large enough for icon plus label text
-- vertical layout of actions with stable 32 x 32 icon slots
+- vertical layout of actions with stable 32 x 32 rows and 26 x 26 image content
 - action widgets fill the available sidebar width in compact and expanded modes
 - support a growable spacer between primary launcher actions and bottom system actions
 - bottom system actions should include Help, Status, Settings, Close All, and Exit in the demo sidebar
 - keep the visible action count limited until the upper action group can scroll
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
-- optional tooltip when collapsed and labels are hidden
+- delayed tooltip text when collapsed and labels are hidden
 - content root fills the full chrome-less window area
 - no title header, no close button, and no draggable header in docked mode
 - resizing should normally be disabled in compact docked mode
@@ -175,15 +181,15 @@ Implementation direction:
 
 - keep the first version as a specialized demo composition before deciding whether it deserves a reusable class
 - use `UiVBox` for vertical stacking
-- replace temporary `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once texture-backed icons exist
+- move the demo tooltip popup policy into a reusable widget-level popup facade
 - give the replacement row a fixed icon slot and a separate label region instead of centering the combined text label with symmetric spacers
 - add mouse-wheel scrolling and fade-out indicators for the upper launcher group before adding many more sidebar entries
-- allow the expanded state to be a normal retained boolean, later animated by the UI animation scheduler
+- animate expand and collapse with the existing window bounds-transition path
 
 Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
-- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact and expanded labels.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Layout Demo, ScrollArea Demo, Controls Demo, UiWindow Demo, Input Demo, Selection Demo, Audio Demo, and Custom Demo, with compact icon mode and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
 - The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
 
@@ -193,7 +199,7 @@ Window identity direction:
 - `UiWindow` has a generated stable `windowId` for lookup, saved layouts, and external registries.
 - `UiWindow.userTag` is an optional opaque integration value, but it stays secondary to engine-owned ids.
 - Pointer-sized tags or `void*`-style hooks need clear lifetime ownership because they can otherwise hide GC and object-reference coupling.
-- The Widget Demo should include sidebar button rows once icon widgets exist.
+- The Controls Demo should include generalized sidebar/action button rows once the icon-capable action widget exists.
 
 Open questions:
 
@@ -227,7 +233,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, Widget Demo, and Chrome Demo.
+- Help Desk, Status, Settings, Layout Demo, Controls Demo, Custom Demo, and UiWindow Demo.
 
 ### UiHBox
 
@@ -252,7 +258,7 @@ Required behavior:
 Demo coverage:
 
 - Settings size row and action row.
-- Widget Demo nested rows.
+- Layout Demo, Controls Demo, and Custom Demo nested rows.
 
 ## Layout Policy
 
@@ -278,10 +284,12 @@ Required behavior:
 - deterministic cell placement
 - clear debug bounds
 - useful weighted row and column allocation
+- horizontal and vertical spacing is reserved before cell sizes are distributed, so increasing gaps cannot push children outside the grid bounds
+- children are assigned fresh cell geometry on every layout pass, allowing live spacing controls and window resizes to relayout correctly
 
 Demo coverage:
 
-- debug color legend documents it; the Widget Demo should add a visible grid example.
+- Layout Demo shows visible grid placement and live grid spacing.
 
 ### UiSpacer
 
@@ -304,7 +312,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Widget Demo, and Chrome Demo.
+- Help Desk, Layout Demo, Controls Demo, Custom Demo, and UiWindow Demo.
 
 ### UiContentBox
 
@@ -330,7 +338,7 @@ Required behavior:
 Demo coverage:
 
 - current window content roots use `UiContentBox` internally.
-- Widget Demo shows an explicit padded `UiContentBox` example inside the control gallery.
+- Custom Demo shows an explicit padded `UiContentBox` example inside the custom-widget probe section.
 
 ### UiFrameBox
 
@@ -354,15 +362,15 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses `UiFrameBox` sections for layout probes and retained controls.
+- Layout Demo uses `UiFrameBox` sections for live layout previews; Custom Demo uses a framed section for custom probe widgets.
 
 ### UiScrollArea
 
 Status: Partial.
 
-`UiScrollArea` is the planned widget for content that can be larger than the visible region. It should own a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
+`UiScrollArea` is the widget for content that can be larger than the visible region. It owns a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
 
-The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Renderer clipping and direct scrollbar dragging are still planned.
+The current implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, clips child panel/image/text geometry to the viewport, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Direct scrollbar dragging is still planned.
 
 Common use cases:
 
@@ -394,8 +402,8 @@ Implementation direction:
 
 Demo coverage:
 
-- planned Widget Demo gallery should use it once the gallery grows beyond one window.
-- Help Desk should use it for long help content after renderer clipping and text-block content exist.
+- ScrollArea Demo includes a compact `UiScrollArea` example with oversized colored child content for visible clipping and wheel scrolling.
+- Help Desk should use it for long help content after text-block content exists.
 - Settings should use it when tab pages or grouped settings exceed the current window height.
 
 Open questions:
@@ -428,7 +436,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, and Chrome Demo.
+- Help Desk, Status, Settings, and UiWindow Demo.
 
 ### UiTextBlock
 
@@ -468,7 +476,7 @@ Status: Implemented.
 
 `UiButton` is a framed clickable action widget with optional image and label content.
 
-The current implementation is a compound widget: the button owns an internal horizontal row with flexible spacer widgets, an optional image, and a label. This keeps ordinary caption buttons centered and gives us a simple icon-plus-text path, but it is not ideal for sidebar launcher rows where the icon slot should stay fixed on the left and the expanded label should occupy a separate text region.
+The current implementation is a compound widget: the button owns an internal horizontal row with flexible spacer widgets, an optional image, and a label. This keeps ordinary caption buttons centered and gives us a simple icon-plus-text path. Sidebar launcher rows now use `UiSidebarAction` instead, because their icon slot must stay fixed on the left and the expanded label should occupy a separate text region.
 
 Common use cases:
 
@@ -488,10 +496,10 @@ Required behavior:
 
 Demo coverage:
 
-- Settings and Widget Demo.
-- Widget Demo includes button examples in the retained-controls section.
-- Sidebar currently reuses `UiButton` as a temporary text-placeholder row.
-- Sidebar should later use `UiIconButton`, `UiSidebarAction`, or a specialized derivative.
+- Settings and Controls Demo.
+- Controls Demo includes button examples in a normal form/action-controls context.
+- Sidebar uses `UiSidebarAction` for fixed icon-slot launcher rows.
+- Ordinary icon-plus-label command buttons can continue to use `UiButton`.
 
 ### UiToggle
 
@@ -515,7 +523,7 @@ Required behavior:
 
 Demo coverage:
 
-- Settings and Chrome Demo.
+- Settings and UiWindow Demo.
 
 ### UiSlider
 
@@ -541,7 +549,7 @@ Required behavior:
 Demo coverage:
 
 - Settings.
-- planned Audio Demo and Animation Demo.
+- Audio Demo and planned Animation Demo.
 
 ### UiDropdown
 
@@ -569,8 +577,8 @@ Required behavior:
 Demo coverage:
 
 - Settings.
-- Widget Demo.
-- planned Selection Demo.
+- Controls Demo.
+- Selection Demo.
 
 ### UiTextField
 
@@ -597,7 +605,7 @@ Required behavior:
 Demo coverage:
 
 - Settings width and height fields.
-- planned Input Demo.
+- Input Demo.
 
 ## Visual And Media Widgets
 
@@ -605,7 +613,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiImage` is currently a compact framed image/icon placeholder. It should become texture-backed and later support animated image content.
+`UiImage` is currently a compact framed image/icon placeholder with an optional renderer-facing texture asset id. It is used in the Controls Demo, in icon-plus-label buttons, and as the first visual marker for the demo sidebar. When an asset id is set, `UiImage` emits an image draw intent with UV coordinates; the renderer resolves that id through a small UI image asset registry, rewrites the UVs to an atlas cell, and draws the result through a dedicated UI image layer while the framed placeholder remains visible as fallback styling. The atlas starts with generated fallback cells and is then overlaid with simple file-backed PPM demo assets from `assets/ui/`. The documented asset direction is to replace authored UI artwork with PNG files decoded to engine-owned RGBA8 pixels, while PPM remains a fallback/test format. Details live in [Asset And Localization Pipeline](asset-and-localization-pipeline.md).
 
 Common use cases:
 
@@ -619,13 +627,20 @@ Required behavior:
 
 - stable preferred size
 - optional aspect-ratio constraints
-- texture or atlas reference once the asset path exists
+- optional texture or atlas asset id with UV rectangle
+- renderer-side asset registry that maps retained ids to atlas regions
+- file-backed demo assets that can override generated atlas fallback cells
+- PNG-backed authored image loading through a neutral decoded image representation
+- visible placeholder fallback when the renderer cannot resolve the asset id
 - optional frame selection for animated images
 
 Demo coverage:
 
-- button tests currently cover image-plus-label composition.
-- planned Media Demo and Sidebar.
+- `UiImage` unit tests cover measurement and image draw intent emission.
+- button tests cover image-plus-label composition.
+- Controls Demo shows multiple placeholder image sizes and an icon action button.
+- Sidebar uses file-backed atlas icon markers with generated fallback cells next to compact or expanded labels.
+- planned Media Demo covers richer PNG texture lookup and animated images.
 
 ### UiVideo
 
@@ -656,7 +671,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window and Widget Demo.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window.
 
 Common use cases:
 
@@ -675,7 +690,7 @@ Required behavior:
 Demo coverage:
 
 - Settings window for Display, UI, and Audio pages.
-- Widget Demo visible tab selection.
+- Settings window tab selection and overflow behavior.
 - Unit coverage verifies pointer, keyboard, and overflow scrolling behavior.
 
 ### UiProgressBar
@@ -699,14 +714,14 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo uses an Amount slider to update a determinate progress bar.
+- Controls Demo uses an Amount slider to update a determinate progress bar.
 - planned Animation Demo.
 
 ### UiListBox
 
 Status: Partial.
 
-`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Widget Demo.
+`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Selection Demo.
 
 Common use cases:
 
@@ -729,8 +744,8 @@ Required behavior:
 Demo coverage:
 
 - Settings dropdown popups.
-- Widget Demo visible list selection and dropdown popup.
-- planned Selection Demo.
+- Selection Demo visible list selection and dropdown popup.
+- Selection Demo.
 
 ### UiSeparator
 
@@ -752,7 +767,7 @@ Required behavior:
 
 Demo coverage:
 
-- Widget Demo groups related control rows with horizontal separators.
+- Settings groups related pages and action areas; Controls Demo should add visible separators again when it grows beyond the compact first pass.
 - Sidebar after grouped launcher sections exist.
 - Settings after tabs/grouped panels exist.
 
@@ -786,7 +801,7 @@ Demo coverage:
 
 Status: Planned.
 
-`UiTooltip` shows short explanatory text for icon-only or compact controls.
+`UiTooltip` shows short explanatory text for icon-only or compact controls. The data path exists through `UiWidget.tooltipAt` and `UiScreen.tooltipAt`; the demo renders collapsed sidebar tooltips through a small frameless input-transparent `UiWindow` after roughly 1.2 seconds of stable hover. Once shown, the demo tooltip remains visible while the pointer stays inside the same tooltip source region. A reusable retained tooltip widget and shared popup policy are still planned.
 
 Common use cases:
 
@@ -799,17 +814,21 @@ Required behavior:
 - delayed hover display
 - viewport-clamped placement
 - non-focusable transient rendering
+- frameless popup body
 - dismissal on pointer leave or input
+- text source from hovered widget through `UiScreen.tooltipAt`
+- input-transparent overlay window so hit testing keeps reaching the source widget
 
 Demo coverage:
 
-- planned Sidebar and Widget Demo.
+- demo Sidebar renders collapsed action tooltips.
+- planned Controls Demo coverage once tooltip behavior becomes reusable.
 
-### UiIconButton
+### Generalized Icon Action Button
 
 Status: Planned.
 
-`UiIconButton` is a compact action button centered around an icon, with optional text in expanded contexts.
+The planned icon action button should not become a narrow special case. It should generalize the current `UiButton` and `UiSidebarAction` roles into one configurable action widget family: optional icon, optional label, configurable icon and label alignment, horizontal or vertical arrangement, fixed or flexible icon slot, and ordinary button behavior. In that model, a text-only button is the same action widget without an icon, while the sidebar row is the same action widget configured with a fixed left icon slot and an expanded label region.
 
 Common use cases:
 
@@ -821,6 +840,8 @@ Required behavior:
 
 - stable icon slot, usually 32 x 32 px for the first sidebar implementation
 - optional label text in a separate region beside the icon slot
+- support text-only button mode without forcing a separate class
+- configurable icon/label alignment and orientation
 - left-edge sidebar mode where the icon remains aligned and the row can fill the available width
 - active, hover, pressed, disabled, and focused states
 - tooltip support when the label is hidden
@@ -828,5 +849,32 @@ Required behavior:
 
 Demo coverage:
 
-- planned Sidebar.
-- Widget Demo once icon assets exist.
+- current Sidebar through `UiSidebarAction`, then later ordinary `UiButton` replacement once the generalized action widget exists.
+
+### UiSidebarAction
+
+Status: Partial.
+
+`UiSidebarAction` is the first dedicated launcher-row widget for the demo sidebar. It is button-like, focusable, keyboard-activatable, and uses a fixed icon slot plus a separate label region. In collapsed sidebar width the label child is hidden by layout; in expanded width it becomes visible next to the icon as the sidebar width animates. An optional active marker can show that a singleton target is currently open. Tooltip text is reported only when the expanded label is hidden and is rendered by the demo tooltip overlay.
+
+Common use cases:
+
+- left-edge app launchers
+- dock rows
+- compact tool panels with optional expanded labels
+
+Required behavior:
+
+- fixed icon slot
+- optional expanded label region
+- pointer and Enter activation
+- focus ring through the normal widget focus path
+- active-state marker
+- collapsed-mode tooltip hook
+- visible tooltip popup through the demo screen
+
+Demo coverage:
+
+- demo sidebar uses `UiSidebarAction` for all launcher and bottom system actions.
+- unit tests cover icon/label separation, active state, collapsed-mode tooltip reporting, visible demo tooltip wiring, and keyboard activation.
+- Controls Demo once generalized action-button assets exist.

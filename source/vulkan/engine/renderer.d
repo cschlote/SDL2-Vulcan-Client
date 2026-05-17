@@ -19,8 +19,9 @@ import bindbc.sdl : SDL_Delay, SDL_Event, SDL_EventType, SDL_GetError, SDL_GetPl
 import bindbc.vulkan;
 import core.stdc.string : memcpy;
 import std.exception : enforce;
+import std.file : exists;
 import std.format : format;
-import std.math : PI, cos, sin, tan;
+import std.math : PI, cos, sin, sqrt, tan;
 import std.stdio : writeln;
 import std.string : fromStringz;
 
@@ -30,7 +31,7 @@ import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.audio.audio_device : AudioDevice, AudioDeviceConfig;
 import vulkan.audio.audio_mixer : AudioMixer;
-import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId;
+import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId, uiEffectsPreviewClipId, uiMasterPreviewClipId, uiMusicPreviewClipId;
 import vulkan.engine.device;
 import vulkan.engine.instance;
 import vulkan.engine.pipeline;
@@ -39,7 +40,8 @@ import vulkan.font.font_legacy : buildFontAtlas, FontAtlas, selectDefaultFontPat
 import vulkan.models.polyhedra : buildPlatonicSolids, MeshData;
 import vulkan.ui.ui_cursor : UiCursorBitmap, UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiKeyModifier, UiPointerEvent, UiPointerEventKind, UiTextInputEvent;
-import vulkan.ui.ui_geometry : UiWindowDrawRange;
+import vulkan.ui.ui_geometry : UiImageDrawCommand, UiWindowDrawRange;
+import vulkan.ui.ui_image_assets : loadPpmUiImage, UiImageAsset, UiImageAssetRegistry, UiImageBitmap;
 import sdl2.window;
 
 private enum maxFramesInFlight = 2;
@@ -108,6 +110,14 @@ private struct TextureResource
     VkSampler sampler = VK_NULL_HANDLE;
 }
 
+private struct UiImageAtlasSource
+{
+    string assetId;
+    string path;
+    uint cellX;
+    uint cellY;
+}
+
 private struct BufferResource
 {
     /** Vulkan buffer handle. */
@@ -165,9 +175,12 @@ class VulkanRenderer
     private VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
     private VkDescriptorSet[maxFramesInFlight] descriptorSets;
     private TextureResource sceneTexture;
+    private TextureResource uiImageTexture;
+    private UiImageAssetRegistry uiImageAssets;
     private FontAtlas[7] fontAtlases;
     private TextureResource[7] fontTextures;
     private OverlayLayerResources overlayPanels;
+    private OverlayLayerResources overlayImages;
     private OverlayLayerResources[7] overlayFonts;
     private UiWindowDrawRange[] uiWindowRanges;
     private AudioDevice audioDevice;
@@ -729,6 +742,7 @@ class VulkanRenderer
     private void createOverlayBuffers()
     {
         createFrameVertexBuffers(overlayPanels);
+        createFrameVertexBuffers(overlayImages);
         foreach (ref fontLayer; overlayFonts)
             createFrameVertexBuffers(fontLayer);
     }
@@ -736,8 +750,11 @@ class VulkanRenderer
     /** Creates the scene checkerboard texture used by the main 3D pass. */
     private void createTextureResources()
     {
+        uiImageAssets = buildDefaultUiImageAssetRegistry();
         auto textureData = buildCheckerboardTextureData();
         createTextureResource(sceneTexture, textureData, textureWidth, textureHeight, VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_REPEAT);
+        auto uiImageData = buildUiImageTextureData();
+        createTextureResource(uiImageTexture, uiImageData, textureWidth, textureHeight, VkSamplerAddressMode.VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE);
     }
 
     /** Creates one Vulkan texture from raw RGBA pixel data.
@@ -882,6 +899,7 @@ class VulkanRenderer
     private void destroyOverlayBuffers()
     {
         destroyFrameVertexBuffers(overlayPanels);
+        destroyFrameVertexBuffers(overlayImages);
         foreach (ref fontLayer; overlayFonts)
             destroyFrameVertexBuffers(fontLayer);
     }
@@ -890,6 +908,9 @@ class VulkanRenderer
     private void destroyTextureResources()
     {
         destroyTextureResource(sceneTexture);
+        destroyTextureResource(uiImageTexture);
+        if (uiImageAssets !is null)
+            uiImageAssets.clear();
     }
 
     /** Releases the font atlas textures. */
@@ -906,6 +927,7 @@ class VulkanRenderer
         {
             createBuffer(uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
             createBuffer(overlayPanels.uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
+            createBuffer(overlayImages.uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
             foreach (ref fontLayer; overlayFonts)
                 createBuffer(fontLayer.uniformBuffers[frameIndex], SceneUniforms.sizeof, VkBufferUsageFlagBits.VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT);
         }
@@ -914,7 +936,7 @@ class VulkanRenderer
     /** Creates the descriptor pool and descriptor sets for the scene and all overlay layers. */
     private void createDescriptorPoolAndSets()
     {
-        enum descriptorLayerCount = 1 + 1 + fontTextures.length;
+        enum descriptorLayerCount = 1 + 1 + 1 + fontTextures.length;
 
         VkDescriptorPoolSize[2] poolSizes;
         poolSizes[0].type = VkDescriptorType.VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -932,6 +954,7 @@ class VulkanRenderer
 
         createDescriptorSetsForScene();
         createDescriptorSetsForLayer(overlayPanels, sceneTexture);
+        createDescriptorSetsForLayer(overlayImages, uiImageTexture);
         foreach (layerIndex; 0 .. fontTextures.length)
             createDescriptorSetsForLayer(overlayFonts[layerIndex], fontTextures[layerIndex]);
     }
@@ -1013,6 +1036,7 @@ class VulkanRenderer
             destroyBuffer(uniformBuffers[frameIndex]);
 
         destroyFrameUniformBuffers(overlayPanels);
+        destroyFrameUniformBuffers(overlayImages);
         foreach (ref fontLayer; overlayFonts)
             destroyFrameUniformBuffers(fontLayer);
 
@@ -1235,6 +1259,7 @@ class VulkanRenderer
         SceneUniforms textUniforms;
         textUniforms.lightDirectionMode = [0.35f, 0.72f, 1.0f, -2.0f];
         textUniforms.shadingParams = [0.18f, 0.82f, 0.22f, 18.0f];
+        memcpy(overlayImages.uniformBuffers[frameIndex].mapped, &textUniforms, SceneUniforms.sizeof);
         foreach (ref fontLayer; overlayFonts)
             memcpy(fontLayer.uniformBuffers[frameIndex].mapped, &textUniforms, SceneUniforms.sizeof);
 
@@ -1308,6 +1333,7 @@ class VulkanRenderer
             uiDebugMode);
 
         enforce(overlayVertices.panels.length <= maxOverlayVertices, "UI overlay panel vertex limit exceeded.");
+        enforce(overlayVertices.images.length * 6 <= maxOverlayVertices, "UI overlay image vertex limit exceeded.");
         foreach (layerIndex; 0 .. overlayVertices.textLayers.length)
             enforce(overlayVertices.textLayers[layerIndex].length <= maxOverlayVertices, "UI overlay text-layer vertex limit exceeded.");
 
@@ -1315,6 +1341,11 @@ class VulkanRenderer
 
         overlayPanels.vertexCounts[frameIndex] = cast(uint)overlayVertices.panels.length;
         memcpy(overlayPanels.vertexBuffers[frameIndex].mapped, overlayVertices.panels.ptr, Vertex.sizeof * overlayVertices.panels.length);
+
+        auto imageVertices = flattenUiImageVertices(overlayVertices.images);
+        overlayImages.vertexCounts[frameIndex] = cast(uint)imageVertices.length;
+        memcpy(overlayImages.vertexBuffers[frameIndex].mapped, imageVertices.ptr, Vertex.sizeof * imageVertices.length);
+
         foreach (layerIndex; 0 .. overlayFonts.length)
         {
             overlayFonts[layerIndex].vertexCounts[frameIndex] = cast(uint)overlayVertices.textLayers[layerIndex].length;
@@ -1425,6 +1456,7 @@ class VulkanRenderer
             /** Applies the platform cursor matching current retained UI hover state. */
             private void updateMouseCursor(float x, float y)
             {
+                uiScreen.updatePointerPosition(x, y);
                 window.setSystemCursor(sdlCursorFor(uiScreen.cursorAt(x, y)));
             }
 
@@ -1527,6 +1559,14 @@ class VulkanRenderer
                 VkBuffer[1] panelVertexBuffers = [overlayPanels.vertexBuffers[currentFrame].buffer];
                 vkCmdBindVertexBuffers(commandBuffer, 0, 1, panelVertexBuffers.ptr, offsets.ptr);
                 vkCmdDraw(commandBuffer, windowRange.panelsCount, 1, windowRange.panelsStart, 0);
+            }
+
+            if (windowRange.imagesCount > 0)
+            {
+                vkCmdBindDescriptorSets(commandBuffer, VkPipelineBindPoint.VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline.pipelineLayout, 0, 1, &overlayImages.descriptorSets[currentFrame], 0, null);
+                VkBuffer[1] imageVertexBuffers = [overlayImages.vertexBuffers[currentFrame].buffer];
+                vkCmdBindVertexBuffers(commandBuffer, 0, 1, imageVertexBuffers.ptr, offsets.ptr);
+                vkCmdDraw(commandBuffer, windowRange.imagesCount * 6, 1, windowRange.imagesStart * 6, 0);
             }
 
             foreach (layerIndex; 0 .. overlayFonts.length)
@@ -1689,6 +1729,206 @@ class VulkanRenderer
         return data;
     }
 
+    /** Builds the temporary texture used by texture-backed UI image intents. */
+    private ubyte[] buildUiImageTextureData()
+    {
+        ubyte[] data;
+        data.length = textureWidth * textureHeight * 4;
+        enum atlasColumns = 4;
+        enum atlasRows = 4;
+        enum cellWidth = textureWidth / atlasColumns;
+        enum cellHeight = textureHeight / atlasRows;
+
+        foreach (cellY; 0 .. atlasRows)
+        {
+            foreach (cellX; 0 .. atlasColumns)
+            {
+                const hue = cast(ubyte)(80 + cellX * 38);
+                const accent = cast(ubyte)(120 + cellY * 30);
+                const baseX = cellX * cellWidth;
+                const baseY = cellY * cellHeight;
+                const centerX = cast(float)baseX + cast(float)(cellWidth - 1) * 0.5f;
+                const centerY = cast(float)baseY + cast(float)(cellHeight - 1) * 0.5f;
+                const radius = cast(float)cellWidth * 0.38f;
+
+                foreach (localY; 0 .. cellHeight)
+                {
+                    foreach (localX; 0 .. cellWidth)
+                    {
+                        const x = baseX + localX;
+                        const y = baseY + localY;
+                        const dx = cast(float)x - centerX;
+                        const dy = cast(float)y - centerY;
+                        const distance = cast(float)sqrt(dx * dx + dy * dy);
+                        const inside = distance <= radius;
+                        const ring = distance > radius - 2.0f && distance <= radius;
+                        const diagonal = localX > localY - 2 && localX < localY + 2;
+                        const base = (y * textureWidth + x) * 4;
+                        data[base + 0] = cast(ubyte)(ring ? 255 : diagonal ? 235 : hue);
+                        data[base + 1] = cast(ubyte)(ring ? 255 : diagonal ? 245 : accent);
+                        data[base + 2] = cast(ubyte)(ring ? 255 : diagonal ? 255 : 230);
+                        data[base + 3] = inside ? cast(ubyte)(ring || diagonal ? 235 : 190) : cast(ubyte)0;
+                    }
+                }
+            }
+        }
+
+        packDefaultUiImageAssets(data, textureWidth, textureHeight, cellWidth, cellHeight);
+        return data;
+    }
+
+    /** Overlays file-backed demo assets into the generated UI image atlas. */
+    private void packDefaultUiImageAssets(ref ubyte[] atlas, uint atlasWidth, uint atlasHeight, uint cellWidth, uint cellHeight)
+    {
+        foreach (source; defaultUiImageAtlasSources())
+        {
+            if (!exists(source.path))
+            {
+                logLineVerbose(format("UI image asset missing, using generated fallback: %s", source.path));
+                continue;
+            }
+
+            try
+            {
+                auto bitmap = loadPpmUiImage(source.path);
+                blitUiImageBitmapToCell(atlas, atlasWidth, atlasHeight, cellWidth, cellHeight, source.cellX, source.cellY, bitmap);
+                logLineVerbose(format("Loaded UI image asset '%s' from %s", source.assetId, source.path));
+            }
+            catch (Exception e)
+            {
+                logLine(format("Failed to load UI image asset '%s' from %s: %s", source.assetId, source.path, e.msg));
+            }
+        }
+    }
+
+    private UiImageAtlasSource[] defaultUiImageAtlasSources()
+    {
+        return [
+            UiImageAtlasSource("sidebar/expand", "assets/ui/sidebar-expand.ppm", 0, 0),
+            UiImageAtlasSource("sidebar/collapse", "assets/ui/sidebar-collapse.ppm", 3, 2),
+            UiImageAtlasSource("sidebar/toggle", "assets/ui/sidebar-expand.ppm", 0, 0),
+            UiImageAtlasSource("sidebar/help", "assets/ui/sidebar-help.ppm", 1, 0),
+            UiImageAtlasSource("sidebar/status", "assets/ui/demo-image.ppm", 2, 0),
+            UiImageAtlasSource("sidebar/settings", "assets/ui/sidebar-settings.ppm", 3, 0),
+            UiImageAtlasSource("sidebar/layout", "assets/ui/sidebar-layout.ppm", 0, 1),
+            UiImageAtlasSource("sidebar/window", "assets/ui/sidebar-window.ppm", 1, 1),
+            UiImageAtlasSource("sidebar/input", "assets/ui/sidebar-input.ppm", 2, 1),
+            UiImageAtlasSource("sidebar/selection", "assets/ui/sidebar-selection.ppm", 3, 1),
+            UiImageAtlasSource("sidebar/audio", "assets/ui/sidebar-audio.ppm", 0, 2),
+            UiImageAtlasSource("sidebar/close-all", "assets/ui/sidebar-close.ppm", 1, 2),
+            UiImageAtlasSource("sidebar/exit", "assets/ui/sidebar-close.ppm", 2, 2),
+            UiImageAtlasSource("sidebar/scroll", "assets/ui/sidebar-scroll.ppm", 0, 3),
+            UiImageAtlasSource("sidebar/controls", "assets/ui/sidebar-controls.ppm", 1, 3),
+            UiImageAtlasSource("sidebar/custom", "assets/ui/sidebar-custom.ppm", 2, 3),
+            UiImageAtlasSource("demo/icon-action", "assets/ui/sidebar-settings.ppm", 3, 3),
+        ];
+    }
+
+    /** Copies one loaded bitmap into a fixed atlas cell with nearest scaling. */
+    private void blitUiImageBitmapToCell(ref ubyte[] atlas, uint atlasWidth, uint atlasHeight, uint cellWidth, uint cellHeight, uint cellX, uint cellY, UiImageBitmap bitmap)
+    {
+        if (bitmap.empty)
+            return;
+
+        const atlasLeft = cellX * cellWidth;
+        const atlasTop = cellY * cellHeight;
+        if (atlasLeft >= atlasWidth || atlasTop >= atlasHeight)
+            return;
+
+        const copyWidth = cellWidth < atlasWidth - atlasLeft ? cellWidth : atlasWidth - atlasLeft;
+        const copyHeight = cellHeight < atlasHeight - atlasTop ? cellHeight : atlasHeight - atlasTop;
+        foreach (targetY; 0 .. copyHeight)
+        {
+            const sourceY = cast(uint)((cast(ulong)targetY * bitmap.height) / copyHeight);
+            foreach (targetX; 0 .. copyWidth)
+            {
+                const sourceX = cast(uint)((cast(ulong)targetX * bitmap.width) / copyWidth);
+                const sourceIndex = (cast(size_t)sourceY * bitmap.width + sourceX) * 4;
+                const targetIndex = (cast(size_t)(atlasTop + targetY) * atlasWidth + atlasLeft + targetX) * 4;
+                atlas[targetIndex .. targetIndex + 4] = bitmap.rgba[sourceIndex .. sourceIndex + 4];
+            }
+        }
+    }
+
+    /** Builds the first fixed atlas mapping for demo/sidebar UI images. */
+    private UiImageAssetRegistry buildDefaultUiImageAssetRegistry()
+    {
+        auto registry = new UiImageAssetRegistry();
+        registerUiImageCell(registry, "sidebar/expand", 0, 0);
+        registerUiImageCell(registry, "sidebar/toggle", 0, 0);
+        registerUiImageCell(registry, "sidebar/help", 1, 0);
+        registerUiImageCell(registry, "sidebar/status", 2, 0);
+        registerUiImageCell(registry, "sidebar/settings", 3, 0);
+        registerUiImageCell(registry, "sidebar/layout", 0, 1);
+        registerUiImageCell(registry, "sidebar/window", 1, 1);
+        registerUiImageCell(registry, "sidebar/input", 2, 1);
+        registerUiImageCell(registry, "sidebar/selection", 3, 1);
+        registerUiImageCell(registry, "sidebar/audio", 0, 2);
+        registerUiImageCell(registry, "sidebar/close-all", 1, 2);
+        registerUiImageCell(registry, "sidebar/exit", 2, 2);
+        registerUiImageCell(registry, "sidebar/collapse", 3, 2);
+        registerUiImageCell(registry, "sidebar/scroll", 0, 3);
+        registerUiImageCell(registry, "sidebar/controls", 1, 3);
+        registerUiImageCell(registry, "sidebar/custom", 2, 3);
+        registerUiImageCell(registry, "demo/icon-small", 0, 3);
+        registerUiImageCell(registry, "demo/icon-medium", 1, 3);
+        registerUiImageCell(registry, "demo/icon-wide", 2, 3);
+        registerUiImageCell(registry, "demo/icon-action", 3, 3);
+        return registry;
+    }
+
+    private void registerUiImageCell(UiImageAssetRegistry registry, string assetId, uint cellX, uint cellY)
+    {
+        registry.registerAsset(assetId, uiImageCellUv(cellX, cellY));
+    }
+
+    private float[4] uiImageCellUv(uint cellX, uint cellY) const
+    {
+        enum atlasColumns = 4.0f;
+        enum atlasRows = 4.0f;
+        const u0 = cast(float)cellX / atlasColumns;
+        const v0 = cast(float)cellY / atlasRows;
+        const u1 = cast(float)(cellX + 1) / atlasColumns;
+        const v1 = cast(float)(cellY + 1) / atlasRows;
+        return [u0, v0, u1, v1];
+    }
+
+    /** Flattens retained UI image draw commands into a vertex list for upload. */
+    private Vertex[] flattenUiImageVertices(const(UiImageDrawCommand)[] commands)
+    {
+        Vertex[] vertices;
+        vertices.length = commands.length * 6;
+        foreach (index, command; commands)
+        {
+            UiImageDrawCommand resolved = command;
+            resolveUiImageCommand(resolved);
+            vertices[index * 6 .. index * 6 + 6] = resolved.vertices[];
+        }
+        return vertices;
+    }
+
+    /** Resolves the asset id to an atlas region and rewrites vertex UVs in-place. */
+    private void resolveUiImageCommand(ref UiImageDrawCommand command)
+    {
+        if (uiImageAssets is null)
+            return;
+
+        UiImageAsset asset;
+        if (!uiImageAssets.resolve(command.assetId, asset))
+            return;
+
+        const u0 = asset.uvRect[0];
+        const v0 = asset.uvRect[1];
+        const u1 = asset.uvRect[2];
+        const v1 = asset.uvRect[3];
+        command.vertices[0].uv = [u0, v0];
+        command.vertices[1].uv = [u1, v0];
+        command.vertices[2].uv = [u1, v1];
+        command.vertices[3].uv = [u0, v0];
+        command.vertices[4].uv = [u1, v1];
+        command.vertices[5].uv = [u0, v1];
+    }
+
     /// Advances or reverses the selected polyhedron and updates the window title.
     ///
     /// Params:
@@ -1776,7 +2016,7 @@ class VulkanRenderer
             uiScreen.settingsDraft.audio.masterVolume,
             uiScreen.settingsDraft.audio.musicVolume,
             uiScreen.settingsDraft.audio.effectsVolume);
-        queueUiClipAudio(audioPreviewBus(previewKind));
+        queueUiClipAudio(audioPreviewClip(previewKind), audioPreviewBus(previewKind));
     }
 
     /** Applies persisted demo audio settings through the engine audio event queue. */
@@ -1804,16 +2044,31 @@ class VulkanRenderer
         if (audioSystem is null)
             return;
 
-        queueUiClipAudio(AudioBusId.ui, 0.45f);
+        queueUiClipAudio(uiClickClipId, AudioBusId.ui, 0.45f);
     }
 
-    private void queueUiClipAudio(AudioBusId bus, float gain = 0.55f)
+    private void queueUiClipAudio(string clipId, AudioBusId bus, float gain = 0.55f)
     {
         if (audioSystem is null)
             return;
 
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, gain));
+        audioSystem.emit(AudioEvent.playClip(clipId, bus, gain));
         audioSystem.processEvents();
+    }
+
+    private string audioPreviewClip(DemoAudioPreviewKind previewKind) const
+    {
+        final switch (previewKind)
+        {
+            case DemoAudioPreviewKind.ui:
+                return uiClickClipId;
+            case DemoAudioPreviewKind.master:
+                return uiMasterPreviewClipId;
+            case DemoAudioPreviewKind.music:
+                return uiMusicPreviewClipId;
+            case DemoAudioPreviewKind.effects:
+                return uiEffectsPreviewClipId;
+        }
     }
 
     private AudioBusId audioPreviewBus(DemoAudioPreviewKind previewKind) const
