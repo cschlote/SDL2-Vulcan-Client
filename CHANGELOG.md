@@ -2,6 +2,54 @@
 
 ## Unreleased
 
+- Reviewed documentation consistency and updated the near-term UI/audio planning order.
+- Added first-pass `UiTabBar` overflow navigation with wheel scrolling, previous/next regions, selected-tab visibility, and edge fades.
+- Added generated `UiWindow.windowId`, optional `UiWindow.userTag`, and `UiScreen.windowById` lookup.
+- Documented the `UiWindow` identity direction: generated ids first, optional opaque application tags second, titles never as durable keys.
+- Moved Status into the sidebar bottom action group and added a Close All action for singleton and repeatable demo windows.
+- Added a repeatable Selection Demo window for dropdown popups, edge popup placement, and list callbacks.
+- Added `UiSeparator` and used it to group controls in the Widget Demo.
+- Added a visible `UiTabBar` selection example to the Widget Demo.
+- Added a visible `UiListBox` selection example to the Widget Demo.
+- Added a determinate `UiProgressBar` and wired the Widget Demo slider to update it.
+- Matched window header transparency to the body fill and centered titles by font ascent/descent metrics.
+- Kept keyboard focus inside open dropdown popups and lowered synthetic UI audio preview gain.
+- Added visible `UiScrollArea` scrollbar thumbs and edge overflow indicators.
+- Made focused window titles visually distinct, opened focused dropdowns with Enter, and rendered settings tabs as attached tab-strip tabs.
+- Added a repeatable Input Demo window with text, toggle, slider, dropdown, and activation callback coverage.
+- Included dropdowns in keyboard focus traversal, made focused-window chrome subtler by tinting only the title, and fixed keyboard-activated sidebar Exit handling.
+- Added a repeatable Audio Demo window with semantic UI/master/music/effects preview buttons.
+- Documented idle UI click latency as an open audio issue after removing ineffective stream keepalive workarounds.
+- Added live 3D rotation angles to the Status window.
+- Changed audio settings slider previews to play once on pointer commit instead of cascading during drag.
+- Added audio settings slider previews through draft bus-volume updates and the synthetic UI click clip.
+- Added SDL audio stream output and renderer-side pumping of mixed UI click voices.
+- Added a synthetic builtin UI click clip and queued it from activated retained UI buttons.
+- Wired audio `playClip` and `stopAll` events to registered clips, active voices, and mix-buffer rendering.
+- Added decoded audio clip and active voice primitives with looped/non-looped mixing into float buffers.
+- Added a float audio mixer scaffold for silent output buffers, interleaved block mixing, bus gain, and sample clamping.
+- Added an SDL audio device owner scaffold with requested and actual playback format state.
+- Added visible retained UI keyboard focus rings and focused-window header highlighting.
+- Wired demo audio settings into the runtime `AudioSystem` volume buses on startup, Apply, and Save.
+- Added backend-neutral audio bus/event scaffolding with settings volume mapping.
+- Added API-level UI window move and resize bounds transitions plus updated Help Desk shortcut text.
+- Wired normal `UiScreen` show, hide, and toggle paths plus demo singleton windows through UI window transitions.
+- Applied UI window transition alpha, scale, and offset to generated overlay vertices before upload.
+- Added renderer-facing window presentation parameters for UI transition alpha, scale, and offset.
+- Added logical `UiWindow` open and close transition states with progress ticking.
+- Added the first UI animation scheduler hooks with `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, and renderer frame dispatch.
+- Added blocked cursor feedback for background regions behind active modal windows.
+- Added modal default and cancel button handling for Enter and Escape on active `UiWindow` dialogs.
+- Added `UiScreen` modal window routing with background input blocking, modal stack priority, and modal focus containment.
+- Added screen-level Tab and Shift-Tab focus traversal plus Enter/arrow keyboard handling for focused buttons, toggles, and sliders.
+- Added focused keyboard handling for `UiTabBar` and `UiListBox`, including SDL up/down key mapping.
+- Reduced the expanded demo sidebar width to match the current text-placeholder actions more closely.
+- Added `UiTabBar` and split Settings into Display, UI, and Audio pages with persisted audio volume sliders.
+- Added a reusable `UiListBox` text-row selection control and switched dropdown popups to use it instead of demo-local button rows.
+- Fixed dropdown popup row selection so each option button selects its own option instead of the last option in the list.
+- Reworked `UiDropdown` to request popup lists and wired the demo settings and widget-demo dropdowns to transient popup windows.
+- Added `UiScreen` popup primitives for transient popup windows with anchor placement, viewport clamping, front-most stack handling, outside-click dismissal, and Escape dismissal.
+
 ## Release 26.20.8493
 
 - Removed the obsolete Demo Control window; the sidebar now toggles singleton windows and spawns repeatable demo windows.

@@ -12,7 +12,7 @@ module vulkan.ui.ui_button;
 import logging : logLine;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_cursor : UiCursorKind;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget : UiWidget;
 import vulkan.ui.ui_image : UiImage;
@@ -97,6 +97,7 @@ final class UiButton : UiWidget
         this.style = style;
         this.textOffsetX = textOffsetX;
         this.textOffsetY = textOffsetY;
+        focusable = true;
 
         contentRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 0.0f, textOffsetX, textOffsetY, textOffsetX, textOffsetY);
 
@@ -130,6 +131,14 @@ final class UiButton : UiWidget
         preferredHeight = 0.0f;
         minimumWidth = 0.0f;
         minimumHeight = 0.0f;
+    }
+
+    /** Activates the button from pointer, keyboard, or dialog conventions. */
+    void activate()
+    {
+        logLine("UiButton click: ", caption);
+        if (onClick !is null)
+            onClick();
     }
 
 protected:
@@ -180,10 +189,18 @@ protected:
         if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
             return false;
 
-        logLine("UiButton click: ", caption);
-        if (onClick !is null)
-            onClick();
+        activate();
+        event.actionActivated = true;
+        return true;
+    }
 
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown || event.key != UiKeyCode.enter)
+            return false;
+
+        activate();
+        event.actionActivated = true;
         return true;
     }
 }
@@ -231,4 +248,35 @@ unittest
     column.layout(context);
 
     assert(button.width == 120.0f);
+}
+
+@("UiButton activates from Enter when focused")
+unittest
+{
+    auto button = new UiButton("OK", 0.0f, 0.0f, 80.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    bool clicked;
+    button.onClick = () { clicked = true; };
+
+    UiKeyEvent event;
+    event.kind = UiKeyEventKind.keyDown;
+    event.key = UiKeyCode.enter;
+
+    assert(button.dispatchKeyEvent(event));
+    assert(clicked);
+    assert(event.actionActivated);
+}
+
+@("UiButton marks pointer events as activated")
+unittest
+{
+    auto button = new UiButton("OK", 0.0f, 0.0f, 80.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 10.0f;
+    event.y = 10.0f;
+
+    assert(button.dispatchPointerEvent(event));
+    assert(event.actionActivated);
 }

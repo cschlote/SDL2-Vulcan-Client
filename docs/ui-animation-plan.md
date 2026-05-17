@@ -1,6 +1,6 @@
 # UI Animation Plan
 
-This document captures the planned animation model for the retained UI layer. No animation runtime exists yet. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and window transitions can be added without rewriting input routing or layout.
+This document captures the planned animation model for the retained UI layer. A first frame-time dispatch runtime exists, window transitions can already export and apply basic presentation values, and concrete animated widgets are still planned. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and richer window transitions can be added without rewriting input routing or layout.
 
 ## Goals
 
@@ -37,12 +37,12 @@ The UI layer needs a small time source independent from input events. `UiScreen`
 
 Expected first API shape:
 
-- `UiScreen.tickUi(float deltaSeconds)`
-- `UiWidget.tick(float deltaSeconds)` for widgets with active local animation
-- `UiWindow.tickTransition(float deltaSeconds)` for top-level transition state
-- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle
+- `UiScreen.tickUi(float deltaSeconds)`. Implemented with delta clamping and dirty return.
+- `UiWidget.tick(float deltaSeconds)` for widgets with active local animation. Implemented as a recursive subtree hook.
+- `UiWindow.tickTransition(float deltaSeconds)` for top-level transition state. Implemented for logical open/close transition progress.
+- a boolean result or dirty flag that tells the renderer whether another frame is needed even when input is idle. Implemented for `UiScreen.tickUi`, `UiWidget.tick`, and `UiWindow.tickTransition`.
 
-The scheduler should clamp large delta values after stalls or breakpoints so transitions do not jump through several visual states at once.
+The scheduler clamps large delta values after stalls or breakpoints so transitions do not jump through several visual states at once.
 
 ## Widget-Local Animation
 
@@ -79,19 +79,21 @@ Top-level window transitions should be owned by `UiWindow` and coordinated by `U
 
 Common transition states:
 
-- hidden
-- opening
-- visible
-- closing
+- hidden. Implemented as `UiWindowTransitionState.hidden`.
+- opening. Implemented as `UiWindowTransitionState.opening`.
+- visible. Implemented as `UiWindowTransitionState.visible`.
+- closing. Implemented as `UiWindowTransitionState.closing`.
 
 Common transition properties:
 
-- alpha
-- scale
-- translation offset
+- alpha. Exported per window through `UiWindowDrawRange.alpha`.
+- scale. Exported per window through `UiWindowDrawRange.scale`.
+- translation offset. Exported per window through `UiWindowDrawRange.offsetX` and `offsetY`.
 - optional shadow or border emphasis
 
-Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. Close behavior should mirror the open transition and remove or hide the window only after the transition completes.
+Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes, exports alpha, scale, and offset to the window draw range, and applies those values to generated UI vertices before upload. `UiScreen.showWindow`, `hideWindow`, and `toggleWindow` use these transitions for normal windows, and the demo singleton windows are wired through that path.
+
+Programmatic move and resize calls should animate the logical bounds, while mouse drag and resize remain immediate so the window stays attached to the pointer. `UiWindow.beginBoundsTransition` owns per-window bounds interpolation, and `UiScreen.moveWindowTo`, `resizeWindowTo`, and `setWindowBounds` expose that behavior for API callers. Multiple windows can run these bounds transitions in parallel because `UiScreen.tickUi` advances every registered window independently.
 
 Input policy must be explicit:
 
@@ -112,10 +114,8 @@ Exceptions should be rare and documented. For example, an animated expanding pan
 
 ## Renderer Boundary
 
-The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. To support animation, renderer-facing UI geometry may later need:
+The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. `UiWindowDrawRange` carries window-level alpha, scale, and offset, and `UiScreen.buildOverlayGeometry` currently applies those values to the emitted vertex positions and colors. Further renderer-facing UI geometry may later need:
 
-- per-window or per-widget alpha
-- optional 2D transform data
 - texture frame references for image widgets
 - clipping rectangles for animated panels or media widgets
 
@@ -123,7 +123,7 @@ The renderer should still not own widget state. It should draw the current frame
 
 ## Demo Coverage
 
-The demo should add an Animation Demo window when the scheduler exists. Until then, the planning target is:
+The demo should add an Animation Demo window now that the basic scheduler exists. The next planning targets are:
 
 - keep widget rendering methods small enough to accept animated visual parameters later
 - avoid hard-coding all visual state as immutable constants
@@ -139,4 +139,3 @@ The Chrome Demo is the natural first place to test open and close transitions. T
 - How should animations be paused when the application is minimized?
 - Should animated cursors use the same timing model as UI widgets, or stay backend/theme-specific?
 - How should video or media decoding integrate with the render thread and asset lifetime?
-

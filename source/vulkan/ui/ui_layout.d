@@ -14,7 +14,7 @@ import std.algorithm : max;
 import vulkan.ui.ui_context : UiRenderContext;
 import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
-import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
+import vulkan.ui.ui_widget_helpers : appendQuad, appendSurfaceFrame;
 import vulkan.ui.ui_widget : UiWidget;
 
 private immutable float[4] contentBoxDebugBoundsColor = [0.15f, 0.95f, 1.00f, 0.65f];
@@ -23,6 +23,19 @@ private immutable float[4] horizontalLayoutDebugBoundsColor = [0.20f, 0.50f, 1.0
 private immutable float[4] gridLayoutDebugBoundsColor = [0.90f, 0.30f, 1.00f, 0.65f];
 private immutable float[4] spacerDebugBoundsColor = [1.00f, 1.00f, 0.20f, 0.45f];
 private immutable float[4] scrollAreaDebugBoundsColor = [1.00f, 0.72f, 0.18f, 0.65f];
+private immutable float[4] scrollTrackColor = [0.02f, 0.03f, 0.04f, 0.34f];
+private immutable float[4] scrollThumbColor = [0.78f, 0.84f, 0.90f, 0.58f];
+private immutable float[4] scrollFadeColor = [0.02f, 0.03f, 0.04f, 0.42f];
+private immutable float[4] separatorColor = [0.78f, 0.84f, 0.90f, 0.30f];
+private enum float scrollIndicatorThickness = 5.0f;
+private enum float scrollFadeSize = 12.0f;
+
+/** Axis direction for non-interactive layout separators. */
+enum UiSeparatorOrientation
+{
+    horizontal,
+    vertical,
+}
 
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
@@ -47,6 +60,60 @@ protected:
 
     override void renderSelf(ref UiRenderContext context)
     {
+    }
+
+    override bool dispatchPointerEvent(ref UiPointerEvent event)
+    {
+        return false;
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])spacerDebugBoundsColor;
+    }
+}
+
+/** Non-interactive visual divider for grouped retained UI content. */
+final class UiSeparator : UiWidget
+{
+    UiSeparatorOrientation orientation;
+    float thickness;
+    float[4] color;
+
+    this(UiSeparatorOrientation orientation = UiSeparatorOrientation.horizontal, float length = 0.0f, float thickness = 1.0f)
+    {
+        const width = orientation == UiSeparatorOrientation.horizontal ? length : thickness;
+        const height = orientation == UiSeparatorOrientation.horizontal ? thickness : length;
+        super(0.0f, 0.0f, width, height);
+        this.orientation = orientation;
+        this.thickness = thickness > 0.0f ? thickness : 1.0f;
+        color = cast(float[4])separatorColor;
+        if (orientation == UiSeparatorOrientation.horizontal)
+            setLayoutHint(0.0f, this.thickness, length, this.thickness, float.max, this.thickness, 1.0f, 0.0f);
+        else
+            setLayoutHint(this.thickness, 0.0f, this.thickness, length, this.thickness, float.max, 0.0f, 1.0f);
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        if (orientation == UiSeparatorOrientation.horizontal)
+            return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : width, thickness);
+        return UiLayoutSize(thickness, preferredHeight > 0.0f ? preferredHeight : height);
+    }
+
+    override void renderSelf(ref UiRenderContext context)
+    {
+        if (orientation == UiSeparatorOrientation.horizontal)
+        {
+            const top = height > thickness ? (height - thickness) * 0.5f : 0.0f;
+            appendQuad(context, 0.0f, top, width, top + thickness, context.depthBase, color);
+        }
+        else
+        {
+            const left = width > thickness ? (width - thickness) * 0.5f : 0.0f;
+            appendQuad(context, left, 0.0f, left + thickness, height, context.depthBase, color);
+        }
     }
 
     override bool dispatchPointerEvent(ref UiPointerEvent event)
@@ -91,6 +158,29 @@ unittest
 
     const measured = child.measure(context);
     assert(measured.height == 0.0f);
+}
+
+@("UiSeparator exposes horizontal and vertical layout hints")
+unittest
+{
+    auto horizontal = new UiSeparator(UiSeparatorOrientation.horizontal, 80.0f, 2.0f);
+    assert(horizontal.minimumHeight == 2.0f);
+    assert(horizontal.maximumHeight == 2.0f);
+    assert(horizontal.flexGrowX == 1.0f);
+    assert(horizontal.flexGrowY == 0.0f);
+
+    auto vertical = new UiSeparator(UiSeparatorOrientation.vertical, 40.0f, 3.0f);
+    assert(vertical.minimumWidth == 3.0f);
+    assert(vertical.maximumWidth == 3.0f);
+    assert(vertical.flexGrowX == 0.0f);
+    assert(vertical.flexGrowY == 1.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 1.0f;
+    event.y = 1.0f;
+    assert(!horizontal.dispatchPointerEvent(event));
 }
 
 private float clampFloat(float value, float minimum, float maximum)
@@ -380,6 +470,56 @@ final class UiScrollArea : UiLayoutContainer
         return maxScrollX() > 0.0f || maxScrollY() > 0.0f;
     }
 
+    float verticalThumbTop() const
+    {
+        const maxY = maxScrollY();
+        if (maxY <= 0.0f)
+            return paddingTop;
+
+        const viewportHeight = innerHeight();
+        const trackTop = paddingTop;
+        const trackHeight = viewportHeight;
+        const thumbHeight = verticalThumbHeight();
+        const travel = trackHeight > thumbHeight ? trackHeight - thumbHeight : 0.0f;
+        return trackTop + travel * (scrollY / maxY);
+    }
+
+    float verticalThumbHeight() const
+    {
+        const viewportHeight = innerHeight();
+        if (contentHeight <= 0.0f || viewportHeight <= 0.0f)
+            return 0.0f;
+
+        const ratio = viewportHeight / contentHeight;
+        const minimum = scrollIndicatorThickness * 3.0f;
+        return clampFloat(viewportHeight * ratio, minimum, viewportHeight);
+    }
+
+    float horizontalThumbLeft() const
+    {
+        const maxX = maxScrollX();
+        if (maxX <= 0.0f)
+            return paddingLeft;
+
+        const viewportWidth = innerWidth();
+        const trackLeft = paddingLeft;
+        const trackWidth = viewportWidth;
+        const thumbWidth = horizontalThumbWidth();
+        const travel = trackWidth > thumbWidth ? trackWidth - thumbWidth : 0.0f;
+        return trackLeft + travel * (scrollX / maxX);
+    }
+
+    float horizontalThumbWidth() const
+    {
+        const viewportWidth = innerWidth();
+        if (contentWidth <= 0.0f || viewportWidth <= 0.0f)
+            return 0.0f;
+
+        const ratio = viewportWidth / contentWidth;
+        const minimum = scrollIndicatorThickness * 3.0f;
+        return clampFloat(viewportWidth * ratio, minimum, viewportWidth);
+    }
+
 protected:
     override UiLayoutSize measureSelf(ref UiLayoutContext context)
     {
@@ -431,6 +571,49 @@ protected:
         }
     }
 
+    override void renderSelf(ref UiRenderContext context)
+    {
+        layoutChildren();
+
+        const maxX = maxScrollX();
+        const maxY = maxScrollY();
+        const viewportLeft = paddingLeft;
+        const viewportTop = paddingTop;
+        const viewportRight = paddingLeft + innerWidth();
+        const viewportBottom = paddingTop + innerHeight();
+        const zBase = context.depthBase - 0.020f;
+
+        if (maxY > 0.0f)
+        {
+            const trackLeft = viewportRight - scrollIndicatorThickness;
+            appendQuad(context, trackLeft, viewportTop, viewportRight, viewportBottom, zBase, scrollTrackColor);
+
+            const thumbTop = verticalThumbTop();
+            const thumbBottom = thumbTop + verticalThumbHeight();
+            appendQuad(context, trackLeft, thumbTop, viewportRight, thumbBottom, zBase - 0.001f, scrollThumbColor);
+
+            if (scrollY > 0.0f)
+                appendQuad(context, viewportLeft, viewportTop, viewportRight, viewportTop + scrollFadeSize, zBase - 0.002f, scrollFadeColor);
+            if (scrollY < maxY)
+                appendQuad(context, viewportLeft, viewportBottom - scrollFadeSize, viewportRight, viewportBottom, zBase - 0.002f, scrollFadeColor);
+        }
+
+        if (maxX > 0.0f)
+        {
+            const trackTop = viewportBottom - scrollIndicatorThickness;
+            appendQuad(context, viewportLeft, trackTop, viewportRight, viewportBottom, zBase, scrollTrackColor);
+
+            const thumbLeft = horizontalThumbLeft();
+            const thumbRight = thumbLeft + horizontalThumbWidth();
+            appendQuad(context, thumbLeft, trackTop, thumbRight, viewportBottom, zBase - 0.001f, scrollThumbColor);
+
+            if (scrollX > 0.0f)
+                appendQuad(context, viewportLeft, viewportTop, viewportLeft + scrollFadeSize, viewportBottom, zBase - 0.002f, scrollFadeColor);
+            if (scrollX < maxX)
+                appendQuad(context, viewportRight - scrollFadeSize, viewportTop, viewportRight, viewportBottom, zBase - 0.002f, scrollFadeColor);
+        }
+    }
+
     override bool handlePointerEvent(ref UiPointerEvent event)
     {
         if (event.kind != UiPointerEventKind.wheel)
@@ -472,6 +655,26 @@ unittest
     event.wheelY = 10.0f;
     assert(area.dispatchPointerEvent(event));
     assert(area.scrollY == 0.0f);
+}
+
+@("UiScrollArea derives visible indicator geometry from scroll offsets")
+unittest
+{
+    auto area = new UiScrollArea(0.0f, 0.0f, 100.0f, 80.0f);
+    auto content = new UiSpacer(200.0f, 200.0f);
+    area.add(content);
+
+    UiLayoutContext context;
+    area.layout(context);
+
+    assert(area.maxScrollX() == 100.0f);
+    assert(area.maxScrollY() == 120.0f);
+    assert(area.horizontalThumbWidth() == 50.0f);
+    assert(area.verticalThumbHeight() == 32.0f);
+
+    area.scrollTo(50.0f, 60.0f);
+    assert(area.horizontalThumbLeft() == 25.0f);
+    assert(area.verticalThumbTop() == 24.0f);
 }
 
 /** Vertical stack container. */
@@ -662,6 +865,10 @@ final class UiGrid : UiLayoutContainer
 
     void add(UiWidget child, size_t row, size_t column, size_t rowSpan = 1, size_t columnSpan = 1)
     {
+        if (child is null)
+            return;
+
+        child.parent = this;
         children ~= child;
         placements ~= GridPlacement(row, column, rowSpan, columnSpan);
     }

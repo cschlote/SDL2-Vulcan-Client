@@ -41,12 +41,18 @@ struct UiPointerEvent
     float x;
     /** Pointer Y coordinate in the current widget space. */
     float y;
+    /** Pointer X coordinate in screen space, preserved during widget-local routing. */
+    float screenX;
+    /** Pointer Y coordinate in screen space, preserved during widget-local routing. */
+    float screenY;
     /** Pointer button identifier for button events. */
     uint button;
     /** Horizontal wheel delta for wheel events. */
     float wheelX;
     /** Vertical wheel delta for wheel events. */
     float wheelY;
+    /** Set by controls that activated a command while handling this event. */
+    bool actionActivated;
 }
 
 /** Keyboard event kinds routed to the focused widget. */
@@ -64,11 +70,20 @@ enum UiKeyCode
     delete_,
     left,
     right,
+    up,
+    down,
     home,
     end,
     enter,
     escape,
     tab,
+}
+
+/** Generic key modifier bits used by retained UI widgets. */
+enum UiKeyModifier : uint
+{
+    none = 0,
+    shift = 1 << 0,
 }
 
 /** Describes one keyboard event routed through the UI focus owner. */
@@ -82,6 +97,8 @@ struct UiKeyEvent
     bool repeat;
     /** Platform modifier bitmask for future shortcut handling. */
     uint modifiers;
+    /** Set by controls that activated a command while handling this event. */
+    bool actionActivated;
 }
 
 /** UTF-8 text input emitted by the platform text input layer. */

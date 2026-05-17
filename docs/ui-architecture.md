@@ -28,7 +28,7 @@ Reusable UI engine code lives in [source/vulkan/ui/](../source/vulkan/ui):
 - [ui_layout.d](../source/vulkan/ui/ui_layout.d): box-style layout containers and spacers
 - [ui_label.d](../source/vulkan/ui/ui_label.d): text widgets
 - [ui_button.d](../source/vulkan/ui/ui_button.d): button widget
-- [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, and text field controls
+- [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, tab bar, list box, progress bar, and text field controls
 - [ui_geometry.d](../source/vulkan/ui/ui_geometry.d): renderer-facing UI overlay geometry and draw ranges
 - [ui_image.d](../source/vulkan/ui/ui_image.d): small image/icon placeholder widget
 - [ui_context.d](../source/vulkan/ui/ui_context.d): renderer-facing UI render context
@@ -50,10 +50,14 @@ Generic responsibilities belong in `UiScreen`:
 - iterate windows from back to front or front to back
 - move windows to the front or back of the ordered list
 - dispatch pointer events to top-most visible windows
+- own transient popup window placement, stack priority, and outside-click/Escape dismissal
+- own active modal window routing, background blocking, modal focus containment, and modal Enter/Escape action dispatch
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
 - place windows in free screen space when possible
+- start normal window open and close transitions through shared show, hide, and toggle helpers
+- animate programmatic window move and resize requests through shared bounds helpers
 - provide shared helpers for window dragging, resizing, toggling, registration, and removal
 
 Responsibilities that do not belong in `UiScreen`:
@@ -67,7 +71,7 @@ Responsibilities that do not belong in `UiScreen`:
 
 Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific screen class.
 
-`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, and viewport clamping. The next cleanup question is whether renderer-facing overlay geometry should also become a generic `vulkan.ui` type.
+`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, viewport clamping, normal window show/hide transitions, and API-level bounds transitions.
 
 ## UiWindow
 
@@ -87,6 +91,10 @@ Window chrome owns the resize ring, stack behavior, and header controls. Edge gr
 
 `UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
 
+Each `UiWindow` has a generated stable `windowId` for title-independent lookup through `UiScreen.windowById`. The visible title remains presentation text. `UiWindow.userTag` is available as an optional pointer-sized application integration value, but engine code should prefer generated ids and owned collections for identity.
+
+Modal dialog conventions are attached to `UiWindow` through optional default and cancel buttons. `UiScreen` keeps the modal routing policy, while the window owns which button represents Enter or Escape. The button callback still decides what the action means, such as applying a dialog, dismissing the modal window, or showing validation feedback.
+
 ## Current Widget Set
 
 The reusable UI package currently provides these retained widgets:
@@ -102,15 +110,17 @@ The reusable UI package currently provides these retained widgets:
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
-- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets and wheel handling
+- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, scrollbar thumbs, and edge indicators
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
-- `UiDropdown`: compact option selector that cycles values until popup menus exist
+- `UiTabBar`: horizontal page selector with keyboard navigation and first-pass overflow scrolling
+- `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
+- `UiListBox`: selectable text-row list used by popup-backed dropdowns
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, `UiScrollArea`, `UiIconButton`, `UiTabBar`, `UiProgressBar`, `UiListBox`, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
+Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, `UiIconButton`, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
 
 `UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
 
@@ -125,7 +135,8 @@ Expected cursor states include:
 - horizontal, vertical, and diagonal resize cursors for window grips
 - move cursor for draggable chrome
 - hand or action cursor for buttons and clickable controls
-- busy or blocked cursor for future modal or disabled states
+- busy cursor for future long-running UI actions
+- blocked cursor for the background behind an active modal window
 
 `UiScreen` resolves final cursor intent because it already owns window order and hit testing. Individual widgets expose local cursor preferences, and `UiScreen` chooses the front-most visible result. The SDL/window layer applies the platform cursor, keeping cursor resource ownership out of individual widgets.
 
@@ -151,7 +162,7 @@ Children should receive a well-defined content area. Chrome, border, and gutter 
 
 Layout follows the same broad idea as mature retained UI systems: a widget reports a natural content size, then the parent layout uses minimum, preferred, maximum, and grow hints to decide the arranged size. A control such as `UiButton` may therefore measure its caption as a compact natural width while still filling a sidebar or form row when its maximum width and horizontal grow hint allow stretching. Widgets should not silently turn their current arranged size into their future intrinsic size, because that makes later shrink layouts impossible.
 
-`UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes.
+`UiScreen` owns keyboard focus at the window-stack level. Primary pointer-down selects the deepest focusable widget under the pointer or clears focus when no focusable widget is hit. `Tab` and `Shift-Tab` move through visible focusable widgets in front-window traversal order, including dropdown controls. Focused widgets receive generic key events and UTF-8 text input before the demo renderer evaluates global shortcuts, so editing a text field does not accidentally change render modes. Focus ownership is visible: the focused widget draws a generic focus ring, and the window that owns that focused widget tints its title text.
 
 ## Font-Sensitive Layout
 
@@ -195,7 +206,7 @@ Whether signals are synchronous delegates, queued events, or a small typed event
 
 The retained UI should reserve a path for animation without changing ownership boundaries. Widgets may later animate their own visual state, such as hover fades, caret blinking, animated images, media widgets, progress movement, or validation feedback. Windows may later animate their own presentation, such as short pop-in and close-out transitions.
 
-The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` is the natural owner for frame-time dispatch and active transition cleanup, while `UiWidget` and `UiWindow` own the state they visually animate. The renderer should draw resolved geometry and optional transform or texture-frame data; it should not own animation policy.
+The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` owns frame-time dispatch through `tickUi`, while `UiWidget` owns recursive widget-local tick hooks. `UiWindow` owns logical open/close transition state, progress, and API-level bounds interpolation. `UiWindowDrawRange` carries the current window alpha, scale, and offset across the renderer boundary. `UiScreen.buildOverlayGeometry` applies those window presentation values to the generated vertex positions and alpha before upload, so the renderer still draws resolved geometry and does not own animation policy.
 
 See [UI Animation Plan](ui-animation-plan.md) for the planned scheduler, widget-local animation, media-widget, and window-transition model.
 
@@ -234,7 +245,7 @@ This policy keeps runtime experimentation separate from permanent configuration.
 - Should UI signals stay as delegates or become typed event objects?
 - Should `UiScreen.buildOverlayGeometry` stay as the final render traversal API, or should it become part of a separate UI renderer object?
 - Should future color or animated cursors be represented as theme assets, renderer textures, SDL surfaces, or a backend-specific extension?
-- How should keyboard navigation, tab traversal, and modal windows be represented?
+- Which modal dialog conventions should be built on top of the current modal routing primitive?
 - Should docking and grouping live in `UiScreen` or in a separate layout manager?
 - Should the left-edge UI sidebar reserve viewport space, overlay the scene, or support both modes?
 - Should `UiScrollArea` support both axes in the first version, or should vertical scrolling land first?

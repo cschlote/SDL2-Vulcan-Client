@@ -24,7 +24,7 @@ Reusable implementations belong in [source/vulkan/ui/](../source/vulkan/ui/). De
 
 Status: Implemented.
 
-`UiWidget` is the retained base class for rectangular UI objects. It stores local position, size, preferred layout hints, children, focusability, pointer routing, cursor intent, and rendering hooks.
+`UiWidget` is the retained base class for rectangular UI objects. It stores local position, size, preferred layout hints, children, focusability, pointer routing, cursor intent, and rendering hooks. Focusable widgets draw a generic focus ring when they own keyboard focus, unless a later specialized control deliberately overrides that visual language.
 
 Common use cases:
 
@@ -37,7 +37,7 @@ Required behavior:
 
 - stable local-to-parent geometry
 - deterministic child traversal
-- optional focus ownership
+- optional focus ownership with visible focus ring
 - optional cursor preference through `cursorSelf`
 - local rendering through `renderSelf`
 - measuring and layout through `measureSelf` and layout hints
@@ -65,6 +65,8 @@ Common use cases:
 - own the visible window list
 - dispatch pointer and keyboard events
 - resolve top-most hit targets
+- block background routing while a modal window is active
+- route modal Enter/Escape keys to a window's configured default or cancel button
 - build renderer-facing overlay geometry
 - clamp and place windows in the SDL viewport
 
@@ -82,8 +84,7 @@ Demo coverage:
 
 Planned work:
 
-- popup root ownership
-- modal routing and blocked-background handling
+- widget-level popup root ownership
 - animation tick dispatch and transition cleanup
 - optional dock/sidebar placement helpers
 
@@ -92,6 +93,10 @@ Planned work:
 Status: Implemented, with additional planned window roles.
 
 `UiWindow` is the top-level retained UI container. It owns frame rendering, content root placement, close button behavior, dragging, resizing, stacking, and window-level hit testing.
+
+For modal use cases, `UiWindow` can mark one body `UiButton` as the default action and one as the cancel action. `UiScreen` activates those buttons for Enter and Escape while the window is the active modal window. The callbacks remain ordinary button callbacks, so a cancel action may close the modal, and a default action may apply, validate, or keep the dialog open.
+
+Every `UiWindow` receives a generated stable `windowId` when constructed. The visible `title` remains presentation text and is not an identity key. `UiScreen.windowById` can find registered windows by this id, and the optional pointer-sized `userTag` gives application code an opaque integration hook when it owns the lifetime and interpretation contract.
 
 Common use cases:
 
@@ -109,6 +114,8 @@ Required behavior:
 - chrome visibility can independently control header, title, and border
 - cursor regions match resize, move, action, and blocked states
 - close/hide/destroy behavior remains distinguishable
+- generated `windowId` remains stable when titles change or when multiple windows share the same title
+- optional opaque `userTag` never replaces engine-owned identity
 
 Implemented chrome attributes:
 
@@ -126,7 +133,8 @@ Demo coverage:
 
 - all current UI windows are `UiWindow` instances.
 - Chrome Demo toggles current behavior and visibility flags.
-- planned Sidebar Demo should exercise chrome-less window mode.
+- unit coverage verifies generated ids, title-independent lookup, and opaque tags.
+- the current demo sidebar exercises chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
 
 ### UiSidebar
@@ -153,7 +161,7 @@ Required behavior:
 - vertical layout of actions with stable 32 x 32 icon slots
 - action widgets fill the available sidebar width in compact and expanded modes
 - support a growable spacer between primary launcher actions and bottom system actions
-- bottom system actions should include Help, Settings, and Exit in the demo sidebar
+- bottom system actions should include Help, Status, Settings, Close All, and Exit in the demo sidebar
 - keep the visible action count limited until the upper action group can scroll
 - click action shows, hides, raises, or spawns a target window depending on the action policy
 - optional active-state marker for currently visible windows
@@ -175,8 +183,16 @@ Implementation direction:
 Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
-- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo and Chrome Demo, with compact and expanded labels.
-- The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Settings, and Exit actions to the bottom.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact and expanded labels.
+- The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
+- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
+
+Window identity direction:
+
+- `UiWindow.title` is display text and must not be used as a durable key.
+- `UiWindow` has a generated stable `windowId` for lookup, saved layouts, and external registries.
+- `UiWindow.userTag` is an optional opaque integration value, but it stays secondary to engine-owned ids.
+- Pointer-sized tags or `void*`-style hooks need clear lifetime ownership because they can otherwise hide GC and object-reference coupling.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
 Open questions:
@@ -346,7 +362,7 @@ Status: Partial.
 
 `UiScrollArea` is the planned widget for content that can be larger than the visible region. It should own a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
 
-The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, and consumes mouse-wheel events. Renderer clipping, visible scrollbars, and fade indicators are still planned.
+The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Renderer clipping and direct scrollbar dragging are still planned.
 
 Common use cases:
 
@@ -363,8 +379,8 @@ Required behavior:
 - clip child rendering to that viewport
 - translate pointer events by the current scroll offset
 - support mouse wheel scrolling
-- show horizontal and vertical scrollbars when content exceeds viewport size
-- let scrollbars be dragged directly
+- show horizontal and vertical scrollbars when content exceeds viewport size. Implemented as overlay indicators.
+- let scrollbars be dragged directly. Planned.
 - clamp scroll offsets to the content bounds
 - preserve keyboard focus for children inside the scrolled content
 - provide debug bounds for viewport, content extent, and scrollbar regions
@@ -464,6 +480,7 @@ Common use cases:
 Required behavior:
 
 - emit click callback on primary activation
+- activate with Enter when focused
 - show pointer/action cursor
 - measure from label and optional icon content
 - stretch only when layout hints and grow policy explicitly allow it
@@ -493,7 +510,7 @@ Required behavior:
 
 - expose checked state
 - emit changed callback
-- support keyboard activation after navigation exists
+- activate with Enter when focused
 - show action cursor
 
 Demo coverage:
@@ -519,6 +536,7 @@ Required behavior:
 - capture pointer while dragging
 - clamp value to min/max
 - emit changed callback during updates
+- adjust with arrow keys, Home, and End when focused
 
 Demo coverage:
 
@@ -529,7 +547,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiDropdown` is currently a compact option selector that cycles values on click. It should become a popup-backed selector when popup infrastructure exists.
+`UiDropdown` is a compact option selector that requests a transient popup list on click or focused Enter. It participates in keyboard focus traversal and shows the generic focus ring while focused. The current demo wires activation requests to a chrome-less popup `UiWindow`; while the popup is open, focus moves into the option list so arrow keys and Enter can select a value. The later reusable step is extracting that option-list surface into a proper selection/list widget.
 
 Common use cases:
 
@@ -543,13 +561,15 @@ Required behavior:
 
 - show selected text
 - emit changed callback
-- open popup list in the planned version
+- open popup list through `UiScreen` popup primitives
 - dismiss popup on outside click
-- support keyboard selection later
+- support keyboard popup opening. Implemented for focused Enter.
+- support keyboard selection. Implemented in the demo popup list with Up, Down, Home, End, and Enter.
 
 Demo coverage:
 
 - Settings.
+- Widget Demo.
 - planned Selection Demo.
 
 ### UiTextField
@@ -634,9 +654,9 @@ Demo coverage:
 
 ### UiTabBar
 
-Status: Planned.
+Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window and Widget Demo.
 
 Common use cases:
 
@@ -646,21 +666,23 @@ Common use cases:
 
 Required behavior:
 
-- active tab state
-- changed callback
-- keyboard navigation later
-- compact label measurement
+- active tab state. Implemented.
+- changed callback. Implemented.
+- keyboard navigation. Implemented for Left, Right, Home, and End when focused.
+- compact label measurement. Implemented.
+- overflow navigation with mouse wheel, arrow buttons, automatic selected-tab visibility, and edge fade indicators. Implemented as a first retained tab-strip pass.
 
 Demo coverage:
 
-- Settings window after grouped pages exist.
-- Widget Demo.
+- Settings window for Display, UI, and Audio pages.
+- Widget Demo visible tab selection.
+- Unit coverage verifies pointer, keyboard, and overflow scrolling behavior.
 
 ### UiProgressBar
 
-Status: Planned.
+Status: Partial.
 
-`UiProgressBar` displays determinate or indeterminate progress.
+`UiProgressBar` displays determinate progress as a horizontal filled track with optional percentage text. Indeterminate animation is still planned.
 
 Common use cases:
 
@@ -671,19 +693,20 @@ Common use cases:
 
 Required behavior:
 
-- clamped value display
-- optional text label
-- future indeterminate animation
+- clamped value display. Implemented.
+- optional text label. Implemented.
+- future indeterminate animation. Planned.
 
 Demo coverage:
 
-- planned Animation Demo and Widget Demo.
+- Widget Demo uses an Amount slider to update a determinate progress bar.
+- planned Animation Demo.
 
 ### UiListBox
 
-Status: Planned.
+Status: Partial.
 
-`UiListBox` shows selectable rows.
+`UiListBox` shows selectable text rows. It is used as the reusable option surface inside dropdown popups and as a visible selection example in the Widget Demo.
 
 Common use cases:
 
@@ -694,21 +717,26 @@ Common use cases:
 
 Required behavior:
 
-- selected row state
-- changed callback
-- hover and active row rendering
+- selected row state. Implemented.
+- changed callback. Implemented.
+- activation callback for clicks on the already selected row. Implemented.
+- active row rendering. Implemented for the selected row.
+- keyboard selection. Implemented for Up, Down, Left, Right, Home, End, and Enter when focused.
+- hover row rendering later
 - scroll integration when content exceeds viewport
-- keyboard selection later
+- focus traversal integration later
 
 Demo coverage:
 
+- Settings dropdown popups.
+- Widget Demo visible list selection and dropdown popup.
 - planned Selection Demo.
 
 ### UiSeparator
 
-Status: Planned.
+Status: Implemented.
 
-`UiSeparator` is a thin visual divider for grouped content.
+`UiSeparator` is a thin non-interactive visual divider for grouped content. It supports horizontal and vertical orientation and participates in box layout through fixed-thickness hints.
 
 Common use cases:
 
@@ -718,20 +746,21 @@ Common use cases:
 
 Required behavior:
 
-- horizontal and vertical variants
-- predictable spacing in `UiVBox` and `UiHBox`
-- no input behavior
+- horizontal and vertical variants. Implemented.
+- predictable spacing in `UiVBox` and `UiHBox`. Implemented through fixed-thickness layout hints.
+- no input behavior. Implemented.
 
 Demo coverage:
 
+- Widget Demo groups related control rows with horizontal separators.
 - Sidebar after grouped launcher sections exist.
 - Settings after tabs/grouped panels exist.
 
 ### UiPopupRoot
 
-Status: Planned.
+Status: Partial.
 
-`UiPopupRoot` is the planned owner for transient UI surfaces such as menus, dropdown lists, and tooltips.
+`UiPopupRoot` is the planned widget-facing owner for transient UI surfaces such as menus, dropdown lists, and tooltips. The first implementation step lives in `UiScreen`: a transient popup `UiWindow` can be shown near an anchor rectangle, clamped to the viewport, kept above ordinary windows, and dismissed on outside click or Escape.
 
 Common use cases:
 
@@ -742,14 +771,16 @@ Common use cases:
 
 Required behavior:
 
-- place relative to anchor widget
-- clamp to viewport edges
-- dismiss on outside click or Escape
-- stack above normal windows but below modal blocking policy where appropriate
+- place relative to anchor widget. Implemented at screen-window level.
+- clamp to viewport edges. Implemented at screen-window level.
+- dismiss on outside click or Escape. Implemented at screen-window level.
+- stack above normal windows but below active popups and modal blocking policy where appropriate. Implemented at screen-window level.
+- expose a widget-level popup root API for dropdowns, context menus, and tooltips.
 
 Demo coverage:
 
-- planned Selection Demo.
+- Selection Demo.
+- current unit coverage in `UiScreen` for placement, clamping, stacking, outside-click dismissal, and Escape dismissal.
 
 ### UiTooltip
 

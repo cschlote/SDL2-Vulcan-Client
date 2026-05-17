@@ -9,6 +9,7 @@ This repository is a compact D codebase for building a small game-engine spine w
 - Vulkan owns rendering, presentation, synchronization, textures, buffers, and shaders.
 - The UI is a custom retained widget system inspired by Qt-style ownership and Amiga Magic User Interface style font-sensitive layout.
 - Demo-specific UI lives in `source/demo/`; reusable UI widgets live in `source/vulkan/ui/`.
+- Reusable audio scaffolding lives in `source/vulkan/audio/`.
 - GLSL shader sources live in [shaders/](shaders); generated SPIR-V lives in `build/shaders/`.
 
 ## What To Read First
@@ -59,7 +60,7 @@ The build runs the version helper and shader compiler before linking the executa
 - Middle-click free UI window chrome to toggle that window between front and back.
 - Mouse wheel outside UI windows changes the camera field of view.
 - `+` and `-` switch the active Platonic solid, including keypad variants.
-- `Esc` closes the application unless a focused UI control consumes it first.
+- `Esc` first dismisses UI focus, popups, or modal cancel actions; otherwise it closes the application.
 
 ## Settings Policy
 

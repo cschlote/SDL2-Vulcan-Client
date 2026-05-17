@@ -8,6 +8,8 @@ File: [shaders/main.vert](../shaders/main.vert)
 
 This shader is intentionally small. It forwards the vertex attributes from the mesh into the fragment stage and writes clip-space position directly from the incoming position.
 
+UI window transition scale and translation are currently applied before upload by `UiScreen.buildOverlayGeometry`, so the vertex shader still receives final clip-space overlay positions.
+
 Inputs:
 
 - location 0: position
@@ -32,6 +34,8 @@ This shader selects one of three rendering modes through the `SceneUniforms` blo
 - mode 2 multiplies the vertex color by the sampled texture without lighting
 
 The fragment shader therefore covers both the main object pass and the overlay-style textured path used by the renderer.
+
+UI transition alpha is currently multiplied into vertex color alpha before upload. The fragment shader does not own UI animation policy.
 
 ## Build Path
 

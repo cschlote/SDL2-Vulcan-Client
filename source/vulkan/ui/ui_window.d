@@ -7,6 +7,7 @@
  */
 module vulkan.ui.ui_window;
 
+import core.stdc.stdint : uintptr_t;
 import std.algorithm : max;
 
 import vulkan.ui.ui_button : UiButton;
@@ -26,11 +27,37 @@ private enum float resizeGripLineInset = 6.0f;
 private enum float fallbackTitleTextHeight = 16.0f;
 private enum float windowContentMargin = 3.0f;
 private enum float chromeTopInset = 7.0f;
+private enum float defaultOpenTransitionSeconds = 0.12f;
+private enum float defaultCloseTransitionSeconds = 0.10f;
+private enum float defaultBoundsTransitionSeconds = 0.14f;
+private immutable float[4] windowFocusTitleTint = [0.34f, 0.82f, 0.46f, 1.00f];
+private ulong nextGeneratedWindowId = 1;
+
+private ulong allocateWindowId()
+{
+    const id = nextGeneratedWindowId;
+    ++nextGeneratedWindowId;
+    if (nextGeneratedWindowId == 0)
+        nextGeneratedWindowId = 1;
+    return id;
+}
+
+/** Logical top-level window presentation state for future visual transitions. */
+enum UiWindowTransitionState
+{
+    hidden,
+    opening,
+    visible,
+    closing,
+}
 
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
 {
+    private ulong windowId_;                         ///< Stable generated id for lookup; the visible title is not identity.
+
     string title;                                   ///< Window caption shown in the highlighted title badge.
+    uintptr_t userTag;                              ///< Optional opaque application tag. The application owns its lifetime semantics.
     float[4] bodyColor;                             ///< Fill color for the window body.
     float[4] headerColor;                           ///< Base header color used when the window is not dragable.
     float[4] titleColor;                            ///< Text color for the highlighted title badge.
@@ -41,11 +68,16 @@ final class UiWindow : UiWidget
     bool showHeader = true;                         ///< True when the title/header band is rendered and hit-tested.
     bool showTitle = true;                          ///< True when the title text is rendered inside the header.
     bool showBorder = true;                         ///< True when the outer border is rendered and reserved for content.
+    bool hasKeyboardFocus;                          ///< True while one widget inside this window owns keyboard focus.
     bool dragTracking;                              ///< True while a drag gesture is active.
     bool resizeTracking;                            ///< True while a resize gesture is active.
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
     float headerHeight = 30.0f;                     ///< Height of the decorative header bar.
     float borderThickness = windowContentMargin;    ///< Content inset and draw thickness for the simple outer border.
+    UiButton defaultButton;                         ///< Optional button activated by Enter while this window is modal.
+    UiButton cancelButton;                          ///< Optional button activated by Escape while this window is modal.
+    UiWindowTransitionState transitionState = UiWindowTransitionState.visible; ///< Current presentation transition state.
+    float transitionProgress = 1.0f;                ///< Normalized progress from 0 to 1 for opening or closing.
 
     private UiContentBox contentRoot;               ///< Body widgets are kept in a separate root so chrome stays explicit.
     private UiHBox headerExtras;                    ///< Optional extra header widgets placed to the left of the close button.
@@ -53,6 +85,19 @@ final class UiWindow : UiWidget
     private float headerExtrasWidth;                ///< Cached width of all extra header widgets.
     private float headerExtrasHeight;               ///< Cached height of all extra header widgets.
     private uint resizeButton;                      ///< Mouse button that owns the active resize gesture.
+    private float openTransitionDuration = defaultOpenTransitionSeconds;
+    private float closeTransitionDuration = defaultCloseTransitionSeconds;
+    private bool boundsTransitionActive;
+    private float boundsTransitionDuration = defaultBoundsTransitionSeconds;
+    private float boundsTransitionProgress = 1.0f;
+    private float boundsStartX;
+    private float boundsStartY;
+    private float boundsStartWidth;
+    private float boundsStartHeight;
+    private float boundsTargetX;
+    private float boundsTargetY;
+    private float boundsTargetWidth;
+    private float boundsTargetHeight;
 
     void delegate(float, float) onHeaderDragStart;              ///< Notified when a header drag starts.
     void delegate(float, float) onHeaderDragMove;               ///< Notified while a header drag is running.
@@ -62,6 +107,12 @@ final class UiWindow : UiWidget
     void delegate(UiResizeHandle) onResizeEnd;                  ///< Notified when a resize gesture ends.
     void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks free window chrome.
     void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
+
+    /** Stable generated id. It remains unchanged when the visible title changes. */
+    @property ulong windowId() const
+    {
+        return windowId_;
+    }
 
     /**
      * Creates a retained window with explicit chrome flags.
@@ -86,6 +137,7 @@ final class UiWindow : UiWidget
     this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false, float contentPaddingLeft = 18.0f, float contentPaddingTop = 10.0f, float contentPaddingRight = 18.0f, float contentPaddingBottom = 10.0f)
     {
         super(x, y, width, height);
+        windowId_ = allocateWindowId();
         this.title = title;
         this.bodyColor = bodyColor;
         this.headerColor = headerColor;
@@ -123,6 +175,192 @@ final class UiWindow : UiWidget
     void addHeaderButton(UiWidget child)
     {
         addHeaderWidget(child);
+    }
+
+    /** Marks a body button as the default action for modal Enter handling. */
+    void setDefaultButton(UiButton button)
+    {
+        defaultButton = button;
+    }
+
+    /** Marks a body button as the cancel action for modal Escape handling. */
+    void setCancelButton(UiButton button)
+    {
+        cancelButton = button;
+    }
+
+    /** Activates the configured default action, if it is currently visible. */
+    bool activateDefaultButton()
+    {
+        if (defaultButton is null || !defaultButton.visible)
+            return false;
+
+        defaultButton.activate();
+        return true;
+    }
+
+    /** Activates the configured cancel action, if it is currently visible. */
+    bool activateCancelButton()
+    {
+        if (cancelButton is null || !cancelButton.visible)
+            return false;
+
+        cancelButton.activate();
+        return true;
+    }
+
+    /** Starts an opening transition and makes the window visible immediately. */
+    void beginOpenTransition(float durationSeconds = defaultOpenTransitionSeconds)
+    {
+        openTransitionDuration = max(durationSeconds, 0.0f);
+        visible = true;
+        transitionProgress = openTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        transitionState = transitionProgress >= 1.0f ? UiWindowTransitionState.visible : UiWindowTransitionState.opening;
+    }
+
+    /** Starts a closing transition. The window becomes hidden when it completes. */
+    void beginCloseTransition(float durationSeconds = defaultCloseTransitionSeconds)
+    {
+        closeTransitionDuration = max(durationSeconds, 0.0f);
+        transitionProgress = closeTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        if (transitionProgress >= 1.0f)
+        {
+            visible = false;
+            transitionState = UiWindowTransitionState.hidden;
+        }
+        else
+        {
+            transitionState = UiWindowTransitionState.closing;
+        }
+    }
+
+    /** Returns true while an opening or closing transition is active. */
+    bool hasActiveTransition() const
+    {
+        return transitionState == UiWindowTransitionState.opening || transitionState == UiWindowTransitionState.closing;
+    }
+
+    /** Returns true while a programmatic move or resize animation is active. */
+    bool hasActiveBoundsTransition() const
+    {
+        return boundsTransitionActive;
+    }
+
+    /** Updates the logical window bounds immediately and cancels bounds animation. */
+    void setBoundsImmediate(float targetX, float targetY, float targetWidth, float targetHeight)
+    {
+        boundsTransitionActive = false;
+        boundsTransitionProgress = 1.0f;
+        x = targetX;
+        y = targetY;
+        width = max(targetWidth, 0.0f);
+        height = max(targetHeight, 0.0f);
+    }
+
+    /** Starts a smooth programmatic move and resize to the target bounds. */
+    void beginBoundsTransition(float targetX, float targetY, float targetWidth, float targetHeight, float durationSeconds = defaultBoundsTransitionSeconds)
+    {
+        boundsTransitionDuration = max(durationSeconds, 0.0f);
+        boundsTransitionProgress = boundsTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        boundsStartX = x;
+        boundsStartY = y;
+        boundsStartWidth = width;
+        boundsStartHeight = height;
+        boundsTargetX = targetX;
+        boundsTargetY = targetY;
+        boundsTargetWidth = max(targetWidth, 0.0f);
+        boundsTargetHeight = max(targetHeight, 0.0f);
+
+        if (boundsTransitionProgress >= 1.0f)
+            setBoundsImmediate(boundsTargetX, boundsTargetY, boundsTargetWidth, boundsTargetHeight);
+        else
+            boundsTransitionActive = true;
+    }
+
+    /** Returns true when this window should currently accept user input. */
+    bool acceptsInput() const
+    {
+        return visible && transitionState != UiWindowTransitionState.closing && transitionState != UiWindowTransitionState.hidden;
+    }
+
+    /** Returns the renderer-facing alpha for the current transition frame. */
+    float presentationAlpha() const
+    {
+        final switch (transitionState)
+        {
+            case UiWindowTransitionState.hidden:
+                return 0.0f;
+            case UiWindowTransitionState.opening:
+                return transitionProgress;
+            case UiWindowTransitionState.visible:
+                return 1.0f;
+            case UiWindowTransitionState.closing:
+                return max(0.0f, 1.0f - transitionProgress);
+        }
+    }
+
+    /** Returns the renderer-facing scale for the current transition frame. */
+    float presentationScale() const
+    {
+        return 0.96f + presentationAlpha() * 0.04f;
+    }
+
+    /** Returns the renderer-facing X translation for the current transition frame. */
+    float presentationOffsetX() const
+    {
+        return 0.0f;
+    }
+
+    /** Returns the renderer-facing Y translation for the current transition frame. */
+    float presentationOffsetY() const
+    {
+        return (1.0f - presentationAlpha()) * -6.0f;
+    }
+
+    /** Advances the window transition state without applying visual transforms yet. */
+    bool tickTransition(float deltaSeconds)
+    {
+        if (!hasActiveTransition())
+            return false;
+
+        const duration = transitionState == UiWindowTransitionState.opening ? openTransitionDuration : closeTransitionDuration;
+        const step = duration <= 0.0f ? 1.0f : max(deltaSeconds, 0.0f) / duration;
+        transitionProgress = max(0.0f, transitionProgress + step);
+        if (transitionProgress < 1.0f)
+            return true;
+
+        transitionProgress = 1.0f;
+        if (transitionState == UiWindowTransitionState.opening)
+            transitionState = UiWindowTransitionState.visible;
+        else
+        {
+            transitionState = UiWindowTransitionState.hidden;
+            visible = false;
+        }
+
+        return true;
+    }
+
+    /** Advances an active programmatic bounds transition. */
+    bool tickBoundsTransition(float deltaSeconds)
+    {
+        if (!boundsTransitionActive)
+            return false;
+
+        const step = boundsTransitionDuration <= 0.0f ? 1.0f : max(deltaSeconds, 0.0f) / boundsTransitionDuration;
+        boundsTransitionProgress = max(0.0f, boundsTransitionProgress + step);
+        if (boundsTransitionProgress >= 1.0f)
+        {
+            setBoundsImmediate(boundsTargetX, boundsTargetY, boundsTargetWidth, boundsTargetHeight);
+            return true;
+        }
+
+        const t = smoothStep(boundsTransitionProgress);
+        x = lerp(boundsStartX, boundsTargetX, t);
+        y = lerp(boundsStartY, boundsTargetY, t);
+        width = lerp(boundsStartWidth, boundsTargetWidth, t);
+        height = lerp(boundsStartHeight, boundsTargetHeight, t);
+        return true;
     }
 
     /** Updates the interactive chrome flags at runtime.
@@ -276,6 +514,7 @@ final class UiWindow : UiWidget
                 closeEvent.y -= y;
                 if (closeButton.dispatchPointerEvent(closeEvent))
                 {
+                    event.actionActivated = event.actionActivated || closeEvent.actionActivated;
                     logLine("UiWindow close hit: ", title, " at ", event.x, ", ", event.y);
                     return true;
                 }
@@ -287,7 +526,10 @@ final class UiWindow : UiWidget
                 headerEvent.x -= x;
                 headerEvent.y -= y;
                 if (headerExtras.dispatchPointerEvent(headerEvent))
+                {
+                    event.actionActivated = event.actionActivated || headerEvent.actionActivated;
                     return true;
+                }
             }
 
             if (event.button == 2 && stackable && isInWindowChrome(event.x, event.y))
@@ -319,7 +561,10 @@ final class UiWindow : UiWidget
         for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
         {
             if (children[cast(size_t)index].dispatchPointerEvent(childEvent))
+            {
+                event.actionActivated = event.actionActivated || childEvent.actionActivated;
                 return true;
+            }
         }
 
         return handlePointerEvent(event);
@@ -361,12 +606,19 @@ final class UiWindow : UiWidget
     }
 
 protected:
+    override bool tickSelf(float deltaSeconds)
+    {
+        const transitionDirty = tickTransition(deltaSeconds);
+        const boundsDirty = tickBoundsTransition(deltaSeconds);
+        return transitionDirty || boundsDirty;
+    }
+
     /** Draws the chrome and the title badge before the body children are rendered. */
     override void renderSelf(ref UiRenderContext context)
     {
         updateChromeLayout();
 
-        const headerFill = showHeader ? headerColor : bodyColor;
+        const headerFill = showHeader ? headerFillColor() : bodyColor;
         const bodyFill = bodyColor;
         const renderedHeaderHeight = showHeader ? headerHeight : 0.0f;
 
@@ -387,8 +639,8 @@ protected:
         if (showHeader && showTitle)
         {
             const titleX = activeResizeRing() ? resizeGripHitSize + 6.0f : 10.0f;
-            const titleY = max(0.0f, (headerHeight - titleTextHeight(context)) * 0.5f);
-            appendTextLine(context, UiTextStyle.large, title, titleX, titleY, titleColor, context.depthBase - 0.001f);
+            const titleY = max(0.0f, (headerHeight - titleMetricHeight(context)) * 0.5f);
+            appendTextLine(context, UiTextStyle.large, title, titleX, titleY, focusedTitleColor(), context.depthBase - 0.001f);
         }
 
         if (showHeader && headerExtras.children.length > 0)
@@ -446,10 +698,27 @@ private:
     }
 
     /** Returns the draw-time title text height used for vertical centering. */
-    float titleTextHeight(ref UiRenderContext context) const
+    float titleMetricHeight(ref UiRenderContext context) const
     {
         const atlas = context.atlasFor(UiTextStyle.large);
-        return atlas is null ? fallbackTitleTextHeight : max(atlas.lineHeight, atlas.ascent + atlas.descent);
+        return atlas is null ? fallbackTitleTextHeight : atlas.ascent + atlas.descent;
+    }
+
+    /** Returns the header color with the same transparency as the window body. */
+    float[4] headerFillColor() const
+    {
+        float[4] color = headerColor;
+        color[3] = bodyColor[3];
+        return color;
+    }
+
+    /** Returns the title color adjusted for an active keyboard focus owner. */
+    float[4] focusedTitleColor() const
+    {
+        if (!hasKeyboardFocus)
+            return titleColor;
+
+        return cast(float[4])windowFocusTitleTint;
     }
 
     /** Draws the visual resize ring and corner markers around the window. */
@@ -624,6 +893,35 @@ private:
         return showBorder ? max(borderThickness, 0.0f) : 0.0f;
     }
 
+    static float lerp(float start, float target, float t)
+    {
+        return start + (target - start) * t;
+    }
+
+    static float smoothStep(float t)
+    {
+        const clamped = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+        return clamped * clamped * (3.0f - 2.0f * clamped);
+    }
+
+}
+
+@("UiWindow assigns stable generated ids and opaque user tags")
+unittest
+{
+    auto first = new UiWindow("Shared", 0.0f, 0.0f, 120.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto second = new UiWindow("Shared", 0.0f, 0.0f, 120.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    const firstId = first.windowId;
+
+    assert(first.windowId != 0);
+    assert(second.windowId != 0);
+    assert(first.windowId != second.windowId);
+
+    first.title = "Renamed";
+    assert(first.windowId == firstId);
+
+    first.userTag = cast(uintptr_t)42;
+    assert(first.userTag == cast(uintptr_t)42);
 }
 
 @("UiWindow stretches direct content to the content root")
@@ -705,4 +1003,68 @@ unittest
 
     assert(window.cursorAt(12.0f, 22.0f) == UiCursorKind.default_);
     assert(window.cursorAt(40.0f, 32.0f) == UiCursorKind.default_);
+}
+
+@("UiWindow advances open and close transition states")
+unittest
+{
+    auto window = new UiWindow("Test", 10.0f, 20.0f, 240.0f, 180.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    window.visible = false;
+    window.beginOpenTransition(0.10f);
+    assert(window.visible);
+    assert(window.transitionState == UiWindowTransitionState.opening);
+    assert(window.hasActiveTransition());
+
+    assert(window.tickTransition(0.05f));
+    assert(window.transitionState == UiWindowTransitionState.opening);
+    assert(window.transitionProgress > 0.49f && window.transitionProgress < 0.51f);
+    assert(window.presentationAlpha() > 0.49f && window.presentationAlpha() < 0.51f);
+    assert(window.presentationScale() > 0.97f && window.presentationScale() < 0.99f);
+    assert(window.presentationOffsetY() < 0.0f);
+
+    assert(window.tickTransition(0.05f));
+    assert(window.transitionState == UiWindowTransitionState.visible);
+    assert(window.transitionProgress == 1.0f);
+    assert(window.visible);
+    assert(!window.hasActiveTransition());
+
+    window.beginCloseTransition(0.10f);
+    assert(window.transitionState == UiWindowTransitionState.closing);
+    assert(window.visible);
+    assert(window.presentationAlpha() == 1.0f);
+    assert(!window.acceptsInput());
+
+    assert(window.tickTransition(0.10f));
+    assert(window.transitionState == UiWindowTransitionState.hidden);
+    assert(window.transitionProgress == 1.0f);
+    assert(!window.visible);
+    assert(window.presentationAlpha() == 0.0f);
+}
+
+@("UiWindow animates programmatic bounds changes")
+unittest
+{
+    auto window = new UiWindow("Test", 10.0f, 20.0f, 100.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    window.beginBoundsTransition(110.0f, 70.0f, 160.0f, 120.0f, 0.10f);
+    assert(window.hasActiveBoundsTransition());
+    assert(window.tickBoundsTransition(0.05f));
+    assert(window.x > 10.0f && window.x < 110.0f);
+    assert(window.y > 20.0f && window.y < 70.0f);
+    assert(window.width > 100.0f && window.width < 160.0f);
+    assert(window.height > 80.0f && window.height < 120.0f);
+
+    assert(window.tickBoundsTransition(0.05f));
+    assert(!window.hasActiveBoundsTransition());
+    assert(window.x == 110.0f);
+    assert(window.y == 70.0f);
+    assert(window.width == 160.0f);
+    assert(window.height == 120.0f);
+
+    window.setBoundsImmediate(1.0f, 2.0f, 3.0f, 4.0f);
+    assert(window.x == 1.0f);
+    assert(window.y == 2.0f);
+    assert(window.width == 3.0f);
+    assert(window.height == 4.0f);
 }

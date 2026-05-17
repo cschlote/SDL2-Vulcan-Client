@@ -16,6 +16,7 @@ import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_widget_helpers : appendSurfaceFrame;
 
 private immutable float[4] widgetDebugBoundsColor = [1.00f, 0.05f, 0.05f, 0.55f];
+private immutable float[4] widgetFocusRingColor = [0.34f, 0.82f, 0.46f, 0.95f];
 
 /** Base class for all retained UI widgets. */
 abstract class UiWidget
@@ -37,6 +38,7 @@ abstract class UiWidget
     bool visible = true;
     bool focusable;
     bool focused;
+    UiWidget parent;
     UiWidget[] children;
 
     this(float x = 0, float y = 0, float width = 0, float height = 0)
@@ -60,7 +62,37 @@ abstract class UiWidget
     /** Adds a child widget below this widget in the visual tree. */
     void add(UiWidget child)
     {
+        if (child is null)
+            return;
+
+        child.parent = this;
         children ~= child;
+    }
+
+    /** Returns the widget left edge in screen coordinates. */
+    float screenX()
+    {
+        float result = x;
+        UiWidget owner = parent;
+        while (owner !is null)
+        {
+            result += owner.x + owner.childOffsetX;
+            owner = owner.parent;
+        }
+        return result;
+    }
+
+    /** Returns the widget top edge in screen coordinates. */
+    float screenY()
+    {
+        float result = y;
+        UiWidget owner = parent;
+        while (owner !is null)
+        {
+            result += owner.y + owner.childOffsetY;
+            owner = owner.parent;
+        }
+        return result;
     }
 
     /** Updates the widget's layout hint independently from its final frame. */
@@ -119,7 +151,10 @@ abstract class UiWidget
         for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
         {
             if (children[cast(size_t)index].dispatchPointerEvent(childEvent))
+            {
+                event.actionActivated = event.actionActivated || childEvent.actionActivated;
                 return true;
+            }
         }
 
         return handlePointerEvent(event);
@@ -193,6 +228,26 @@ abstract class UiWidget
         return handleTextInputEvent(event);
     }
 
+    /** Advances optional widget-local animation state for this subtree.
+     *
+     * Returns true when rendering another UI frame is useful even without new
+     * input.
+     */
+    final bool tick(float deltaSeconds)
+    {
+        if (!visible)
+            return false;
+
+        bool dirty = tickSelf(deltaSeconds);
+        if (!visible)
+            return dirty;
+
+        foreach (child; children)
+            dirty = child.tick(deltaSeconds) || dirty;
+
+        return dirty;
+    }
+
     /** Renders the widget and its children in back-to-front order. */
     final void render(ref UiRenderContext context)
     {
@@ -214,6 +269,9 @@ abstract class UiWidget
             const color = debugBoundsColor();
             appendSurfaceFrame(localContext, 0.0f, 0.0f, width, height, color, color, localContext.depthBase - 0.0005f, false, true);
         }
+
+        if (focused && focusable && width > 0.0f && height > 0.0f)
+            appendSurfaceFrame(localContext, 1.0f, 1.0f, width - 1.0f, height - 1.0f, widgetFocusRingColor, widgetFocusRingColor, localContext.depthBase - 0.004f, false, true);
     }
 
 protected:
@@ -260,9 +318,90 @@ protected:
         return false;
     }
 
+    /** Advances this widget's own animation state. */
+    bool tickSelf(float deltaSeconds)
+    {
+        return false;
+    }
+
     /** Returns whether the event hits the widget body in parent space. */
     bool contains(float localX, float localY) const
     {
         return localX >= x && localY >= y && localX < x + width && localY < y + height;
     }
+}
+
+@("UiWidget ticks visible subtrees and reports animation dirtiness")
+unittest
+{
+    final class TickWidget : UiWidget
+    {
+        float lastDelta;
+        uint tickCount;
+        bool dirty;
+
+        this(bool dirty = false)
+        {
+            super(0.0f, 0.0f, 10.0f, 10.0f);
+            this.dirty = dirty;
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+
+        override bool tickSelf(float deltaSeconds)
+        {
+            lastDelta = deltaSeconds;
+            tickCount++;
+            return dirty;
+        }
+    }
+
+    auto root = new TickWidget();
+    auto child = new TickWidget(true);
+    auto hiddenChild = new TickWidget(true);
+    hiddenChild.visible = false;
+    root.add(child);
+    root.add(hiddenChild);
+
+    assert(root.tick(0.025f));
+    assert(root.tickCount == 1);
+    assert(child.tickCount == 1);
+    assert(hiddenChild.tickCount == 0);
+    assert(child.lastDelta == 0.025f);
+}
+
+@("UiWidget reports screen coordinates through parent offsets")
+unittest
+{
+    final class PositionWidget : UiWidget
+    {
+        this(float x = 0.0f, float y = 0.0f)
+        {
+            super(x, y, 10.0f, 10.0f);
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+    }
+
+    auto root = new PositionWidget(100.0f, 50.0f);
+    root.childOffsetX = 4.0f;
+    root.childOffsetY = 6.0f;
+
+    auto group = new PositionWidget(20.0f, 10.0f);
+    group.childOffsetX = 2.0f;
+    group.childOffsetY = 3.0f;
+
+    auto child = new PositionWidget(7.0f, 5.0f);
+
+    root.add(group);
+    group.add(child);
+
+    assert(child.screenX() == 133.0f);
+    assert(child.screenY() == 74.0f);
 }
