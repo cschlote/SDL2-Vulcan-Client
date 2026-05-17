@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added SDL audio stream output and renderer-side pumping of mixed UI click voices.
 - Added a synthetic builtin UI click clip and queued it from activated retained UI buttons.
 - Wired audio `playClip` and `stopAll` events to registered clips, active voices, and mix-buffer rendering.
 - Added decoded audio clip and active voice primitives with looped/non-looped mixing into float buffers.

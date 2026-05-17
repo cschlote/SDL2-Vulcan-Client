@@ -11,8 +11,12 @@
 module vulkan.audio.audio_device;
 
 import bindbc.sdl : SDL_AudioDevice, SDL_AudioDeviceID, SDL_AudioFormat, SDL_AudioSpec,
-    SDL_AudioDevicePaused, SDL_CloseAudioDevice, SDL_GetAudioDeviceFormat,
-    SDL_OpenAudioDevice, SDL_PauseAudioDevice, SDL_ResumeAudioDevice;
+    SDL_AudioStream, SDL_AudioDevicePaused, SDL_AudioStreamDevicePaused,
+    SDL_ClearAudioStream, SDL_CloseAudioDevice, SDL_DestroyAudioStream,
+    SDL_GetAudioDeviceFormat, SDL_GetAudioStreamDevice, SDL_GetAudioStreamQueued,
+    SDL_OpenAudioDevice, SDL_OpenAudioDeviceStream, SDL_PauseAudioDevice,
+    SDL_PauseAudioStreamDevice, SDL_PutAudioStreamData, SDL_ResumeAudioDevice,
+    SDL_ResumeAudioStreamDevice;
 
 private enum SDL_AudioDeviceID invalidAudioDeviceId = 0;
 
@@ -56,6 +60,8 @@ struct AudioDeviceInfo
 final class AudioDevice
 {
     private SDL_AudioDeviceID deviceId = invalidAudioDeviceId;
+    private SDL_AudioStream* stream;
+    private bool streamOwned;
     private AudioDeviceConfig requestedConfig;
     private AudioDeviceInfo actualInfo;
 
@@ -69,6 +75,12 @@ final class AudioDevice
     SDL_AudioDeviceID id() const
     {
         return deviceId;
+    }
+
+    /** Returns true when output uses an SDL audio stream. */
+    bool hasStream() const
+    {
+        return stream !is null;
     }
 
     /** Returns the requested config used by the last `open` call. */
@@ -103,9 +115,44 @@ final class AudioDevice
         return true;
     }
 
+    /** Opens the default playback device as an SDL audio stream.
+     *
+     * The source format is the requested engine mix format. SDL converts it to
+     * the actual hardware format behind the stream.
+     */
+    bool openStream(AudioDeviceConfig config = AudioDeviceConfig.init)
+    {
+        if (hasStream())
+            return true;
+
+        if (isOpen())
+            close();
+
+        requestedConfig = config;
+        auto spec = config.toSdlSpec();
+        stream = SDL_OpenAudioDeviceStream(SDL_AudioDevice.defaultPlayback, &spec, null, null);
+        if (stream is null)
+            return false;
+
+        streamOwned = true;
+        deviceId = SDL_GetAudioStreamDevice(stream);
+        refreshActualInfo();
+        return true;
+    }
+
     /** Closes the SDL playback device if it is open. */
     void close()
     {
+        if (hasStream())
+        {
+            SDL_DestroyAudioStream(stream);
+            stream = null;
+            streamOwned = false;
+            deviceId = invalidAudioDeviceId;
+            actualInfo = AudioDeviceInfo.init;
+            return;
+        }
+
         if (!isOpen())
             return;
 
@@ -117,19 +164,46 @@ final class AudioDevice
     /** Starts device playback if the device is open. */
     bool resume()
     {
+        if (hasStream())
+            return SDL_ResumeAudioStreamDevice(stream);
         return isOpen() && SDL_ResumeAudioDevice(deviceId);
     }
 
     /** Pauses device playback if the device is open. */
     bool pause()
     {
+        if (hasStream())
+            return SDL_PauseAudioStreamDevice(stream);
         return isOpen() && SDL_PauseAudioDevice(deviceId);
     }
 
     /** Returns true while SDL reports the device as paused or while closed. */
-    bool paused() const
+    bool paused()
     {
+        if (hasStream())
+            return SDL_AudioStreamDevicePaused(stream);
         return !isOpen() || SDL_AudioDevicePaused(deviceId);
+    }
+
+    /** Queues interleaved float samples into the SDL stream. */
+    bool queueInterleavedFloat(const(float)[] samples)
+    {
+        if (!hasStream() || samples.length == 0)
+            return false;
+
+        return SDL_PutAudioStreamData(stream, samples.ptr, cast(int)(samples.length * float.sizeof));
+    }
+
+    /** Returns how many bytes are queued in the SDL audio stream. */
+    int queuedBytes()
+    {
+        return hasStream() ? SDL_GetAudioStreamQueued(stream) : 0;
+    }
+
+    /** Clears queued stream data without closing the device. */
+    bool clearQueued()
+    {
+        return hasStream() && SDL_ClearAudioStream(stream);
     }
 
     /** Refreshes the actual device format cached after opening. */
@@ -184,5 +258,7 @@ unittest
 
     assert(!device.isOpen());
     assert(device.id() == invalidAudioDeviceId);
+    assert(!device.hasStream());
     assert(device.paused());
+    assert(device.queuedBytes() == 0);
 }

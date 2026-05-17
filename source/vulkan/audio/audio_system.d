@@ -245,13 +245,17 @@ final class AudioSystem
     /** Registers small synthetic UI clips used until real assets exist. */
     void registerBuiltinClips()
     {
-        registerClip(AudioClip.fromInterleaved(uiClickClipId, [
-            0.00f, 0.00f,
-            0.38f, 0.38f,
-            0.16f, 0.16f,
-            -0.08f, -0.08f,
-            0.00f, 0.00f,
-        ], 2));
+        float[] samples;
+        samples.length = 512 * 2;
+        foreach (frame; 0 .. 512)
+        {
+            const envelope = 1.0f - cast(float)frame / 512.0f;
+            const sign = (frame / 6) % 2 == 0 ? 1.0f : -1.0f;
+            const value = sign * envelope * 0.18f;
+            samples[frame * 2] = value;
+            samples[frame * 2 + 1] = value;
+        }
+        registerClip(AudioClip.fromInterleaved(uiClickClipId, samples, 2));
     }
 
     /** Queues volume changes that match the existing demo settings model.
@@ -524,10 +528,10 @@ unittest
     assert(audio.activeVoiceCount() == 1);
 
     auto mixer = new AudioMixer();
-    auto buffer = mixer.createBuffer(5);
-    assert(audio.mixVoices(buffer) == 5);
+    auto buffer = mixer.createBuffer(512);
+    assert(audio.mixVoices(buffer) == 512);
     assert(audio.activeVoiceCount() == 0);
-    assert(buffer.samples[2] > 0.0f);
+    assert(buffer.samples[0] > 0.0f);
 }
 
 unittest

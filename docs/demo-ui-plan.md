@@ -41,7 +41,7 @@ Remaining migration debt:
 - settings tabs exist for Display, UI, and Audio; Controls and Gameplay pages are still planned once those settings are editable.
 - reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
-- audio output, asset-loaded clips, voice-limit policy, and music playback are still planned engine work; backend-neutral audio events, bus state, settings volume mapping, renderer-side settings application, SDL audio device ownership, float block mixing, in-memory clips, simple voices, event-to-voice scheduling, and synthetic UI click events exist.
+- asset-loaded clips, voice-limit policy, and music playback are still planned engine work; backend-neutral audio events, bus state, settings volume mapping, renderer-side settings application, SDL audio stream output, float block mixing, in-memory clips, simple voices, event-to-voice scheduling, and synthetic UI click events exist.
 - UI animation scheduling, basic window transition state/geometry application, demo singleton open/close wiring, and API-level bounds transitions exist; animated media widgets and broader demo transition coverage are still planned engine work.
 
 ## UI Design Direction
@@ -132,11 +132,11 @@ UI elements should also leave room for future animation. Local widget animation 
 
 ## Audio Direction
 
-The engine now has a first reusable audio-system scaffold for typed events, queued processing, master/music/effects/UI bus state, settings-to-bus volume mapping, renderer-side application of startup/Apply/Save settings, a small SDL audio device owner, a basic float block mixer, in-memory clips, simple active voices, event-to-voice scheduling for registered clips, and a synthetic UI click path for retained button activation. The next target is an SDL-backed audio service with audible short sound effects, device callback rendering, and streamed music.
+The engine now has a first reusable audio-system scaffold for typed events, queued processing, master/music/effects/UI bus state, settings-to-bus volume mapping, renderer-side application of startup/Apply/Save settings, SDL audio stream output, a basic float block mixer, in-memory clips, simple active voices, event-to-voice scheduling for registered clips, and a synthetic UI click path for retained button activation. The next target is better short-sound behavior, asset-backed clips, and streamed music.
 
 The usual split is:
 
-- audio device ownership for SDL callback setup, sample format, buffer size, and shutdown; basic requested/actual format ownership exists
+- audio device ownership for SDL stream setup, sample format, buffer size, queueing, and shutdown; basic output exists
 - audio events for play, stop, fade, and bus-volume changes; playClip/stopAll are wired to registered clips and voices
 - audio mixer for active voices and bus routing; basic interleaved float block mixing with bus gain exists
 - preloaded clips for UI and game sound effects; in-memory float clips exist, asset loading is planned
@@ -197,7 +197,7 @@ The next work should continue from reusable engine foundations toward demo polis
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for SDL device ownership, backend-neutral event queue, bus definitions, volume state, settings-to-bus mapping, renderer-side settings application, float block mixing, in-memory clips, simple voices, and event-to-voice scheduling.
-16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path; audible SDL output remains planned.
+16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path and are pumped to SDL stream output.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
 ## Implementation Order
@@ -231,8 +231,8 @@ The next work should continue from reusable engine foundations toward demo polis
 27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio.
 28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch, widget-local tick hooks, window transition state/progress, renderer-facing window presentation parameters, generated-geometry application, singleton window transition wiring, and API move/resize bounds transitions.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
-30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup. Partial for SDL device owner, backend-neutral event queue, buses, bus-volume state, settings hookup, renderer application, basic mixer, in-memory clips, simple voices, and event-to-voice scheduling.
-31. Add UI and demo audio events, such as button click feedback and settings volume preview. Partial for retained button activation queuing the synthetic `ui/click` clip.
+30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup. Partial for SDL stream output, backend-neutral event queue, buses, bus-volume state, settings hookup, renderer application, basic mixer, in-memory clips, simple voices, and event-to-voice scheduling.
+31. Add UI and demo audio events, such as button click feedback and settings volume preview. Partial for retained button activation queuing the synthetic `ui/click` clip and feeding it to SDL stream output.
 32. Add music playback with stream support, loop handling, fade in/out, and crossfade.
 33. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
 

@@ -1,6 +1,6 @@
 # Audio Architecture
 
-This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback device ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. The runtime also registers a tiny synthetic `ui/click` clip until real UI sound assets exist, and the renderer queues it when retained buttons activate. File loading, voice limits, SDL callback integration, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
+This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback stream ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. The runtime also registers a tiny synthetic `ui/click` clip until real UI sound assets exist, and the renderer queues it when retained buttons activate. The renderer pumps active voices into an SDL audio stream when audio output is available. File loading, voice limits, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
 
 ## Goals
 
@@ -19,7 +19,7 @@ Core goals:
 
 A typical game audio architecture has these layers:
 
-- `AudioDevice`: owns the backend device, requested playback format, actual playback format, pause/resume, and shutdown. Basic SDL owner exists; callback and stream binding are planned.
+- `AudioDevice`: owns the backend device/stream, requested playback format, actual playback format, pause/resume, queueing, and shutdown. Basic SDL stream output exists.
 - `AudioMixer`: combines active voices into the device callback buffer. Basic interleaved float-buffer mixing exists; active voice ownership is planned.
 - `AudioBus`: groups voices by purpose, currently master, music, effects, and UI. Basic bus state exists.
 - `AudioClip`: decoded or preloaded short sound data for low-latency effects. Basic in-memory interleaved float clips exist; loading from assets is planned.
@@ -38,7 +38,7 @@ The expected event flow is:
 2. The main thread queues the event in the `AudioSystem`.
 3. The audio system resolves bus routing and playback parameters. Currently this applies bus-volume state, records fade targets, and maps `playClip` events to registered clips and active voices.
 4. The mixer owns active voices and produces interleaved samples for the device callback. The current mixer can clear output buffers, mix already-decoded interleaved float blocks with bus gain, and render simple clip voices scheduled by `AudioSystem`.
-5. The backend writes mixed samples to the platform audio device. The SDL device owner exists, but is not opened automatically until the mixer/service integration is added.
+5. The backend writes mixed samples to the platform audio device. The renderer currently opens an SDL audio stream, resumes it when possible, and pushes mixed UI/event audio blocks into it each frame when active voices exist.
 
 Audio events should stay small and serializable enough to log, test, or replay. Examples include `playUiClick`, `playEffect(assetId)`, `startMusic(trackId)`, `fadeBus(busId, targetVolume, duration)`, and `stopAll(busId)`. The current UI click path is intentionally synthetic: it proves the event-to-voice path without depending on a package asset or SDL callback yet.
 
@@ -58,7 +58,7 @@ Ambient loops can use the same stream/voice model, but they normally route to an
 
 SDL audio is the most natural first backend because SDL already owns window and input integration in this repository. The backend should be swappable later if needed, but the first useful implementation can be:
 
-- SDL audio device callback
+- SDL audio stream output first; a callback can be added later if frame-driven queueing is not enough
 - engine-owned mixer with `float` sample processing. Basic block mixing exists.
 - short clips decoded into memory. The in-memory clip representation exists; decoding and asset lookup are planned.
 - simple streaming abstraction for music

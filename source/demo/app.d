@@ -82,7 +82,7 @@ int runApplication(string[] args)
     if (!loadVulkanBindings())
         return 1;
 
-    if (!SDL_Init(SDL_InitFlags.video))
+    if (!SDL_Init(SDL_InitFlags.video | SDL_InitFlags.audio))
     {
         stderr.writeln("SDL_Init failed: ", fromStringz(SDL_GetError()));
         return 1;

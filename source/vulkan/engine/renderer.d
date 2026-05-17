@@ -28,6 +28,8 @@ import demo.demo_settings : DemoSettings, saveDemoSettings;
 import demo.demo_ui : DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
+import vulkan.audio.audio_device : AudioDevice, AudioDeviceConfig;
+import vulkan.audio.audio_mixer : AudioMixer;
 import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId;
 import vulkan.engine.device;
 import vulkan.engine.instance;
@@ -168,7 +170,12 @@ class VulkanRenderer
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[7] overlayFonts;
     private UiWindowDrawRange[] uiWindowRanges;
+    private AudioDevice audioDevice;
+    private AudioMixer audioMixer;
     private AudioSystem audioSystem;
+    private bool audioOutputAvailable;
+    private enum size_t audioFramesPerPump = 512;
+    private enum int audioQueuedLimitBytes = 48_000 * 2 * cast(int)float.sizeof / 8;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -262,8 +269,11 @@ class VulkanRenderer
         this.buildVersion = buildVersion;
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
+        audioDevice = new AudioDevice();
+        audioMixer = new AudioMixer();
         audioSystem = new AudioSystem();
         audioSystem.registerBuiltinClips();
+        initializeAudioOutput();
         if (demoSettings !is null)
             applyAudioSettings(*demoSettings);
         uiScreen = new DemoUiScreen();
@@ -376,6 +386,8 @@ class VulkanRenderer
             vkDeviceWaitIdle(device.handle);
 
         syncDemoSettings();
+        if (audioDevice !is null)
+            audioDevice.close();
 
         destroySyncObjects();
         destroyDescriptors();
@@ -603,6 +615,7 @@ class VulkanRenderer
 
         imagesInFlight[imageIndex] = inFlightFences[currentFrame];
 
+        pumpAudioOutput();
         updateGeometryBuffer(currentFrame);
 
         vkResetFences(device.handle, 1, &inFlightFences[currentFrame]);
@@ -1767,6 +1780,44 @@ class VulkanRenderer
 
         audioSystem.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
         audioSystem.processEvents();
+    }
+
+    /** Opens the SDL audio stream used for audible mixed output. */
+    private void initializeAudioOutput()
+    {
+        if (audioDevice is null)
+            return;
+
+        AudioDeviceConfig config;
+        if (!audioDevice.openStream(config))
+        {
+            audioOutputAvailable = false;
+            logLine("Audio output unavailable; continuing without sound.");
+            return;
+        }
+
+        audioOutputAvailable = audioDevice.resume();
+        if (audioOutputAvailable)
+            logLineVerbose("Audio output stream ready.");
+        else
+            logLine("Audio output stream opened but could not be resumed.");
+    }
+
+    /** Pushes mixed voice data into SDL when the stream needs data. */
+    private void pumpAudioOutput()
+    {
+        if (!audioOutputAvailable || audioDevice is null || audioSystem is null || audioMixer is null)
+            return;
+
+        if (audioSystem.activeVoiceCount() == 0)
+            return;
+
+        if (audioDevice.queuedBytes() >= audioQueuedLimitBytes)
+            return;
+
+        auto buffer = audioMixer.createBuffer(audioFramesPerPump);
+        audioSystem.mixVoices(buffer);
+        audioDevice.queueInterleavedFloat(buffer.samples);
     }
 
     /** Resolves the configured startup shape name to a mesh index. */
