@@ -121,6 +121,8 @@ The reusable UI package currently provides these retained widgets:
 - `UiTabBar`: horizontal page selector with keyboard navigation and first-pass overflow scrolling
 - `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
 - `UiListBox`: selectable text-row list used by popup-backed dropdowns
+- `UiProgressBar`: determinate progress indicator with optional percent text
+- `UiSeparator`: non-interactive horizontal or vertical divider for grouped content
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
