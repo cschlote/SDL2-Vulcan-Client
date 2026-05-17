@@ -116,7 +116,7 @@ Current behavior:
 - edits display window mode
 - edits window width and height with focused text fields
 - toggles VSync
-- switches between Display, UI, and Audio pages
+- switches between Display, UI, and Audio pages with a visual tab strip
 - adjusts UI scale with a slider
 - selects a theme placeholder
 - toggles compact-window placeholder behavior
@@ -130,6 +130,7 @@ Useful regression checks:
 - slider dragging keeps pointer capture until button-up
 - tab switching changes only the active settings page
 - dropdown popups open, stay above normal windows, and close through the screen popup policy
+- focused dropdowns open through Enter
 - the action row stays attached below the growable settings body
 - Apply and Save remain separate persistence concepts
 

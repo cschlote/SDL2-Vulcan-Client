@@ -534,7 +534,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiDropdown` is a compact option selector that requests a transient popup list on click. It participates in keyboard focus traversal and shows the generic focus ring while focused. The current demo wires pointer activation requests to a chrome-less popup `UiWindow`; the later reusable step is extracting that option-list surface into a proper selection/list widget.
+`UiDropdown` is a compact option selector that requests a transient popup list on click or focused Enter. It participates in keyboard focus traversal and shows the generic focus ring while focused. The current demo wires activation requests to a chrome-less popup `UiWindow`; the later reusable step is extracting that option-list surface into a proper selection/list widget.
 
 Common use cases:
 
@@ -550,7 +550,8 @@ Required behavior:
 - emit changed callback
 - open popup list through `UiScreen` popup primitives
 - dismiss popup on outside click
-- support keyboard popup opening and selection later
+- support keyboard popup opening. Implemented for focused Enter.
+- support keyboard selection later
 
 Demo coverage:
 
@@ -642,7 +643,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently supports pointer and direct key selection and is used by the Settings window.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, and is used by the Settings window.
 
 Common use cases:
 
@@ -656,6 +657,7 @@ Required behavior:
 - changed callback. Implemented.
 - keyboard navigation. Implemented for Left, Right, Home, and End when focused.
 - compact label measurement. Implemented.
+- overflow navigation with mouse wheel, arrow buttons, and edge fade indicators. Planned for tab sets that exceed the available width.
 
 Demo coverage:
 

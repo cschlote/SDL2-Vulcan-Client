@@ -404,18 +404,23 @@ protected:
 
     override void renderSelf(ref UiRenderContext context)
     {
-        appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
         if (tabs.length == 0)
             return;
 
+        appendQuad(context, 0.0f, height - 2.0f, width, height, context.depthBase - 0.001f, borderColor);
         const tabWidth = width / cast(float)tabs.length;
         foreach (index, tab; tabs)
         {
             const left = cast(float)index * tabWidth;
             const right = index + 1 == tabs.length ? width : left + tabWidth;
+            const selected = index == selectedIndex;
+            const top = selected ? 0.0f : 5.0f;
+            const bottom = selected ? height : height - 1.0f;
+            const fill = selected ? selectedColor : fillColor;
+            appendSurfaceFrame(context, left, top, right, bottom + (selected ? 2.0f : 0.0f), fill, borderColor, context.depthBase - (selected ? 0.003f : 0.002f));
             if (index == selectedIndex)
-                appendQuad(context, left + 1.0f, 1.0f, right - 1.0f, height - 1.0f, context.depthBase - 0.001f, selectedColor);
-            appendTextLine(context, style, tab, left + controlPaddingX, centeredTextY(height, fallbackTextHeight), textColor, context.depthBase - 0.002f);
+                appendQuad(context, left + 1.0f, height - 2.0f, right - 1.0f, height + 2.0f, context.depthBase - 0.004f, selectedColor);
+            appendTextLine(context, style, tab, left + controlPaddingX, top + centeredTextY(bottom - top, fallbackTextHeight), textColor, context.depthBase - 0.005f);
         }
     }
 
@@ -567,13 +572,40 @@ protected:
         if (event.kind != UiPointerEventKind.buttonDown || event.button != 1 || options.length == 0)
             return false;
 
-        if (onOpenRequested !is null)
-        {
-            const anchorX = event.screenX - event.x + x;
-            const anchorY = event.screenY - event.y + y;
-            onOpenRequested(this, anchorX, anchorY, width, height);
-        }
+        requestOpen();
         return true;
+    }
+
+    override bool handleKeyEvent(ref UiKeyEvent event)
+    {
+        if (event.kind != UiKeyEventKind.keyDown || options.length == 0)
+            return false;
+
+        final switch (event.key)
+        {
+            case UiKeyCode.enter:
+                requestOpen();
+                event.actionActivated = true;
+                return true;
+            case UiKeyCode.left:
+            case UiKeyCode.right:
+            case UiKeyCode.up:
+            case UiKeyCode.down:
+            case UiKeyCode.home:
+            case UiKeyCode.end:
+            case UiKeyCode.backspace:
+            case UiKeyCode.delete_:
+            case UiKeyCode.escape:
+            case UiKeyCode.tab:
+            case UiKeyCode.unknown:
+                return false;
+        }
+    }
+
+    void requestOpen()
+    {
+        if (onOpenRequested !is null)
+            onOpenRequested(this, screenX(), screenY(), width, height);
     }
 
     override UiCursorKind cursorSelf(float localX, float localY)
@@ -1005,7 +1037,7 @@ unittest
 @("UiDropdown requests popup anchors and selects by index")
 unittest
 {
-    auto dropdown = new UiDropdown("Theme", ["midnight", "classic"], 0, 0.0f, 0.0f, 160.0f, 28.0f);
+    auto dropdown = new UiDropdown("Theme", ["midnight", "classic"], 0, 100.0f, 60.0f, 160.0f, 28.0f);
     assert(dropdown.focusable);
 
     bool opened;
@@ -1023,8 +1055,8 @@ unittest
     UiPointerEvent event;
     event.kind = UiPointerEventKind.buttonDown;
     event.button = 1;
-    event.x = 20.0f;
-    event.y = 12.0f;
+    event.x = 120.0f;
+    event.y = 72.0f;
     event.screenX = 120.0f;
     event.screenY = 72.0f;
 
@@ -1032,6 +1064,13 @@ unittest
     assert(opened);
     assert(anchorX == 100.0f);
     assert(anchorY == 60.0f);
+    opened = false;
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.enter;
+    assert(dropdown.dispatchKeyEvent(keyEvent));
+    assert(opened);
+    assert(keyEvent.actionActivated);
     dropdown.selectIndex(1);
     assert(dropdown.selectedText() == "classic");
 }

@@ -662,6 +662,10 @@ final class UiGrid : UiLayoutContainer
 
     void add(UiWidget child, size_t row, size_t column, size_t rowSpan = 1, size_t columnSpan = 1)
     {
+        if (child is null)
+            return;
+
+        child.parent = this;
         children ~= child;
         placements ~= GridPlacement(row, column, rowSpan, columnSpan);
     }

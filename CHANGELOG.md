@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Made focused window titles visually distinct, opened focused dropdowns with Enter, and rendered settings tabs as attached tab-strip tabs.
 - Added a repeatable Input Demo window with text, toggle, slider, dropdown, and activation callback coverage.
 - Included dropdowns in keyboard focus traversal, made focused-window chrome subtler by tinting only the title, and fixed keyboard-activated sidebar Exit handling.
 - Added a repeatable Audio Demo window with semantic UI/master/music/effects preview buttons.

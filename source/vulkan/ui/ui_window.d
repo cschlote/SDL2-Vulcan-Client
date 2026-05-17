@@ -29,7 +29,7 @@ private enum float chromeTopInset = 7.0f;
 private enum float defaultOpenTransitionSeconds = 0.12f;
 private enum float defaultCloseTransitionSeconds = 0.10f;
 private enum float defaultBoundsTransitionSeconds = 0.14f;
-private immutable float[4] windowFocusTitleTint = [0.72f, 0.96f, 1.00f, 1.00f];
+private immutable float[4] windowFocusTitleTint = [0.34f, 0.82f, 0.46f, 1.00f];
 
 /** Logical top-level window presentation state for future visual transitions. */
 enum UiWindowTransitionState
@@ -689,11 +689,7 @@ private:
         if (!hasKeyboardFocus)
             return titleColor;
 
-        float[4] color;
-        foreach (index; 0 .. 3)
-            color[index] = titleColor[index] * 0.65f + windowFocusTitleTint[index] * 0.35f;
-        color[3] = titleColor[3];
-        return color;
+        return cast(float[4])windowFocusTitleTint;
     }
 
     /** Draws the visual resize ring and corner markers around the window. */

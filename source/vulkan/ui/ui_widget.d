@@ -38,6 +38,7 @@ abstract class UiWidget
     bool visible = true;
     bool focusable;
     bool focused;
+    UiWidget parent;
     UiWidget[] children;
 
     this(float x = 0, float y = 0, float width = 0, float height = 0)
@@ -61,7 +62,37 @@ abstract class UiWidget
     /** Adds a child widget below this widget in the visual tree. */
     void add(UiWidget child)
     {
+        if (child is null)
+            return;
+
+        child.parent = this;
         children ~= child;
+    }
+
+    /** Returns the widget left edge in screen coordinates. */
+    float screenX()
+    {
+        float result = x;
+        UiWidget owner = parent;
+        while (owner !is null)
+        {
+            result += owner.x + owner.childOffsetX;
+            owner = owner.parent;
+        }
+        return result;
+    }
+
+    /** Returns the widget top edge in screen coordinates. */
+    float screenY()
+    {
+        float result = y;
+        UiWidget owner = parent;
+        while (owner !is null)
+        {
+            result += owner.y + owner.childOffsetY;
+            owner = owner.parent;
+        }
+        return result;
     }
 
     /** Updates the widget's layout hint independently from its final frame. */
@@ -340,4 +371,37 @@ unittest
     assert(child.tickCount == 1);
     assert(hiddenChild.tickCount == 0);
     assert(child.lastDelta == 0.025f);
+}
+
+@("UiWidget reports screen coordinates through parent offsets")
+unittest
+{
+    final class PositionWidget : UiWidget
+    {
+        this(float x = 0.0f, float y = 0.0f)
+        {
+            super(x, y, 10.0f, 10.0f);
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+    }
+
+    auto root = new PositionWidget(100.0f, 50.0f);
+    root.childOffsetX = 4.0f;
+    root.childOffsetY = 6.0f;
+
+    auto group = new PositionWidget(20.0f, 10.0f);
+    group.childOffsetX = 2.0f;
+    group.childOffsetY = 3.0f;
+
+    auto child = new PositionWidget(7.0f, 5.0f);
+
+    root.add(group);
+    group.add(child);
+
+    assert(child.screenX() == 133.0f);
+    assert(child.screenY() == 74.0f);
 }
