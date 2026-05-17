@@ -299,6 +299,7 @@ final class DemoUiScreen : UiScreen
     bool sceneMouseDragging;
     void delegate() onApplySettings;
     void delegate() onSaveSettings;
+    void delegate() onPreviewAudioSettings;
 
     private UiWindow sidebarWindow;
     private UiWindow helpWindow;
@@ -683,9 +684,9 @@ final class DemoUiScreen : UiScreen
         settingsThemeDropdown.onChanged = (index, value) { settingsDraft.ui.theme = value; updateSettingsSummary(); };
         settingsThemeDropdown.onOpenRequested = &openDropdownPopup;
         settingsCompactToggle.onChanged = (value) { settingsDraft.ui.compactWindows = value; updateSettingsSummary(); };
-        settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; updateSettingsSummary(); };
-        settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; updateSettingsSummary(); };
-        settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; updateSettingsSummary(); };
+        settingsMasterVolumeSlider.onChanged = (value) { settingsDraft.audio.masterVolume = value; previewAudioSettingsFromDialog(); };
+        settingsMusicVolumeSlider.onChanged = (value) { settingsDraft.audio.musicVolume = value; previewAudioSettingsFromDialog(); };
+        settingsEffectsVolumeSlider.onChanged = (value) { settingsDraft.audio.effectsVolume = value; previewAudioSettingsFromDialog(); };
         settingsApplyButton.onClick = &applySettingsFromDialog;
         settingsSaveButton.onClick = &saveSettingsFromDialog;
 
@@ -792,6 +793,13 @@ final class DemoUiScreen : UiScreen
         settingsDraft.audio.musicVolume = settingsMusicVolumeSlider.value;
         settingsDraft.audio.effectsVolume = settingsEffectsVolumeSlider.value;
         updateSettingsSummary();
+    }
+
+    void previewAudioSettingsFromDialog()
+    {
+        updateSettingsSummary();
+        if (onPreviewAudioSettings !is null)
+            onPreviewAudioSettings();
     }
 
     void updateSettingsPageVisibility()
@@ -1138,9 +1146,11 @@ unittest
     assert(!screen.settingsUiPage.visible);
     assert(screen.settingsAudioPage.visible);
 
+    uint previews;
+    screen.onPreviewAudioSettings = () { ++previews; };
     screen.settingsMasterVolumeSlider.setValue(0.42f);
-    screen.syncSettingsDraftFromControls();
     assert(screen.settingsDraft.audio.masterVolume > 0.41f && screen.settingsDraft.audio.masterVolume < 0.43f);
+    assert(previews == 1);
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")

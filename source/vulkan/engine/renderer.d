@@ -279,6 +279,7 @@ class VulkanRenderer
         uiScreen = new DemoUiScreen();
         uiScreen.onApplySettings = &applySettingsDialog;
         uiScreen.onSaveSettings = &saveSettingsDialog;
+        uiScreen.onPreviewAudioSettings = &previewAudioSettingsDialog;
         baseTitle = "SDL2 Vulkan Demo " ~ buildVersion;
         window.setTitle(baseTitle);
         SDL_StartTextInput(window.handle);
@@ -1751,6 +1752,20 @@ class VulkanRenderer
         *demoSettings = uiScreen.settingsDraft;
         applyAudioSettings(*demoSettings);
         saveDemoSettings(*demoSettings);
+    }
+
+    /** Applies the audio settings draft and queues a short audible preview. */
+    private void previewAudioSettingsDialog()
+    {
+        if (audioSystem is null)
+            return;
+
+        audioSystem.applyVolumeSettings(
+            uiScreen.settingsDraft.audio.masterVolume,
+            uiScreen.settingsDraft.audio.musicVolume,
+            uiScreen.settingsDraft.audio.effectsVolume);
+        audioSystem.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
+        audioSystem.processEvents();
     }
 
     /** Applies persisted demo audio settings through the engine audio event queue. */

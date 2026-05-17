@@ -197,7 +197,7 @@ The next work should continue from reusable engine foundations toward demo polis
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for SDL device ownership, backend-neutral event queue, bus definitions, volume state, settings-to-bus mapping, renderer-side settings application, float block mixing, in-memory clips, simple voices, and event-to-voice scheduling.
-16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path and are pumped to SDL stream output.
+16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path, SDL stream output, and Settings slider preview via draft bus volumes.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
 ## Implementation Order

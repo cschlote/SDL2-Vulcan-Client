@@ -26,7 +26,7 @@ A typical game audio architecture has these layers:
 - `AudioStream`: longer decoded-on-demand source for music or ambience. Planned.
 - `AudioVoice`: one active playback instance with gain, pan, pitch, loop state, and remaining lifetime. Basic gain, bus, cursor, active, and loop state exist; `AudioSystem` can schedule voices from `playClip` events. Pan/pitch and voice-limit policy are planned.
 - `AudioEvent`: typed request from gameplay or UI code, such as play sound, stop sound, set bus volume, fade music, or trigger a transition. Basic event types exist.
-- `AudioSystem`: frame-facing owner that receives events, updates fades and voice state, and feeds the mixer. The first implementation owns the event queue, bus-volume state, clip registry, and active voices; SDL device callback integration is planned.
+- `AudioSystem`: frame-facing owner that receives events, updates fades and voice state, and feeds the mixer. The first implementation owns the event queue, bus-volume state, clip registry, and active voices; the renderer currently pumps mixed blocks into an SDL audio stream.
 
 The important boundary is that game and UI code should emit intent, not push samples. The audio system owns playback policy, voice limits, fades, and backend details.
 
@@ -74,7 +74,9 @@ The existing demo settings already contain:
 - `musicVolume`
 - `effectsVolume`
 
-These map to the current buses through `AudioSystem.applyVolumeSettings`. `masterVolume` controls the master bus, `musicVolume` controls the music bus, and `effectsVolume` controls both effects and UI buses until the settings model gains a dedicated UI volume. The renderer owns the first `AudioSystem` instance, applies loaded settings during startup, and re-applies the settings dialog values through the audio event queue on Apply or Save. This is still silent until the SDL device and mixer are added.
+These map to the current buses through `AudioSystem.applyVolumeSettings`. `masterVolume` controls the master bus, `musicVolume` controls the music bus, and `effectsVolume` controls both effects and UI buses until the settings model gains a dedicated UI volume. The renderer owns the first `AudioSystem` instance, applies loaded settings during startup, and re-applies the settings dialog values through the audio event queue on Apply or Save.
+
+Audio sliders in the Settings window also trigger a small preview path: the demo UI updates only the settings draft, the renderer applies those draft volumes to the live audio buses, and then queues the synthetic `ui/click` clip. This keeps the preview audible without persisting settings before Apply or Save. The current preview proves the bus path for master/effects/UI volume; a later audio demo should add real effect assets, a dedicated music preview, and a separate UI volume control if needed.
 
 ## Open Questions
 
