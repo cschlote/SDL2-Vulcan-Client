@@ -174,6 +174,7 @@ class VulkanRenderer
     private AudioMixer audioMixer;
     private AudioSystem audioSystem;
     private bool audioOutputAvailable;
+    private bool audioQueuedSilence;
     private enum size_t audioFramesPerPump = 512;
     private enum int audioQueueTargetBytes = cast(int)audioFramesPerPump * 2 * cast(int)float.sizeof * 2;
     private enum textureWidth = 64;
@@ -1776,8 +1777,7 @@ class VulkanRenderer
             uiScreen.settingsDraft.audio.masterVolume,
             uiScreen.settingsDraft.audio.musicVolume,
             uiScreen.settingsDraft.audio.effectsVolume);
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, audioPreviewBus(previewKind), 1.0f));
-        audioSystem.processEvents();
+        queueUiClipAudio(audioPreviewBus(previewKind));
     }
 
     /** Applies persisted demo audio settings through the engine audio event queue. */
@@ -1805,8 +1805,27 @@ class VulkanRenderer
         if (audioSystem is null)
             return;
 
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
+        queueUiClipAudio(AudioBusId.ui);
+    }
+
+    private void queueUiClipAudio(AudioBusId bus)
+    {
+        if (audioSystem is null)
+            return;
+
+        discardIdleAudioSilence();
+        audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, 1.0f));
         audioSystem.processEvents();
+        pumpAudioOutput();
+    }
+
+    private void discardIdleAudioSilence()
+    {
+        if (!audioQueuedSilence || audioDevice is null)
+            return;
+
+        if (audioDevice.clearQueued())
+            audioQueuedSilence = false;
     }
 
     private AudioBusId audioPreviewBus(DemoAudioPreviewKind previewKind) const
@@ -1862,6 +1881,7 @@ class VulkanRenderer
         {
             if (!audioDevice.queueInterleavedFloat(buffer.samples))
                 break;
+            audioQueuedSilence = true;
         }
     }
 
@@ -1876,7 +1896,12 @@ class VulkanRenderer
 
         auto buffer = audioMixer.createBuffer(audioFramesPerPump);
         if (audioSystem.activeVoiceCount() > 0)
+        {
             audioSystem.mixVoices(buffer);
+            audioQueuedSilence = false;
+        }
+        else
+            audioQueuedSilence = true;
         audioDevice.queueInterleavedFloat(buffer.samples);
     }
 

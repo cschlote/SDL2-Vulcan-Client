@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Discarded queued idle silence before one-shot UI sounds to reduce delayed clicks after inactivity.
 - Added live 3D rotation angles to the Status window.
 - Changed audio settings slider previews to play once on pointer commit instead of cascading during drag.
 - Kept the SDL audio stream warm with a small silence queue to reduce idle/startup click latency.
