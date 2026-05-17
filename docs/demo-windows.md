@@ -182,7 +182,8 @@ Useful regression checks:
 
 Planned extensions:
 
-- replace placeholder image widgets with texture-backed image assets once the renderer exposes them to UI widgets
+- replace the rough low-resolution placeholder image assets with a coherent higher-resolution icon/image set
+- move richer image browsing and animated-image examples into the planned Media Demo
 - add future controls to the gallery
 - wrap the gallery in `UiScrollArea` after renderer clipping exists
 - add popup examples as those widgets land
