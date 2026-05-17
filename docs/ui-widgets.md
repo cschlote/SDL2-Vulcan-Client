@@ -50,7 +50,7 @@ Demo coverage:
 
 Planned work:
 
-- add local animation tick hooks
+- add concrete widget-local animations on top of the existing `tick` hook
 - add explicit disabled state
 - add accessibility or semantic metadata if the project grows in that direction
 
