@@ -180,7 +180,14 @@ Demo coverage:
 - The demo sidebar replaces the old Demo Control launcher.
 - The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
-- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers and postpones a general `UiWindow` unique-id mechanism until a real engine use case needs it.
+- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers and postpones a general `UiWindow` identity mechanism until a real engine use case needs it.
+
+Window identity direction:
+
+- `UiWindow.title` is display text and must not be used as a durable key.
+- A future `UiWindow` should get a generated stable id for lookup, saved layouts, and external registries.
+- An optional opaque application tag can be added later for integration code, but it should be secondary to engine-owned ids.
+- Pointer-sized tags or `void*`-style hooks need clear lifetime ownership because they can otherwise hide GC and object-reference coupling.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
 Open questions:

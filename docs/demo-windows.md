@@ -38,6 +38,7 @@ Useful regression checks:
 - compact and expanded action buttons fill the available sidebar width
 - the growable spacer keeps Help, Status, Settings, Close All, and Exit aligned to the bottom edge after viewport resizing
 - Close All hides the singleton Help Desk, Status, and Settings windows and destroys repeatable demo windows without relying on window titles
+- future persistent window lookup should use generated window ids, not titles; optional application tags are secondary integration data
 - expanding the sidebar updates the reserved left edge for demo windows
 - viewport resizing keeps the bar attached to the left edge
 - shrinking to the minimum SDL window height must shrink the growable spacer instead of clipping bottom actions
