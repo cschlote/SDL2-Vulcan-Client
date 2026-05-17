@@ -284,22 +284,28 @@ Primary classes to exercise:
 - future animation scheduler
 - future transition descriptors
 
-## Planned Audio Demo Window
+## Audio Demo Window
 
-The Audio Demo should exercise the audio service once implemented. It should connect ordinary UI controls to audio events instead of directly calling backend playback functions.
+The Audio Demo exercises the current audio service from ordinary retained UI controls. It connects buttons to semantic audio events and lets the renderer map those events to the runtime audio buses instead of calling backend playback functions from the demo window.
 
-Target use cases:
+Current behavior:
 
 - button click sound event
-- one-shot effect preview
+- one-shot preview buttons for UI, master, music, and effects bus routing
+- repeatable window instances from the sidebar
+- no direct dependency on SDL audio backend code
+
+Planned extensions:
+
+- one-shot effect preview with real assets
 - master, music, effects, and UI bus volume sliders
 - music play, stop, loop, fade, and crossfade
 - settings preview that does not implicitly save configuration
 
 Primary classes to exercise:
 
-- future audio service
-- future `AudioEvent`
+- current audio service
+- `AudioEvent`
 - `UiButton`
 - `UiSlider`
 - `UiToggle`

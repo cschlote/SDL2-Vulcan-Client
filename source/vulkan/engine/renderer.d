@@ -1820,6 +1820,8 @@ class VulkanRenderer
     {
         final switch (previewKind)
         {
+            case DemoAudioPreviewKind.ui:
+                return AudioBusId.ui;
             case DemoAudioPreviewKind.master:
                 return AudioBusId.ui;
             case DemoAudioPreviewKind.music:
