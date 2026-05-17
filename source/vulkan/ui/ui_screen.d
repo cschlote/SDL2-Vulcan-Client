@@ -242,6 +242,30 @@ class UiScreen
         return windows_;
     }
 
+    /** Finds a registered window by its stable generated id, or null when it is not registered. */
+    UiWindow windowById(ulong windowId)
+    {
+        foreach (window; windows_)
+        {
+            if (window.windowId == windowId)
+                return window;
+        }
+
+        return null;
+    }
+
+    /** Finds a registered window by its stable generated id, or null when it is not registered. */
+    const(UiWindow) windowById(ulong windowId) const
+    {
+        foreach (window; windows_)
+        {
+            if (window.windowId == windowId)
+                return window;
+        }
+
+        return null;
+    }
+
     /** Recomputes layout and keeps windows inside the viewport. */
     void ensureWindowLayout()
     {
@@ -1148,6 +1172,29 @@ unittest
     assert(screen.isFrontWindow(first));
     screen.toggleWindowStackPosition(first);
     assert(screen.windowsInFrontToBack()[0] is first);
+}
+
+@("UiScreen finds registered windows by generated id")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto first = new UiWindow("same", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto second = new UiWindow("same", 20.0f, 20.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    screen.addWindow(first);
+    screen.addWindow(second);
+
+    assert(screen.windowById(first.windowId) is first);
+    assert(screen.windowById(second.windowId) is second);
+
+    first.title = second.title;
+    assert(screen.windowById(first.windowId) is first);
+
+    screen.removeWindow(first);
+    assert(screen.windowById(first.windowId) is null);
+    assert(screen.windowById(second.windowId) is second);
 }
 
 @("UiScreen toggles window stacking from a middle chrome click")

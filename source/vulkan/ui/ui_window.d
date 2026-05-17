@@ -7,6 +7,7 @@
  */
 module vulkan.ui.ui_window;
 
+import core.stdc.stdint : uintptr_t;
 import std.algorithm : max;
 
 import vulkan.ui.ui_button : UiButton;
@@ -30,6 +31,16 @@ private enum float defaultOpenTransitionSeconds = 0.12f;
 private enum float defaultCloseTransitionSeconds = 0.10f;
 private enum float defaultBoundsTransitionSeconds = 0.14f;
 private immutable float[4] windowFocusTitleTint = [0.34f, 0.82f, 0.46f, 1.00f];
+private ulong nextGeneratedWindowId = 1;
+
+private ulong allocateWindowId()
+{
+    const id = nextGeneratedWindowId;
+    ++nextGeneratedWindowId;
+    if (nextGeneratedWindowId == 0)
+        nextGeneratedWindowId = 1;
+    return id;
+}
 
 /** Logical top-level window presentation state for future visual transitions. */
 enum UiWindowTransitionState
@@ -43,7 +54,10 @@ enum UiWindowTransitionState
 /** Retained window chrome with optional close, drag, and resize behavior. */
 final class UiWindow : UiWidget
 {
+    private ulong windowId_;                         ///< Stable generated id for lookup; the visible title is not identity.
+
     string title;                                   ///< Window caption shown in the highlighted title badge.
+    uintptr_t userTag;                              ///< Optional opaque application tag. The application owns its lifetime semantics.
     float[4] bodyColor;                             ///< Fill color for the window body.
     float[4] headerColor;                           ///< Base header color used when the window is not dragable.
     float[4] titleColor;                            ///< Text color for the highlighted title badge.
@@ -94,6 +108,12 @@ final class UiWindow : UiWidget
     void delegate() onHeaderMiddleClick;                        ///< Notified when the middle mouse button clicks free window chrome.
     void delegate() onClose;                                    ///< Notified when the built-in close button is activated.
 
+    /** Stable generated id. It remains unchanged when the visible title changes. */
+    @property ulong windowId() const
+    {
+        return windowId_;
+    }
+
     /**
      * Creates a retained window with explicit chrome flags.
      *
@@ -117,6 +137,7 @@ final class UiWindow : UiWidget
     this(string title, float x, float y, float width, float height, float[4] bodyColor, float[4] headerColor, float[4] titleColor, bool sizeable = false, bool closable = false, bool dragable = false, float contentPaddingLeft = 18.0f, float contentPaddingTop = 10.0f, float contentPaddingRight = 18.0f, float contentPaddingBottom = 10.0f)
     {
         super(x, y, width, height);
+        windowId_ = allocateWindowId();
         this.title = title;
         this.bodyColor = bodyColor;
         this.headerColor = headerColor;
@@ -883,6 +904,24 @@ private:
         return clamped * clamped * (3.0f - 2.0f * clamped);
     }
 
+}
+
+@("UiWindow assigns stable generated ids and opaque user tags")
+unittest
+{
+    auto first = new UiWindow("Shared", 0.0f, 0.0f, 120.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto second = new UiWindow("Shared", 0.0f, 0.0f, 120.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    const firstId = first.windowId;
+
+    assert(first.windowId != 0);
+    assert(second.windowId != 0);
+    assert(first.windowId != second.windowId);
+
+    first.title = "Renamed";
+    assert(first.windowId == firstId);
+
+    first.userTag = cast(uintptr_t)42;
+    assert(first.userTag == cast(uintptr_t)42);
 }
 
 @("UiWindow stretches direct content to the content root")

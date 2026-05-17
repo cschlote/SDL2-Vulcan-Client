@@ -96,6 +96,8 @@ Status: Implemented, with additional planned window roles.
 
 For modal use cases, `UiWindow` can mark one body `UiButton` as the default action and one as the cancel action. `UiScreen` activates those buttons for Enter and Escape while the window is the active modal window. The callbacks remain ordinary button callbacks, so a cancel action may close the modal, and a default action may apply, validate, or keep the dialog open.
 
+Every `UiWindow` receives a generated stable `windowId` when constructed. The visible `title` remains presentation text and is not an identity key. `UiScreen.windowById` can find registered windows by this id, and the optional pointer-sized `userTag` gives application code an opaque integration hook when it owns the lifetime and interpretation contract.
+
 Common use cases:
 
 - normal draggable tool windows
@@ -112,6 +114,8 @@ Required behavior:
 - chrome visibility can independently control header, title, and border
 - cursor regions match resize, move, action, and blocked states
 - close/hide/destroy behavior remains distinguishable
+- generated `windowId` remains stable when titles change or when multiple windows share the same title
+- optional opaque `userTag` never replaces engine-owned identity
 
 Implemented chrome attributes:
 
@@ -129,6 +133,7 @@ Demo coverage:
 
 - all current UI windows are `UiWindow` instances.
 - Chrome Demo toggles current behavior and visibility flags.
+- unit coverage verifies generated ids, title-independent lookup, and opaque tags.
 - planned Sidebar Demo should exercise chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
 
@@ -185,8 +190,8 @@ Demo coverage:
 Window identity direction:
 
 - `UiWindow.title` is display text and must not be used as a durable key.
-- A future `UiWindow` should get a generated stable id for lookup, saved layouts, and external registries.
-- An optional opaque application tag can be added later for integration code, but it should be secondary to engine-owned ids.
+- `UiWindow` has a generated stable `windowId` for lookup, saved layouts, and external registries.
+- `UiWindow.userTag` is an optional opaque integration value, but it stays secondary to engine-owned ids.
 - Pointer-sized tags or `void*`-style hooks need clear lifetime ownership because they can otherwise hide GC and object-reference coupling.
 - The Widget Demo should include sidebar button rows once icon widgets exist.
 
