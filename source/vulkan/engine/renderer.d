@@ -1810,16 +1810,16 @@ class VulkanRenderer
             UiImageAtlasSource("sidebar/help", "assets/ui/sidebar-help.ppm", 1, 0),
             UiImageAtlasSource("sidebar/status", "assets/ui/demo-image.ppm", 2, 0),
             UiImageAtlasSource("sidebar/settings", "assets/ui/sidebar-settings.ppm", 3, 0),
-            UiImageAtlasSource("sidebar/widgets", "assets/ui/demo-image.ppm", 0, 1),
-            UiImageAtlasSource("sidebar/window", "assets/ui/demo-image.ppm", 1, 1),
-            UiImageAtlasSource("sidebar/input", "assets/ui/demo-image.ppm", 2, 1),
-            UiImageAtlasSource("sidebar/selection", "assets/ui/demo-image.ppm", 3, 1),
-            UiImageAtlasSource("sidebar/audio", "assets/ui/demo-image.ppm", 0, 2),
+            UiImageAtlasSource("sidebar/layout", "assets/ui/sidebar-layout.ppm", 0, 1),
+            UiImageAtlasSource("sidebar/window", "assets/ui/sidebar-window.ppm", 1, 1),
+            UiImageAtlasSource("sidebar/input", "assets/ui/sidebar-input.ppm", 2, 1),
+            UiImageAtlasSource("sidebar/selection", "assets/ui/sidebar-selection.ppm", 3, 1),
+            UiImageAtlasSource("sidebar/audio", "assets/ui/sidebar-audio.ppm", 0, 2),
             UiImageAtlasSource("sidebar/close-all", "assets/ui/sidebar-close.ppm", 1, 2),
             UiImageAtlasSource("sidebar/exit", "assets/ui/sidebar-close.ppm", 2, 2),
-            UiImageAtlasSource("demo/icon-small", "assets/ui/demo-image.ppm", 0, 3),
-            UiImageAtlasSource("demo/icon-medium", "assets/ui/demo-image.ppm", 1, 3),
-            UiImageAtlasSource("demo/icon-wide", "assets/ui/demo-image.ppm", 2, 3),
+            UiImageAtlasSource("sidebar/scroll", "assets/ui/sidebar-scroll.ppm", 0, 3),
+            UiImageAtlasSource("sidebar/controls", "assets/ui/sidebar-controls.ppm", 1, 3),
+            UiImageAtlasSource("sidebar/custom", "assets/ui/sidebar-custom.ppm", 2, 3),
             UiImageAtlasSource("demo/icon-action", "assets/ui/sidebar-settings.ppm", 3, 3),
         ];
     }
@@ -1859,7 +1859,7 @@ class VulkanRenderer
         registerUiImageCell(registry, "sidebar/help", 1, 0);
         registerUiImageCell(registry, "sidebar/status", 2, 0);
         registerUiImageCell(registry, "sidebar/settings", 3, 0);
-        registerUiImageCell(registry, "sidebar/widgets", 0, 1);
+        registerUiImageCell(registry, "sidebar/layout", 0, 1);
         registerUiImageCell(registry, "sidebar/window", 1, 1);
         registerUiImageCell(registry, "sidebar/input", 2, 1);
         registerUiImageCell(registry, "sidebar/selection", 3, 1);
@@ -1867,6 +1867,9 @@ class VulkanRenderer
         registerUiImageCell(registry, "sidebar/close-all", 1, 2);
         registerUiImageCell(registry, "sidebar/exit", 2, 2);
         registerUiImageCell(registry, "sidebar/collapse", 3, 2);
+        registerUiImageCell(registry, "sidebar/scroll", 0, 3);
+        registerUiImageCell(registry, "sidebar/controls", 1, 3);
+        registerUiImageCell(registry, "sidebar/custom", 2, 3);
         registerUiImageCell(registry, "demo/icon-small", 0, 3);
         registerUiImageCell(registry, "demo/icon-medium", 1, 3);
         registerUiImageCell(registry, "demo/icon-wide", 2, 3);

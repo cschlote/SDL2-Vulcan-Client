@@ -1045,9 +1045,9 @@ final class DemoUiScreen : UiScreen
         sidebarHelpButton = buildSidebarButton("", "sidebar/help", "Help Desk", cast(float[4])sidebarIconCool, &toggleHelpWindow);
         sidebarStatusButton = buildSidebarButton("", "sidebar/status", "Status", cast(float[4])sidebarIconGreen, &toggleStatusWindow);
         sidebarSettingsButton = buildSidebarButton("", "sidebar/settings", "Settings", cast(float[4])sidebarIconWarm, () { toggleSettingsDialog(null); });
-        sidebarLayoutButton = buildSidebarButton("", "sidebar/widgets", "Layout Demo", cast(float[4])sidebarIconGreen, &spawnLayoutDemoWindow);
-        sidebarScrollButton = buildSidebarButton("", "sidebar/widgets", "ScrollArea Demo", cast(float[4])sidebarIconWarm, &spawnScrollAreaDemoWindow);
-        sidebarControlsButton = buildSidebarButton("", "sidebar/widgets", "Controls Demo", cast(float[4])sidebarIconCool, &spawnControlsDemoWindow);
+        sidebarLayoutButton = buildSidebarButton("", "sidebar/layout", "Layout Demo", cast(float[4])sidebarIconGreen, &spawnLayoutDemoWindow);
+        sidebarScrollButton = buildSidebarButton("", "sidebar/scroll", "ScrollArea Demo", cast(float[4])sidebarIconWarm, &spawnScrollAreaDemoWindow);
+        sidebarControlsButton = buildSidebarButton("", "sidebar/controls", "Controls Demo", cast(float[4])sidebarIconCool, &spawnControlsDemoWindow);
         sidebarChromeButton = buildSidebarButton("", "sidebar/window", "Window Demo", cast(float[4])sidebarIconViolet, &spawnChromeDemoWindow);
         sidebarInputButton = buildSidebarButton("", "sidebar/input", "Input Demo", cast(float[4])sidebarIconCool, &spawnInputDemoWindow);
         sidebarSelectionButton = buildSidebarButton("", "sidebar/selection", "Selection Demo", cast(float[4])sidebarIconWarm, &spawnSelectionDemoWindow);
