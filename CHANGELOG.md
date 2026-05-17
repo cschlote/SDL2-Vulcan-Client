@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Release 26.20.9945
+
 - Fixed nested pointer-coordinate dispatch for controls inside horizontal layouts, corrected `UiGrid` spacing allocation during relayout, added Layout Demo reset/help affordances, kept the Custom Demo probes inside their frame, and gave Audio Demo preview buttons distinct synthetic clips.
 - Added distinct file-backed sidebar placeholder icons for the repeatable demo/test windows.
 - Rebuilt Layout Demo around live HBox, VBox, Grid, Spacer, and grow-policy controls, moved the old probe content to a Custom Demo, narrowed the expanded sidebar, and softened slider/tab colors.
