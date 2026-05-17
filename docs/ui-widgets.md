@@ -821,11 +821,11 @@ Demo coverage:
 - demo Sidebar renders collapsed action tooltips.
 - planned Widget Demo coverage once tooltip behavior becomes reusable.
 
-### UiIconButton
+### Generalized Icon Action Button
 
 Status: Planned.
 
-`UiIconButton` is a compact action button centered around an icon, with optional text in expanded contexts.
+The planned icon action button should not become a narrow special case. It should generalize the current `UiButton` and `UiSidebarAction` roles into one configurable action widget family: optional icon, optional label, configurable icon and label alignment, horizontal or vertical arrangement, fixed or flexible icon slot, and ordinary button behavior. In that model, a text-only button is the same action widget without an icon, while the sidebar row is the same action widget configured with a fixed left icon slot and an expanded label region.
 
 Common use cases:
 
@@ -837,6 +837,8 @@ Required behavior:
 
 - stable icon slot, usually 32 x 32 px for the first sidebar implementation
 - optional label text in a separate region beside the icon slot
+- support text-only button mode without forcing a separate class
+- configurable icon/label alignment and orientation
 - left-edge sidebar mode where the icon remains aligned and the row can fill the available width
 - active, hover, pressed, disabled, and focused states
 - tooltip support when the label is hidden
@@ -844,7 +846,7 @@ Required behavior:
 
 Demo coverage:
 
-- planned Sidebar.
+- current Sidebar through `UiSidebarAction`, then later ordinary `UiButton` replacement once the generalized action widget exists.
 
 ### UiSidebarAction
 
