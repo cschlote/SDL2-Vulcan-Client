@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added API-level UI window move and resize bounds transitions plus updated Help Desk shortcut text.
 - Wired normal `UiScreen` show, hide, and toggle paths plus demo singleton windows through UI window transitions.
 - Applied UI window transition alpha, scale, and offset to generated overlay vertices before upload.
 - Added renderer-facing window presentation parameters for UI transition alpha, scale, and offset.

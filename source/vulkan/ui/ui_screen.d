@@ -294,6 +294,41 @@ class UiScreen
             window.beginCloseTransition(0.0f);
     }
 
+    /** Moves a window by API, optionally animated. */
+    void moveWindowTo(UiWindow window, float targetX, float targetY, bool animated = true)
+    {
+        if (window is null)
+            return;
+
+        setWindowBounds(window, targetX, targetY, window.width, window.height, animated);
+    }
+
+    /** Resizes a window by API, optionally animated. */
+    void resizeWindowTo(UiWindow window, float targetWidth, float targetHeight, bool animated = true)
+    {
+        if (window is null)
+            return;
+
+        setWindowBounds(window, window.x, window.y, targetWidth, targetHeight, animated);
+    }
+
+    /** Moves and resizes a window by API, optionally animated. */
+    void setWindowBounds(UiWindow window, float targetX, float targetY, float targetWidth, float targetHeight, bool animated = true)
+    {
+        if (window is null)
+            return;
+
+        if (isInteractingWith(window))
+            endWindowInteraction();
+
+        const boundedWidth = max(targetWidth, window.minimumWidth);
+        const boundedHeight = max(targetHeight, window.minimumHeight);
+        if (animated)
+            window.beginBoundsTransition(targetX, targetY, boundedWidth, boundedHeight);
+        else
+            window.setBoundsImmediate(targetX, targetY, boundedWidth, boundedHeight);
+    }
+
     /** Shows a modal window and blocks routing to windows behind it. */
     void showModalWindow(UiWindow modal)
     {
@@ -1464,6 +1499,33 @@ unittest
     foreach (_; 0 .. 2)
         screen.tickUi(0.05f);
     assert(!window.visible);
+}
+
+@("UiScreen animates API window move and resize changes")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto window = new UiWindow("animated", 10.0f, 20.0f, 100.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(window);
+
+    screen.setWindowBounds(window, 90.0f, 60.0f, 140.0f, 120.0f);
+    assert(window.hasActiveBoundsTransition());
+    assert(screen.tickUi(0.05f));
+    assert(window.x > 10.0f && window.x < 90.0f);
+    assert(window.y > 20.0f && window.y < 60.0f);
+    assert(window.width > 100.0f && window.width < 140.0f);
+    assert(window.height > 80.0f && window.height < 120.0f);
+
+    foreach (_; 0 .. 3)
+        screen.tickUi(0.05f);
+    assert(!window.hasActiveBoundsTransition());
+    assert(window.x == 90.0f);
+    assert(window.y == 60.0f);
+    assert(window.width == 140.0f);
+    assert(window.height == 120.0f);
 }
 
 @("UiScreen can place a window away from existing visible windows")

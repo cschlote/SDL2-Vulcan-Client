@@ -57,6 +57,7 @@ Generic responsibilities belong in `UiScreen`:
 - clamp windows to the viewport
 - place windows in free screen space when possible
 - start normal window open and close transitions through shared show, hide, and toggle helpers
+- animate programmatic window move and resize requests through shared bounds helpers
 - provide shared helpers for window dragging, resizing, toggling, registration, and removal
 
 Responsibilities that do not belong in `UiScreen`:
@@ -70,7 +71,7 @@ Responsibilities that do not belong in `UiScreen`:
 
 Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific screen class.
 
-`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, viewport clamping, and normal window show/hide transitions.
+`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, viewport clamping, normal window show/hide transitions, and API-level bounds transitions.
 
 ## UiWindow
 
@@ -203,7 +204,7 @@ Whether signals are synchronous delegates, queued events, or a small typed event
 
 The retained UI should reserve a path for animation without changing ownership boundaries. Widgets may later animate their own visual state, such as hover fades, caret blinking, animated images, media widgets, progress movement, or validation feedback. Windows may later animate their own presentation, such as short pop-in and close-out transitions.
 
-The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` owns frame-time dispatch through `tickUi`, while `UiWidget` owns recursive widget-local tick hooks. `UiWindow` owns logical open/close transition state and progress, and `UiWindowDrawRange` carries the current window alpha, scale, and offset across the renderer boundary. `UiScreen.buildOverlayGeometry` applies those window presentation values to the generated vertex positions and alpha before upload, so the renderer still draws resolved geometry and does not own animation policy.
+The default rule should keep layout and hit testing based on logical retained rectangles while rendering applies transient alpha, scale, frame selection, or small offsets. `UiScreen` owns frame-time dispatch through `tickUi`, while `UiWidget` owns recursive widget-local tick hooks. `UiWindow` owns logical open/close transition state, progress, and API-level bounds interpolation. `UiWindowDrawRange` carries the current window alpha, scale, and offset across the renderer boundary. `UiScreen.buildOverlayGeometry` applies those window presentation values to the generated vertex positions and alpha before upload, so the renderer still draws resolved geometry and does not own animation policy.
 
 See [UI Animation Plan](ui-animation-plan.md) for the planned scheduler, widget-local animation, media-widget, and window-transition model.
 

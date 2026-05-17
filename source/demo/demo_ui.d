@@ -240,8 +240,8 @@ private enum float sidebarButtonSize = 32.0f;
 private enum float sidebarPadding = 5.0f;
 private enum float sidebarSpacing = 4.0f;
 private enum float sidebarFallbackHeight = 260.0f;
-private enum float helpWidth = 388.0f;
-private enum float helpHeight = 214.0f;
+private enum float helpWidth = 462.0f;
+private enum float helpHeight = 252.0f;
 private enum float statusWidth = 348.0f;
 private enum float statusHeight = 184.0f;
 private enum float settingsWidth = 372.0f;
@@ -325,6 +325,8 @@ final class DemoUiScreen : UiScreen
     private UiLabel helpIntroLabel;
     private UiLabel helpLayoutLabel;
     private UiLabel helpCloseLabel;
+    private UiLabel helpShapeLabel;
+    private UiLabel helpFocusLabel;
     private UiLabel helpDebugLegendTitleLabel;
     private UiLabel helpDebugLegendWindowLabel;
     private UiLabel helpDebugLegendSurfaceLabel;
@@ -583,8 +585,10 @@ final class DemoUiScreen : UiScreen
         helpContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         helpTitleLabel = new UiLabel("Keyboard and mouse controls", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
         helpIntroLabel = new UiLabel("Open windows: 0", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        helpLayoutLabel = new UiLabel("Arrow keys rotate, Shift accelerates, mouse drag rotates outside UI.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
-        helpCloseLabel = new UiLabel("F/T/W/H switch render modes, D toggles UI bounds, Esc quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpLayoutLabel = new UiLabel("Arrow keys rotate model; Shift accelerates; mouse drag rotates outside UI.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpShapeLabel = new UiLabel("+/- switch 3D model; F/T/W/H switch render modes.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpFocusLabel = new UiLabel("Tab/Shift+Tab move focus; Enter activates controls; D toggles UI bounds.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        helpCloseLabel = new UiLabel("Esc dismisses UI focus/popups/modals first; otherwise it quits.", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendTitleLabel = new UiLabel("Debug bounds colors:", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor);
         helpDebugLegendWindowLabel = new UiLabel("Orange: UiWindow", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
         helpDebugLegendSurfaceLabel = new UiLabel("Cyan: UiContentBox / UiFrameBox", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
@@ -597,6 +601,8 @@ final class DemoUiScreen : UiScreen
         helpContent.add(helpTitleLabel);
         helpContent.add(helpIntroLabel);
         helpContent.add(helpLayoutLabel);
+        helpContent.add(helpShapeLabel);
+        helpContent.add(helpFocusLabel);
         helpContent.add(helpCloseLabel);
         helpContent.add(new UiSpacer(0.0f, sectionSpacing));
         helpContent.add(helpDebugLegendTitleLabel);
@@ -1046,6 +1052,8 @@ unittest
     assert(screen.sidebarHelpButton.width == sidebarCollapsedWidth - sidebarPadding * 2.0f);
     assert(screen.sidebarExitButton.y + screen.sidebarExitButton.height == screen.sidebarWindow.height - sidebarPadding, format("exit bottom %.1f, sidebar target %.1f", screen.sidebarExitButton.y + screen.sidebarExitButton.height, screen.sidebarWindow.height - sidebarPadding));
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
+    assert(screen.helpShapeLabel.text == "+/- switch 3D model; F/T/W/H switch render modes.");
+    assert(screen.helpFocusLabel.text == "Tab/Shift+Tab move focus; Enter activates controls; D toggles UI bounds.");
 
     assert(!screen.helpWindow.visible);
     screen.sidebarHelpButton.onClick();

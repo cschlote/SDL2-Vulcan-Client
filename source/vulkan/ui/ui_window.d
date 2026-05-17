@@ -28,6 +28,7 @@ private enum float windowContentMargin = 3.0f;
 private enum float chromeTopInset = 7.0f;
 private enum float defaultOpenTransitionSeconds = 0.12f;
 private enum float defaultCloseTransitionSeconds = 0.10f;
+private enum float defaultBoundsTransitionSeconds = 0.14f;
 
 /** Logical top-level window presentation state for future visual transitions. */
 enum UiWindowTransitionState
@@ -70,6 +71,17 @@ final class UiWindow : UiWidget
     private uint resizeButton;                      ///< Mouse button that owns the active resize gesture.
     private float openTransitionDuration = defaultOpenTransitionSeconds;
     private float closeTransitionDuration = defaultCloseTransitionSeconds;
+    private bool boundsTransitionActive;
+    private float boundsTransitionDuration = defaultBoundsTransitionSeconds;
+    private float boundsTransitionProgress = 1.0f;
+    private float boundsStartX;
+    private float boundsStartY;
+    private float boundsStartWidth;
+    private float boundsStartHeight;
+    private float boundsTargetX;
+    private float boundsTargetY;
+    private float boundsTargetWidth;
+    private float boundsTargetHeight;
 
     void delegate(float, float) onHeaderDragStart;              ///< Notified when a header drag starts.
     void delegate(float, float) onHeaderDragMove;               ///< Notified while a header drag is running.
@@ -205,6 +217,43 @@ final class UiWindow : UiWidget
         return transitionState == UiWindowTransitionState.opening || transitionState == UiWindowTransitionState.closing;
     }
 
+    /** Returns true while a programmatic move or resize animation is active. */
+    bool hasActiveBoundsTransition() const
+    {
+        return boundsTransitionActive;
+    }
+
+    /** Updates the logical window bounds immediately and cancels bounds animation. */
+    void setBoundsImmediate(float targetX, float targetY, float targetWidth, float targetHeight)
+    {
+        boundsTransitionActive = false;
+        boundsTransitionProgress = 1.0f;
+        x = targetX;
+        y = targetY;
+        width = max(targetWidth, 0.0f);
+        height = max(targetHeight, 0.0f);
+    }
+
+    /** Starts a smooth programmatic move and resize to the target bounds. */
+    void beginBoundsTransition(float targetX, float targetY, float targetWidth, float targetHeight, float durationSeconds = defaultBoundsTransitionSeconds)
+    {
+        boundsTransitionDuration = max(durationSeconds, 0.0f);
+        boundsTransitionProgress = boundsTransitionDuration <= 0.0f ? 1.0f : 0.0f;
+        boundsStartX = x;
+        boundsStartY = y;
+        boundsStartWidth = width;
+        boundsStartHeight = height;
+        boundsTargetX = targetX;
+        boundsTargetY = targetY;
+        boundsTargetWidth = max(targetWidth, 0.0f);
+        boundsTargetHeight = max(targetHeight, 0.0f);
+
+        if (boundsTransitionProgress >= 1.0f)
+            setBoundsImmediate(boundsTargetX, boundsTargetY, boundsTargetWidth, boundsTargetHeight);
+        else
+            boundsTransitionActive = true;
+    }
+
     /** Returns true when this window should currently accept user input. */
     bool acceptsInput() const
     {
@@ -266,6 +315,28 @@ final class UiWindow : UiWidget
             visible = false;
         }
 
+        return true;
+    }
+
+    /** Advances an active programmatic bounds transition. */
+    bool tickBoundsTransition(float deltaSeconds)
+    {
+        if (!boundsTransitionActive)
+            return false;
+
+        const step = boundsTransitionDuration <= 0.0f ? 1.0f : max(deltaSeconds, 0.0f) / boundsTransitionDuration;
+        boundsTransitionProgress = max(0.0f, boundsTransitionProgress + step);
+        if (boundsTransitionProgress >= 1.0f)
+        {
+            setBoundsImmediate(boundsTargetX, boundsTargetY, boundsTargetWidth, boundsTargetHeight);
+            return true;
+        }
+
+        const t = smoothStep(boundsTransitionProgress);
+        x = lerp(boundsStartX, boundsTargetX, t);
+        y = lerp(boundsStartY, boundsTargetY, t);
+        width = lerp(boundsStartWidth, boundsTargetWidth, t);
+        height = lerp(boundsStartHeight, boundsTargetHeight, t);
         return true;
     }
 
@@ -507,7 +578,9 @@ final class UiWindow : UiWidget
 protected:
     override bool tickSelf(float deltaSeconds)
     {
-        return tickTransition(deltaSeconds);
+        const transitionDirty = tickTransition(deltaSeconds);
+        const boundsDirty = tickBoundsTransition(deltaSeconds);
+        return transitionDirty || boundsDirty;
     }
 
     /** Draws the chrome and the title badge before the body children are rendered. */
@@ -773,6 +846,17 @@ private:
         return showBorder ? max(borderThickness, 0.0f) : 0.0f;
     }
 
+    static float lerp(float start, float target, float t)
+    {
+        return start + (target - start) * t;
+    }
+
+    static float smoothStep(float t)
+    {
+        const clamped = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+        return clamped * clamped * (3.0f - 2.0f * clamped);
+    }
+
 }
 
 @("UiWindow stretches direct content to the content root")
@@ -891,4 +975,31 @@ unittest
     assert(window.transitionProgress == 1.0f);
     assert(!window.visible);
     assert(window.presentationAlpha() == 0.0f);
+}
+
+@("UiWindow animates programmatic bounds changes")
+unittest
+{
+    auto window = new UiWindow("Test", 10.0f, 20.0f, 100.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    window.beginBoundsTransition(110.0f, 70.0f, 160.0f, 120.0f, 0.10f);
+    assert(window.hasActiveBoundsTransition());
+    assert(window.tickBoundsTransition(0.05f));
+    assert(window.x > 10.0f && window.x < 110.0f);
+    assert(window.y > 20.0f && window.y < 70.0f);
+    assert(window.width > 100.0f && window.width < 160.0f);
+    assert(window.height > 80.0f && window.height < 120.0f);
+
+    assert(window.tickBoundsTransition(0.05f));
+    assert(!window.hasActiveBoundsTransition());
+    assert(window.x == 110.0f);
+    assert(window.y == 70.0f);
+    assert(window.width == 160.0f);
+    assert(window.height == 120.0f);
+
+    window.setBoundsImmediate(1.0f, 2.0f, 3.0f, 4.0f);
+    assert(window.x == 1.0f);
+    assert(window.y == 2.0f);
+    assert(window.width == 3.0f);
+    assert(window.height == 4.0f);
 }

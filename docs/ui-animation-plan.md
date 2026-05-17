@@ -93,6 +93,8 @@ Common transition properties:
 
 Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes, exports alpha, scale, and offset to the window draw range, and applies those values to generated UI vertices before upload. `UiScreen.showWindow`, `hideWindow`, and `toggleWindow` use these transitions for normal windows, and the demo singleton windows are wired through that path.
 
+Programmatic move and resize calls should animate the logical bounds, while mouse drag and resize remain immediate so the window stays attached to the pointer. `UiWindow.beginBoundsTransition` owns per-window bounds interpolation, and `UiScreen.moveWindowTo`, `resizeWindowTo`, and `setWindowBounds` expose that behavior for API callers. Multiple windows can run these bounds transitions in parallel because `UiScreen.tickUi` advances every registered window independently.
+
 Input policy must be explicit:
 
 - opening windows can usually receive input once visible enough, or after the transition completes
