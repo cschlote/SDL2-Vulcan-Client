@@ -349,7 +349,7 @@ Status: Partial.
 
 `UiScrollArea` is the planned widget for content that can be larger than the visible region. It should own a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
 
-The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, and consumes mouse-wheel events. Renderer clipping, visible scrollbars, and fade indicators are still planned.
+The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Renderer clipping and direct scrollbar dragging are still planned.
 
 Common use cases:
 
@@ -366,8 +366,8 @@ Required behavior:
 - clip child rendering to that viewport
 - translate pointer events by the current scroll offset
 - support mouse wheel scrolling
-- show horizontal and vertical scrollbars when content exceeds viewport size
-- let scrollbars be dragged directly
+- show horizontal and vertical scrollbars when content exceeds viewport size. Implemented as overlay indicators.
+- let scrollbars be dragged directly. Planned.
 - clamp scroll offsets to the content bounds
 - preserve keyboard focus for children inside the scrolled content
 - provide debug bounds for viewport, content extent, and scrollbar regions

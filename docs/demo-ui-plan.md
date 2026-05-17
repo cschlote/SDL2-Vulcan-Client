@@ -222,7 +222,7 @@ The next work should continue from reusable engine foundations toward demo polis
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, singleton toggle actions, repeatable spawn actions, and bottom Help/Settings/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
-21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets and wheel handling.
+21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets, wheel handling, visible scrollbar thumbs, and edge overflow indicators.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click. Done for demo dropdowns.
 23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, and current controls.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
