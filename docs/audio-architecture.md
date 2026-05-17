@@ -1,6 +1,6 @@
 # Audio Architecture
 
-This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback device ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. File loading, voice limits, SDL callback integration, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
+This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback device ownership also exists as a small lifecycle wrapper. The first mixer primitive can clear and mix interleaved floating-point sample blocks with bus gain and sample clamping. Decoded clips and active voice primitives exist for non-looped and looped playback into mixer buffers. `playClip` and `stopAll` events can now create and stop voices from registered clips. The runtime also registers a tiny synthetic `ui/click` clip until real UI sound assets exist, and the renderer queues it when retained buttons activate. File loading, voice limits, SDL callback integration, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
 
 ## Goals
 
@@ -40,7 +40,7 @@ The expected event flow is:
 4. The mixer owns active voices and produces interleaved samples for the device callback. The current mixer can clear output buffers, mix already-decoded interleaved float blocks with bus gain, and render simple clip voices scheduled by `AudioSystem`.
 5. The backend writes mixed samples to the platform audio device. The SDL device owner exists, but is not opened automatically until the mixer/service integration is added.
 
-Audio events should stay small and serializable enough to log, test, or replay. Examples include `playUiClick`, `playEffect(assetId)`, `startMusic(trackId)`, `fadeBus(busId, targetVolume, duration)`, and `stopAll(busId)`.
+Audio events should stay small and serializable enough to log, test, or replay. Examples include `playUiClick`, `playEffect(assetId)`, `startMusic(trackId)`, `fadeBus(busId, targetVolume, duration)`, and `stopAll(busId)`. The current UI click path is intentionally synthetic: it proves the event-to-voice path without depending on a package asset or SDL callback yet.
 
 ## Music And Ambience
 

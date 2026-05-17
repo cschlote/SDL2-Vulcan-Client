@@ -51,6 +51,8 @@ struct UiPointerEvent
     float wheelX;
     /** Vertical wheel delta for wheel events. */
     float wheelY;
+    /** Set by controls that activated a command while handling this event. */
+    bool actionActivated;
 }
 
 /** Keyboard event kinds routed to the focused widget. */
@@ -95,6 +97,8 @@ struct UiKeyEvent
     bool repeat;
     /** Platform modifier bitmask for future shortcut handling. */
     uint modifiers;
+    /** Set by controls that activated a command while handling this event. */
+    bool actionActivated;
 }
 
 /** UTF-8 text input emitted by the platform text input layer. */

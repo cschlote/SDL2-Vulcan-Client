@@ -190,6 +190,7 @@ protected:
             return false;
 
         activate();
+        event.actionActivated = true;
         return true;
     }
 
@@ -199,6 +200,7 @@ protected:
             return false;
 
         activate();
+        event.actionActivated = true;
         return true;
     }
 }
@@ -261,4 +263,20 @@ unittest
 
     assert(button.dispatchKeyEvent(event));
     assert(clicked);
+    assert(event.actionActivated);
+}
+
+@("UiButton marks pointer events as activated")
+unittest
+{
+    auto button = new UiButton("OK", 0.0f, 0.0f, 80.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 10.0f;
+    event.y = 10.0f;
+
+    assert(button.dispatchPointerEvent(event));
+    assert(event.actionActivated);
 }

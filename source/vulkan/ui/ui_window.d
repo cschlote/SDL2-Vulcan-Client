@@ -493,6 +493,7 @@ final class UiWindow : UiWidget
                 closeEvent.y -= y;
                 if (closeButton.dispatchPointerEvent(closeEvent))
                 {
+                    event.actionActivated = event.actionActivated || closeEvent.actionActivated;
                     logLine("UiWindow close hit: ", title, " at ", event.x, ", ", event.y);
                     return true;
                 }
@@ -504,7 +505,10 @@ final class UiWindow : UiWidget
                 headerEvent.x -= x;
                 headerEvent.y -= y;
                 if (headerExtras.dispatchPointerEvent(headerEvent))
+                {
+                    event.actionActivated = event.actionActivated || headerEvent.actionActivated;
                     return true;
+                }
             }
 
             if (event.button == 2 && stackable && isInWindowChrome(event.x, event.y))
@@ -536,7 +540,10 @@ final class UiWindow : UiWidget
         for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
         {
             if (children[cast(size_t)index].dispatchPointerEvent(childEvent))
+            {
+                event.actionActivated = event.actionActivated || childEvent.actionActivated;
                 return true;
+            }
         }
 
         return handlePointerEvent(event);

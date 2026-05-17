@@ -28,7 +28,7 @@ import demo.demo_settings : DemoSettings, saveDemoSettings;
 import demo.demo_ui : DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
-import vulkan.audio.audio_system : AudioBusId, AudioSystem;
+import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId;
 import vulkan.engine.device;
 import vulkan.engine.instance;
 import vulkan.engine.pipeline;
@@ -263,6 +263,7 @@ class VulkanRenderer
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
         audioSystem = new AudioSystem();
+        audioSystem.registerBuiltinClips();
         if (demoSettings !is null)
             applyAudioSettings(*demoSettings);
         uiScreen = new DemoUiScreen();
@@ -507,7 +508,11 @@ class VulkanRenderer
         uiEvent.modifiers = ((event.key.mod & SDL_Keymod.shift) != 0) ? cast(uint)UiKeyModifier.shift : cast(uint)UiKeyModifier.none;
 
         if (uiScreen.dispatchKeyEvent(uiEvent))
+        {
+            if (uiEvent.actionActivated)
+                emitUiClickAudio();
             return true;
+        }
 
         return uiScreen.hasKeyboardFocus();
     }
@@ -1320,6 +1325,8 @@ class VulkanRenderer
 
                 if (uiScreen.dispatchPointerEvent(pointerEvent))
                 {
+                    if (pointerEvent.actionActivated)
+                        emitUiClickAudio();
                     uiScreen.sceneMouseDragging = false;
 
                     if (uiScreen.quitRequested)
@@ -1750,6 +1757,16 @@ class VulkanRenderer
             audioSystem.busVolume(AudioBusId.effects),
             ", ui=",
             audioSystem.busVolume(AudioBusId.ui));
+    }
+
+    /** Queues the default UI click sound in the runtime audio system. */
+    private void emitUiClickAudio()
+    {
+        if (audioSystem is null)
+            return;
+
+        audioSystem.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
+        audioSystem.processEvents();
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

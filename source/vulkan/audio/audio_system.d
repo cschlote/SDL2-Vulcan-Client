@@ -15,6 +15,9 @@ import vulkan.audio.audio_voice : AudioClip, AudioVoice, mixVoice;
 
 private enum size_t audioBusCount = 4;
 
+/** Builtin synthetic UI click clip id used before the asset pipeline exists. */
+enum string uiClickClipId = "ui/click";
+
 /** Logical audio routing groups used by the first engine audio model. */
 enum AudioBusId
 {
@@ -237,6 +240,18 @@ final class AudioSystem
                 ++count;
         }
         return count;
+    }
+
+    /** Registers small synthetic UI clips used until real assets exist. */
+    void registerBuiltinClips()
+    {
+        registerClip(AudioClip.fromInterleaved(uiClickClipId, [
+            0.00f, 0.00f,
+            0.38f, 0.38f,
+            0.16f, 0.16f,
+            -0.08f, -0.08f,
+            0.00f, 0.00f,
+        ], 2));
     }
 
     /** Queues volume changes that match the existing demo settings model.
@@ -496,6 +511,23 @@ unittest
     audio.emit(AudioEvent.stopAll(AudioBusId.effects));
     audio.processEvents();
     assert(audio.activeVoiceCount() == 0);
+}
+
+unittest
+{
+    auto audio = new AudioSystem();
+    audio.registerBuiltinClips();
+    assert(audio.hasClip(uiClickClipId));
+
+    audio.emit(AudioEvent.playClip(uiClickClipId, AudioBusId.ui, 1.0f));
+    assert(audio.processEvents() == 1);
+    assert(audio.activeVoiceCount() == 1);
+
+    auto mixer = new AudioMixer();
+    auto buffer = mixer.createBuffer(5);
+    assert(audio.mixVoices(buffer) == 5);
+    assert(audio.activeVoiceCount() == 0);
+    assert(buffer.samples[2] > 0.0f);
 }
 
 unittest
