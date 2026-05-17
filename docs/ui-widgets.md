@@ -798,7 +798,7 @@ Demo coverage:
 
 Status: Planned.
 
-`UiTooltip` shows short explanatory text for icon-only or compact controls. The data path exists through `UiWidget.tooltipAt` and `UiScreen.tooltipAt`; the demo renders collapsed sidebar tooltips through a small frameless input-transparent `UiWindow` after roughly 1.2 seconds of stable hover. A reusable retained tooltip widget and shared popup policy are still planned.
+`UiTooltip` shows short explanatory text for icon-only or compact controls. The data path exists through `UiWidget.tooltipAt` and `UiScreen.tooltipAt`; the demo renders collapsed sidebar tooltips through a small frameless input-transparent `UiWindow` after roughly 1.2 seconds of stable hover. Once shown, the demo tooltip remains visible while the pointer stays inside the same tooltip source region. A reusable retained tooltip widget and shared popup policy are still planned.
 
 Common use cases:
 

@@ -31,7 +31,9 @@ Current behavior:
 - hides singleton windows and removes repeatable demo-window instances through the Close All action
 - shows active markers for visible singleton target windows
 - shows delayed tooltips for collapsed icon-only actions
+- keeps an opened tooltip visible while the pointer stays inside the same tooltip source region
 - keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
+- reserves the upper launcher group for at most eight direct actions at the current minimum SDL window height
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
 Useful regression checks:
@@ -84,7 +86,7 @@ Planned extensions:
 
 ## Status Window
 
-The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, preferred-size measurement, per-frame text updates, viewport-edge pinning, and a chrome-less no-backfill presentation.
+The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiLabel`, preferred-size measurement, per-frame text updates, viewport-edge pinning, backdrop layering, and a chrome-less nearly transparent backfill presentation.
 
 Current behavior:
 
@@ -94,8 +96,9 @@ Current behavior:
 - displays current render mode
 - displays 3D object yaw and pitch angles
 - displays viewport size
+- starts visible so the demo has immediate runtime feedback after launch
 - pins to the top-right SDL viewport edge with configurable top/right margins
-- renders without header, border, resize chrome, or window backfill so only the status widgets are visible
+- renders without header, border, or resize chrome and uses a very weak backfill so the status widgets stay readable without becoming a normal opaque panel
 - is marked as a backdrop window so regular demo and dialog windows are drawn and routed above it
 - auto-sizes to the current key/value rows instead of reserving a fixed dialog-sized rectangle
 - re-measures after live text changes so longer build, scene, or render-mode strings grow the overlay before pinning is applied

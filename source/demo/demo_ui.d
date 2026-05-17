@@ -635,7 +635,7 @@ private immutable float[4] helpTitleColor = [1.00f, 0.98f, 0.82f, 1.00f];
 private immutable float[4] helpAccentColor = [0.72f, 0.96f, 1.00f, 1.00f];
 private immutable float[4] helpTextColor = [1.00f, 1.00f, 1.00f, 1.00f];
 
-private immutable float[4] statusBodyColor = [0.10f, 0.12f, 0.16f, 0.95f];
+private immutable float[4] statusBodyColor = [0.10f, 0.12f, 0.16f, 0.05f];
 private immutable float[4] statusHeaderColor = [0.14f, 0.16f, 0.20f, 0.98f];
 private immutable float[4] statusTitleColor = [1.00f, 0.98f, 0.82f, 1.00f];
 private immutable float[4] statusAccentColor = [0.72f, 0.96f, 1.00f, 1.00f];
@@ -791,10 +791,14 @@ final class DemoUiScreen : UiScreen
     {
         if (!hasPointerPosition() || pointerX() != x || pointerY() != y)
         {
-            tooltipHoverSeconds = 0.0f;
-            tooltipCandidateText = "";
-            if (tooltipWindow !is null)
-                tooltipWindow.visible = false;
+            const newTooltipText = tooltipAt(x, y);
+            if (newTooltipText.length == 0 || newTooltipText != tooltipCandidateText)
+            {
+                tooltipHoverSeconds = 0.0f;
+                tooltipCandidateText = newTooltipText;
+                if (tooltipWindow !is null)
+                    tooltipWindow.visible = false;
+            }
         }
 
         super.updatePointerPosition(x, y);
@@ -901,7 +905,7 @@ final class DemoUiScreen : UiScreen
     void updateWindowState()
     {
         hideWindow(helpWindow, false);
-        hideWindow(statusWindow, false);
+        showWindow(statusWindow, false);
         hideWindow(settingsWindow, false);
         if (tooltipWindow !is null)
             tooltipWindow.visible = false;
@@ -1084,7 +1088,7 @@ final class DemoUiScreen : UiScreen
         statusWindow = new UiWindow("Status", windowMargin, windowMargin, statusWidth, statusHeight, cast(float[4])statusBodyColor, cast(float[4])statusHeaderColor, cast(float[4])statusTitleColor, false, false, false, statusPaddingX, statusPaddingY, statusPaddingX, statusPaddingY);
         statusWindow.setChromeFlags(false, false, false, true);
         statusWindow.setChromeVisibility(false, false, false);
-        statusWindow.setBackfillVisible(false);
+        statusWindow.setBackfillVisible(true);
         statusWindow.setBackdrop(true);
         statusWindow.setPinnedEdges(false, true, true, false);
         statusWindow.setPinMargins(0.0f, windowMargin, windowMargin, 0.0f);
@@ -1104,7 +1108,7 @@ final class DemoUiScreen : UiScreen
         statusContent.add(buildStatusRow("Rot", statusRotationLabel));
         statusContent.add(buildStatusRow("View", statusViewportLabel));
         statusWindow.add(statusContent);
-        statusWindow.visible = false;
+        statusWindow.visible = true;
         statusWindow.onClose = ()
         {
             hideWindow(statusWindow);
@@ -1859,6 +1863,8 @@ unittest
         screen.tickUi(0.05f);
     assert(screen.tooltipWindow.visible);
     assert(screen.tooltipLabel.text == "Help Desk");
+    screen.updatePointerPosition(screen.sidebarHelpButton.screenX() + 8.0f, screen.sidebarHelpButton.screenY() + 8.0f);
+    assert(screen.tooltipWindow.visible);
 
     assert(!screen.helpWindow.visible);
     assert(!screen.sidebarHelpButton.active);
@@ -1872,9 +1878,6 @@ unittest
         screen.tickUi(0.05f);
     assert(!screen.helpWindow.visible);
 
-    assert(!screen.statusWindow.visible);
-    assert(!screen.sidebarStatusButton.active);
-    screen.sidebarStatusButton.onClick();
     assert(screen.statusWindow.visible);
     assert(screen.sidebarStatusButton.active);
     screen.sidebarStatusButton.onClick();
@@ -2127,7 +2130,8 @@ unittest
     assert(screen.statusRotationLabel.text == "Y 12.5 / P -7.2 deg");
     assert(!screen.statusWindow.showHeader);
     assert(!screen.statusWindow.showBorder);
-    assert(!screen.statusWindow.showBackfill);
+    assert(screen.statusWindow.showBackfill);
+    assert(screen.statusWindow.bodyColor[3] == 0.05f);
     assert(screen.statusWindow.backdrop);
     assert(screen.statusWindow.pinRight);
     assert(screen.statusWindow.pinTop);
