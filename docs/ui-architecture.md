@@ -55,7 +55,7 @@ Generic responsibilities belong in `UiScreen`:
 - answer whether a pointer is inside any visible window
 - drive layout for registered windows
 - clamp windows to the viewport
-- resolve tooltip text through `UiScreen.tooltipAt` for future tooltip popups
+- resolve tooltip text through `UiScreen.tooltipAt`; reusable tooltip popup presentation is still planned
 - place windows in free screen space when possible
 - start normal window open and close transitions through shared show, hide, and toggle helpers
 - animate programmatic window move and resize requests through shared bounds helpers
