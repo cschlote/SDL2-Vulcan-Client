@@ -224,7 +224,7 @@ The next work should continue from reusable engine foundations toward demo polis
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
 21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets, wheel handling, visible scrollbar thumbs, and edge overflow indicators.
 22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click. Done for demo dropdowns.
-23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, current controls, a progress bar, a slider-to-progress interaction, and a visible list selection example.
+23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, current controls, a progress bar, a slider-to-progress interaction, visible list selection, and visible tab selection.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage. Partial for Input Demo window with focus/input controls and Audio Demo window with semantic audio event buttons.
 26. Add keyboard navigation, tab traversal, and modal focus behavior. Partial for traversal including dropdowns, activation keys, and modal focus containment.

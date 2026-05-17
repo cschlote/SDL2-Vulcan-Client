@@ -144,15 +144,16 @@ Planned extensions:
 
 ## Widget Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
 - contains a layout and box section with nested probe boxes and a padded content-box example
-- contains a retained-controls section with buttons, toggle, slider, dropdown, list, and text field examples
+- contains a retained-controls section with buttons, toggle, slider, dropdown, list, tab, and text field examples
 - updates a progress bar from the Amount slider
 - updates a summary label from the list selection
+- updates a summary label from the tab selection
 - uses varied fill and border colors to make layout movement visible
 - applies a custom crosshair cursor over probe boxes
 - can be resized and stacked like normal windows
@@ -170,7 +171,7 @@ Planned extensions:
 
 - add image widgets and future controls to the gallery
 - wrap the gallery in `UiScrollArea` after renderer clipping and scroll indicators exist
-- add tab and popup examples as those widgets land
+- add popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
 

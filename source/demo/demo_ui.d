@@ -139,14 +139,22 @@ final class LayoutDemoWindow
         selectionRow.add(listBox);
         selectionRow.add(listSummary);
         controlsBody.add(selectionRow);
+        auto tabsRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
+        tabsRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        auto demoTabs = new UiTabBar(["One", "Two", "Three"], 0, 0.0f, 0.0f, 240.0f, 28.0f);
+        auto tabSummary = new UiLabel("Tab: One", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        demoTabs.onChanged = (index, value) { tabSummary.text = format("Tab: %s", value); };
+        tabsRow.add(demoTabs);
+        tabsRow.add(tabSummary);
+        controlsBody.add(tabsRow);
         auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
         actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
         actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
         controlsBody.add(actionRow);
 
-        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 268.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        controlsSection.setLayoutHint(0.0f, 268.0f, 0.0f, 268.0f, float.max, 268.0f, 1.0f, 0.0f);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 308.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 308.0f, 0.0f, 308.0f, float.max, 308.0f, 1.0f, 0.0f);
         controlsSection.add(controlsBody);
 
         content.add(layoutSection);

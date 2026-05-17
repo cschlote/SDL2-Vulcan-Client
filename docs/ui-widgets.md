@@ -643,7 +643,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, and is used by the Settings window.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, and is used by the Settings window and Widget Demo.
 
 Common use cases:
 
@@ -662,7 +662,7 @@ Required behavior:
 Demo coverage:
 
 - Settings window for Display, UI, and Audio pages.
-- Widget Demo.
+- Widget Demo visible tab selection.
 
 ### UiProgressBar
 
