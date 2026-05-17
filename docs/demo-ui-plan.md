@@ -20,7 +20,7 @@ Implemented or partially implemented:
 - selectable placeholder 3D meshes
 - filled, textured, wireframe, and hidden-line render modes
 - FreeType-backed bitmap font atlases
-- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, HBox/VBox/Grid layout, scroll areas, toggles, sliders, dropdowns, and text fields
+- retained UI widgets: windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, HBox/VBox/Grid layout, scroll areas, toggles, sliders, dropdowns, text fields, tab bars, list boxes, progress bars, and separators
 - widget documentation that covers existing widgets and planned widgets
 - `UiScreen` as experimental generic screen/window owner
 - `DemoUiScreen` as the current demo-specific UI screen
@@ -29,15 +29,15 @@ Implemented or partially implemented:
 - INI settings load/save model
 - generic `UiOverlayGeometry` and `UiWindowDrawRange` names for renderer-facing UI draw data in `vulkan.ui`
 - D-key debug bounds overlay with color-coded widget and layout outlines
-- generic keyboard focus dispatch, SDL text input routing, visible focus rings, focused-window header highlighting, and editable single-line text fields
+- generic keyboard focus dispatch, SDL text input routing, visible focus rings, focused-window title tinting, and editable single-line text fields
 - audio settings data for master, music, and effects volumes
 - backend-neutral audio bus/event scaffolding with settings-to-volume mapping
 
 Remaining migration debt:
 
 - The renderer still imports `DemoUiScreen`, even though renderer-facing UI draw data and traversal are generic.
-- popup-backed dropdown behavior exists in the demo; reusable list-box extraction and keyboard selection are still planned.
-- keyboard navigation and tab traversal are not yet implemented for retained controls.
+- popup-backed dropdown behavior exists in the demo through transient popup windows and reusable `UiListBox` rows; a widget-level popup facade is still planned.
+- keyboard traversal and focused control activation exist for retained controls; richer per-widget navigation policy is still planned.
 - settings tabs exist for Display, UI, and Audio; Controls and Gameplay pages are still planned once those settings are editable.
 - reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
@@ -60,20 +60,17 @@ Hard-coded rectangles can exist temporarily in the demo, but final windows shoul
 
 ## Planned Widget Set
 
-The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, row/column/grid containers, scroll areas, toggles, sliders, dropdowns, and text fields.
+The retained UI already has windows, labels, text blocks, buttons, image placeholders, spacers, content/frame boxes, row/column/grid containers, scroll areas, toggles, sliders, dropdowns, text fields, tab bars, progress bars, list boxes, and separators.
 
 Next widgets:
 
-- tab bar
-- progress bar
-- list box or selection list
-- separator or divider
-- left-edge sidebar or dock bar
+- reusable left-edge sidebar or dock bar
 - icon button for sidebar and toolbar actions
 - tooltip for collapsed icon-only controls
-- scroll area with viewport, clipping, and horizontal/vertical scrollbars
+- scroll area clipping plus draggable horizontal/vertical scrollbars
 - icon/image widget backed by real texture data
-- menu or popup list backing for dropdowns
+- widget-level popup/menu facade for dropdowns, context menus, and tooltips
+- animated image/media widgets
 
 The first implementation should favor simple, composable widgets over a large framework.
 
@@ -85,10 +82,10 @@ The demo should evolve from a test shell into a small application with clear win
 
 - UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
 - Status window: app version, frame rate, active scene, current render mode, 3D object rotation, and viewport state.
-- Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, and future widgets.
+- Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, tabs, lists, progress bars, separators, and future widgets.
 - Chrome demo window: runtime toggles for sizeable, closable, dragable, and stackable window chrome so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
-- Settings window: display, controls, gameplay, audio, and UI options.
+- Settings window: Display, UI, and Audio pages now; Controls and Gameplay pages are planned when editable settings exist.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
 - Input demo window: focus traversal, activation keys, pointer capture, disabled states, and modal focus behavior.
 - Selection demo window: popup-backed dropdowns, list selection, placement, dismissal, and keyboard selection.
@@ -96,7 +93,7 @@ The demo should evolve from a test shell into a small application with clear win
 - Animation demo window: widget-local animation, progress animation, panel transitions, and window pop-in/close-out behavior.
 - Audio demo window: UI sound events, effect preview, bus volume controls, music loop/fade/crossfade behavior, and settings preview.
 
-The four corner windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
+The visible demo windows should serve different roles so the UI reads like a real demo app rather than a fixed debug HUD.
 
 Detailed per-window maintenance notes live in [Demo Windows](demo-windows.md). Every visible demo window should have documented purpose, covered UI classes, regression checks, and planned extensions there.
 
@@ -106,7 +103,7 @@ The `D` hotkey toggles a retained UI bounds overlay. When enabled, every visible
 
 The former `UiSurfaceBox` role is now split into clearer `UiContentBox` and `UiFrameBox` names. `UiContentBox` is the padded content-root container used by `UiWindow`, while `UiFrameBox` is the visible framed variant for grouping content. Neither should absorb scrolling behavior. Oversized content should use a dedicated `UiScrollArea` with a viewport, clipping, `scrollX`, `scrollY`, and optional horizontal and vertical scrollbars.
 
-The planned UI sidebar should be implemented as a chrome-less `UiWindow` variant first. `UiWindow` now supports independent header visibility, title visibility, border visibility/thickness, and content padding. Close and resize chrome are controlled by `closable` and `sizeable`; programmatic close, move, and resize remain ordinary API operations. With header, resize chrome, and border disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. If a border is enabled, the content root starts inside that border. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
+The current UI sidebar is implemented as a chrome-less `UiWindow` composition. `UiWindow` now supports independent header visibility, title visibility, border visibility/thickness, and content padding. Close and resize chrome are controlled by `closable` and `sizeable`; programmatic close, move, and resize remain ordinary API operations. With header, resize chrome, and border disabled, the content root can fill the whole docked window and stack 32 x 32 icon actions vertically. If a border is enabled, the content root starts inside that border. Expanded mode adds labels beside the icons, so the same content can be represented as compact icon-only actions or wider icon-plus-text rows.
 
 Layout measurements must keep intrinsic preferred sizes separate from the current arranged size. Resizing a window larger must not permanently turn the expanded child size into the preferred size, otherwise later shrink layouts cannot reduce the content again.
 
@@ -128,7 +125,7 @@ Settings-style dialogs should split the window body into a growable content area
 
 `UiScreen` owns the 2D window stack. Windows are ordered by their position in the screen list; drawing that list from back to front is enough for layering, so no separate z value is needed. Middle-clicking ordinary stackable window chrome outside the content root toggles a window between front and back, and newly shown demo windows can be moved to a non-overlapping free position. This stacking behavior is independent of the dragable header flag. Dedicated chrome controls and resize grips receive middle and right mouse buttons before this stacking fallback so future controls can assign button-specific behavior.
 
-`UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. Focused controls draw a generic ring, and the owning window highlights its header so keyboard mode is visible. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
+`UiScreen` also owns the current keyboard focus target. Primary clicks choose the deepest focusable widget in the visible window stack; clicks on non-focusable space clear focus. The renderer forwards mapped key events and SDL text input to that focus owner before global demo shortcuts run. Focused controls draw a generic ring, and the owning window tints its title text so keyboard mode is visible without changing the header fill. `UiTextField` is the first focusable text control and supports caret rendering, UTF-8 insertion, Backspace/Delete, and Home/End/Left/Right cursor movement.
 
 Context-sensitive custom cursors should be resolved through `UiScreen`. Window chrome should report move and resize cursors, text fields should report a text insertion cursor, clickable controls should report an action cursor, and the application should fall back to the scene cursor outside UI. The SDL window layer should own platform cursor handles so widget code only reports cursor intent.
 
@@ -192,17 +189,30 @@ The next work should continue from reusable engine foundations toward demo polis
 4. UI sidebar: add a left-edge icon launcher that can toggle singleton windows, spawn repeatable demo windows, exit the app, and optionally expand to icon-plus-text mode. Done for demo composition with temporary `UiButton` text placeholders and bottom system actions.
 5. Content box naming: rename `UiSurfaceBox` toward `UiContentBox` or `UiFrameBox` before the API becomes more public. Done by splitting the role into `UiContentBox` and `UiFrameBox`.
 6. Scroll area: add viewport clipping, scroll offsets, and horizontal/vertical scrollbars for oversized content. Partial for retained offsets and wheel handling.
-7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
+7. Popup primitives: add popup roots, popup placement, outside-click dismissal, and stack handling before changing dropdown behavior. Done for `UiScreen`-owned transient popup windows and keyboard-contained dropdown list focus; a widget-level `UiPopupRoot` facade can still be added when dropdowns, context menus, or tooltips share more behavior.
 8. Selection widgets: implement popup-backed dropdowns first, then list boxes or selection lists using the same selection model. Partial: dropdown popup behavior, reusable `UiListBox` text-row selection, and focused keyboard selection are implemented; scroll-backed long lists are still planned.
-9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages. Partial: Display, UI, and Audio pages are implemented; Controls and Gameplay remain planned.
-10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, visible focus state, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal, focused activation/adjustment keys, dropdown focus traversal, focus rings, focused-window title highlighting, and modal focus containment.
+9. Tabs and grouped settings: add a tab bar or segmented page selector, then split settings into display, controls, gameplay, audio, and UI pages. Partial: Display, UI, and Audio pages are implemented, and the tab bar has first-pass overflow navigation; Controls and Gameplay remain planned.
+10. Keyboard navigation: add focus traversal order, Tab and Shift-Tab movement, activation keys, visible focus state, and modal focus containment. Partial for screen-level Tab/Shift-Tab traversal, focused activation/adjustment keys, dropdown focus traversal, focus rings, focused-window title tinting, and modal focus containment.
 11. Dialog and modal support: add modal windows, disabled-background routing, default buttons, cancel buttons, and cursor feedback for blocked regions. Done for `UiScreen` modal routing, blocked-background input, modal Enter/Escape button dispatch, and blocked background cursor feedback; concrete dialog widgets remain planned demo work.
-12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
+12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, progress, separators, and layout boxes. Partial for implemented controls; image/media and state-variant coverage remain planned.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows. Partial: Input Demo exists for retained focus/input coverage, Selection Demo exists for popup/list workflows, and Audio Demo exists for current synthetic audio event previews.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
 15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for SDL device ownership, backend-neutral event queue, bus definitions, volume state, settings-to-bus mapping, renderer-side settings application, float block mixing, in-memory clips, simple voices, and event-to-voice scheduling.
 16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview. Partial for synthetic retained-button click events that reach the audio voice path, SDL stream output, and committed Settings slider preview via draft bus volumes. Open issue: isolated UI clicks can show idle-start latency on at least one XFCE4 audio setup; see `audio-architecture.md`.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
+
+## Near-Term Planning
+
+The next implementation passes should reduce infrastructure gaps that block multiple demo windows:
+
+1. Add renderer clipping for `UiScrollArea`, then use it in long Help Desk, Settings, and Widget Demo content.
+2. Extract a widget-level popup facade from the current screen-owned dropdown popup path so dropdowns, context menus, and tooltips share placement, dismissal, focus containment, and stacking policy.
+3. Add a modal/dialog demo slice to Chrome Demo or a small dedicated dialog example, covering default/cancel buttons, blocked background routing, and focused-window title tinting.
+4. Replace temporary sidebar `UiButton` rows with a proper `UiSidebarAction` or `UiIconButton` that has a fixed icon slot, separate expanded label region, active-state marker, and tooltip hook.
+5. Add Controls and Gameplay pages to Settings once there are real editable values; the current `UiTabBar` overflow support is ready for additional pages.
+6. Add the planned Presets/Shortcuts window after reusable command/action metadata exists, so it can expose layouts and render profiles without hard-coding another launcher.
+7. Continue audio with asset-backed short clips and a music stream path; keep the idle-click latency issue documented until continuous playback or a callback backend clarifies it.
+8. Add the Animation Demo after at least one widget-local animation exists, using the current window transition and bounds-transition foundation.
 
 ## Implementation Order
 
@@ -226,12 +236,12 @@ The next work should continue from reusable engine foundations toward demo polis
 18. Add configurable `UiWindow` chrome attributes for header-less, title-less, border-only, and docked window roles. Done for header, title, border, and content insets.
 19. Add the left-edge UI sidebar with compact 32 x 32 icon actions, optional expanded labels, singleton toggle actions, repeatable spawn actions, and bottom Help/Status/Settings/Close All/Exit actions. Done with temporary `UiButton` text-placeholder actions.
 20. Rename or split `UiSurfaceBox` into clearer `UiContentBox` or `UiFrameBox` semantics. Done.
-21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets, wheel handling, visible scrollbar thumbs, and edge overflow indicators.
-22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click. Done for demo dropdowns.
+21. Add `UiScrollArea` for oversized content with viewport clipping, scroll offsets, wheel handling, and X/Y scrollbars. Partial for retained offsets, wheel handling, visible scrollbar thumbs, and edge overflow indicators; renderer clipping and direct scrollbar dragging remain planned.
+22. Add popup/menu infrastructure so dropdowns can open real option lists instead of cycling on click. Done for demo dropdowns with transient popup windows and keyboard list selection; a reusable widget-level popup facade remains planned.
 23. Turn the current layout probe into a real widget demo/control gallery. Partial for layout probes, content/frame boxes, current controls, separators, a progress bar, a slider-to-progress interaction, visible list selection, and visible tab selection.
 24. Replace temporary sidebar `UiButton` rows with `UiIconButton`, `UiSidebarAction`, or an equivalent launcher row once icon assets or placeholder icon widgets are ready.
 25. Add dedicated demo windows for input/focus, selection/popups, media/images, animation, and audio coverage. Partial for Input Demo window with focus/input controls, Selection Demo window with popup/list controls, and Audio Demo window with semantic audio event buttons.
-26. Add keyboard navigation, tab traversal, and modal focus behavior. Partial for traversal including dropdowns, activation keys, and modal focus containment.
+26. Add keyboard navigation, tab traversal, and modal focus behavior. Partial for traversal including dropdowns, activation keys, visible focus rings, focused-window title tint, popup focus containment, and modal focus containment.
 27. Add stable `UiWindow` identity once external window registries or restored layouts need it: generated id first, optional opaque application tag second, visible title never as identity. Done for generated ids, `UiScreen.windowById`, and `UiWindow.userTag`.
 28. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio with a visual tab-strip style. Overflow behavior has a first retained implementation with mouse-wheel scrolling, small previous/next button regions, edge fade indicators, and automatic selected-tab visibility; Controls and Gameplay remain planned.
 29. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch, widget-local tick hooks, window transition state/progress, renderer-facing window presentation parameters, generated-geometry application, singleton window transition wiring, and API move/resize bounds transitions.

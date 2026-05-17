@@ -134,7 +134,7 @@ Demo coverage:
 - all current UI windows are `UiWindow` instances.
 - Chrome Demo toggles current behavior and visibility flags.
 - unit coverage verifies generated ids, title-independent lookup, and opaque tags.
-- planned Sidebar Demo should exercise chrome-less window mode.
+- the current demo sidebar exercises chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
 
 ### UiSidebar
@@ -185,7 +185,7 @@ Demo coverage:
 - The demo sidebar replaces the old Demo Control launcher.
 - The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
-- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers and postpones a general `UiWindow` identity mechanism until a real engine use case needs it.
+- The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
 
 Window identity direction:
 
@@ -656,7 +656,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, and is used by the Settings window and Widget Demo.
+`UiTabBar` selects one visible page from several related content pages. It currently renders as a row of visual tabs attached to the top of the page area, supports pointer and direct key selection, has first-pass overflow navigation for narrow strips, and is used by the Settings window and Widget Demo.
 
 Common use cases:
 

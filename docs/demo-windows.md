@@ -77,8 +77,8 @@ Planned extensions:
 
 - add search over built-in help topics and documentation snippets
 - add an AI-agent style question interface after the help data model and safety boundaries are clear
-- add a scrolling log region after list or text-area widgets exist
-- use `UiScrollArea` once renderer clipping and scroll indicators exist for long help and log content
+- add a scrolling log region after a text-area or text-block viewport exists
+- use `UiScrollArea` for long help and log content once renderer clipping exists
 - add filter controls for input, UI, renderer, and audio messages
 - add a copy/export command after clipboard support exists
 
@@ -143,8 +143,8 @@ Planned extensions:
 
 - add Controls and Gameplay pages once those settings become editable
 - place oversized page content into `UiScrollArea` instead of forcing the window to grow
-- extract the current popup option rows into a reusable list/selection widget
-- add UI sound volume once an audio bus exists
+- extract repeated popup wiring into a widget-level popup facade
+- add UI sound volume once the settings model exposes the existing UI audio bus separately
 - add validation feedback for invalid numeric fields
 
 ## Widget Demo Window
@@ -176,7 +176,7 @@ Useful regression checks:
 Planned extensions:
 
 - add image widgets and future controls to the gallery
-- wrap the gallery in `UiScrollArea` after renderer clipping and scroll indicators exist
+- wrap the gallery in `UiScrollArea` after renderer clipping exists
 - add popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
@@ -206,9 +206,9 @@ Useful regression checks:
 
 Planned extensions:
 
-- add a modal-window example once modal routing exists
+- add a modal-window example now that modal routing exists
 - add default and cancel button examples for dialog chrome
-- add animated open and close transitions when the animation scheduler exists
+- add controls to replay or compare animated open and close transitions
 
 ## Input Demo Window
 
@@ -225,7 +225,7 @@ Planned extensions:
 
 - pointer capture visualization for dragging controls
 - disabled and blocked cursor states
-- optional modal focus containment after modal windows exist
+- visible modal focus containment examples now that modal routing exists
 
 Primary classes to exercise:
 
@@ -264,6 +264,25 @@ Planned extensions:
 - add context-menu style popup examples after a reusable menu widget exists
 - add tooltip coverage after `UiTooltip` exists
 - replace the screen-level popup callback with a widget-level `UiPopupRoot` facade once multiple popup widget families share behavior
+
+## Planned Presets / Shortcuts Window
+
+The Presets / Shortcuts window should expose reusable commands once the demo has a small action metadata model. It should not duplicate the sidebar launcher. Its role is to group command presets, saved layouts, render profiles, and shortcut discovery in one normal tool window.
+
+Target use cases:
+
+- restore common demo window layouts
+- switch render profiles or scene presets
+- show editable or discoverable keyboard shortcuts
+- expose command groups that can later feed menus, toolbars, and shortcut binding
+
+Primary classes to exercise:
+
+- `UiWindow`
+- `UiTabBar` or future grouped command selector
+- `UiListBox`
+- `UiButton`
+- future command/action metadata
 
 ## Planned Media Demo Window
 

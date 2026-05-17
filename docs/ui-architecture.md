@@ -28,7 +28,7 @@ Reusable UI engine code lives in [source/vulkan/ui/](../source/vulkan/ui):
 - [ui_layout.d](../source/vulkan/ui/ui_layout.d): box-style layout containers and spacers
 - [ui_label.d](../source/vulkan/ui/ui_label.d): text widgets
 - [ui_button.d](../source/vulkan/ui/ui_button.d): button widget
-- [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, and text field controls
+- [ui_controls.d](../source/vulkan/ui/ui_controls.d): toggle, slider, dropdown, tab bar, list box, progress bar, and text field controls
 - [ui_geometry.d](../source/vulkan/ui/ui_geometry.d): renderer-facing UI overlay geometry and draw ranges
 - [ui_image.d](../source/vulkan/ui/ui_image.d): small image/icon placeholder widget
 - [ui_context.d](../source/vulkan/ui/ui_context.d): renderer-facing UI render context
@@ -91,6 +91,8 @@ Window chrome owns the resize ring, stack behavior, and header controls. Edge gr
 
 `UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
 
+Each `UiWindow` has a generated stable `windowId` for title-independent lookup through `UiScreen.windowById`. The visible title remains presentation text. `UiWindow.userTag` is available as an optional pointer-sized application integration value, but engine code should prefer generated ids and owned collections for identity.
+
 Modal dialog conventions are attached to `UiWindow` through optional default and cancel buttons. `UiScreen` keeps the modal routing policy, while the window owns which button represents Enter or Escape. The button callback still decides what the action means, such as applying a dialog, dismissing the modal window, or showing validation feedback.
 
 ## Current Widget Set
@@ -108,17 +110,17 @@ The reusable UI package currently provides these retained widgets:
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
-- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets and wheel handling
+- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, scrollbar thumbs, and edge indicators
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
-- `UiTabBar`: horizontal page selector for grouped settings and future inspectors
+- `UiTabBar`: horizontal page selector with keyboard navigation and first-pass overflow scrolling
 - `UiDropdown`: compact option selector that opens a transient popup list through `UiScreen`
 - `UiListBox`: selectable text-row list used by popup-backed dropdowns
 - `UiTextField`: single-line text value field with focus, caret, UTF-8 text input, and basic cursor/edit keys
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, full scrollbar-backed `UiScrollArea`, `UiIconButton`, `UiProgressBar`, richer `UiTabBar` and `UiListBox` variants, `UiSeparator`, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
+Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, `UiIconButton`, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and compact or expanded text-placeholder `UiButton` rows. Those button rows are temporary: a later sidebar action widget should keep icon and label layout separate instead of encoding both into one centered caption.
 
 `UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
 
