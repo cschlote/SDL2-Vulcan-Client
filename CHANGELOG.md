@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## Release 26.20.9540
+
 - Reviewed documentation consistency and updated the near-term UI/audio planning order.
 - Added first-pass `UiTabBar` overflow navigation with wheel scrolling, previous/next regions, selected-tab visibility, and edge fades.
 - Added generated `UiWindow.windowId`, optional `UiWindow.userTag`, and `UiScreen.windowById` lookup.
