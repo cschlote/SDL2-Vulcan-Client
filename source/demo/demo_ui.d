@@ -19,7 +19,7 @@
 module demo.demo_ui;
 
 import std.format : format;
-import std.algorithm : max;
+import std.algorithm : canFind, max;
 import std.conv : ConvException, to;
 
 import demo.demo_settings : DemoSettings;
@@ -283,6 +283,85 @@ final class AudioDemoWindow
     }
 }
 
+/** Builds a retained input and focus demo window that can be spawned repeatedly. */
+final class InputDemoWindow
+{
+    UiWindow window;
+    UiVBox content;
+    private UiLabel summaryLabel;
+    private UiTextField nameField;
+    private UiToggle captureToggle;
+    private UiSlider speedSlider;
+    private UiDropdown modeDropdown;
+    private UiButton applyButton;
+    private UiButton clearButton;
+    private uint applyCount;
+
+    this(uint serial, void delegate(UiDropdown, float, float, float, float) onDropdownOpen)
+    {
+        const windowTitle = format("Input Demo #%u", serial);
+        window = new UiWindow(windowTitle, 90.0f, 90.0f, 420.0f, 286.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+
+        content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        content.setLayoutHint(0.0f, 0.0f, 0.0f, 0.0f, float.max, float.max, 1.0f, 1.0f);
+        summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpTextColor);
+        nameField = new UiTextField("focus", "type here", 0.0f, 0.0f, 180.0f, 28.0f);
+        captureToggle = new UiToggle("Keyboard mode", false, 0.0f, 0.0f, 156.0f, 28.0f);
+        speedSlider = new UiSlider("Repeat", 0.0f, 1.0f, 0.35f, 0.0f, 0.0f, 180.0f, 32.0f);
+        modeDropdown = new UiDropdown("Route", ["Local", "Modal", "Global"], 0, 0.0f, 0.0f, 160.0f, 28.0f);
+        modeDropdown.onOpenRequested = onDropdownOpen;
+        applyButton = new UiButton("Apply", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+        clearButton = new UiButton("Clear", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderC, cast(float[4])initButtonText);
+
+        nameField.onChanged = (value) { updateSummary(); };
+        captureToggle.onChanged = (value) { updateSummary(); };
+        speedSlider.onChanged = (value) { updateSummary(); };
+        modeDropdown.onChanged = (index, value) { updateSummary(); };
+        applyButton.onClick = ()
+        {
+            ++applyCount;
+            updateSummary();
+        };
+        clearButton.onClick = ()
+        {
+            nameField.setText("");
+            captureToggle.checked = false;
+            speedSlider.setValue(0.0f);
+            modeDropdown.selectIndex(0);
+            updateSummary();
+        };
+
+        auto rowA = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        rowA.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        rowA.add(nameField);
+        rowA.add(captureToggle);
+
+        auto rowB = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        rowB.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
+        rowB.add(speedSlider);
+        rowB.add(modeDropdown);
+
+        auto rowC = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
+        rowC.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        rowC.add(applyButton);
+        rowC.add(clearButton);
+
+        content.add(summaryLabel);
+        content.add(new UiSpacer(0.0f, sectionSpacing));
+        content.add(rowA);
+        content.add(rowB);
+        content.add(rowC);
+        window.add(content);
+        window.visible = true;
+        updateSummary();
+    }
+
+    private void updateSummary()
+    {
+        summaryLabel.text = format("focus text='%s', mode=%s, repeat=%.2f, apply=%u", nameField.text, modeDropdown.selectedText(), speedSlider.value, applyCount);
+    }
+}
+
 /** Creates a new retained layout demo window. */
 LayoutDemoWindow buildLayoutDemoWindow(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
 {
@@ -370,6 +449,7 @@ final class DemoUiScreen : UiScreen
     private UiWindow settingsWindow;
     private LayoutDemoWindow[] testWindows;
     private ChromeDemoWindow[] chromeWindows;
+    private InputDemoWindow[] inputWindows;
     private UiVBox sidebarContent;
     private UiVBox helpContent;
     private UiVBox statusContent;
@@ -382,6 +462,7 @@ final class DemoUiScreen : UiScreen
     private UiButton sidebarSettingsButton;
     private UiButton sidebarWidgetButton;
     private UiButton sidebarChromeButton;
+    private UiButton sidebarInputButton;
     private UiButton sidebarAudioButton;
     private UiButton sidebarExitButton;
     private UiWindow dropdownPopupWindow;
@@ -436,6 +517,7 @@ final class DemoUiScreen : UiScreen
 
     private uint nextTestWindowSerial = 1;
     private uint nextChromeWindowSerial = 1;
+    private uint nextInputWindowSerial = 1;
     private uint nextAudioWindowSerial = 1;
     private AudioDemoWindow[] audioWindows;
 
@@ -448,6 +530,7 @@ final class DemoUiScreen : UiScreen
         sidebarExpanded = false;
         testWindows = [];
         chromeWindows = [];
+        inputWindows = [];
 
         buildSidebarWindow();
         buildHelpWindow();
@@ -573,6 +656,7 @@ final class DemoUiScreen : UiScreen
         sidebarSettingsButton = buildSidebarButton("Cfg", () { toggleSettingsDialog(null); });
         sidebarWidgetButton = buildSidebarButton("W", &spawnLayoutTestWindow);
         sidebarChromeButton = buildSidebarButton("C", &spawnChromeDemoWindow);
+        sidebarInputButton = buildSidebarButton("I", &spawnInputDemoWindow);
         sidebarAudioButton = buildSidebarButton("A", &spawnAudioDemoWindow);
         sidebarExitButton = buildSidebarButton("X", &requestQuit);
         auto sidebarBottomSpacer = new UiSpacer(0.0f, 0.0f);
@@ -583,6 +667,7 @@ final class DemoUiScreen : UiScreen
         sidebarContent.add(sidebarStatusButton);
         sidebarContent.add(sidebarWidgetButton);
         sidebarContent.add(sidebarChromeButton);
+        sidebarContent.add(sidebarInputButton);
         sidebarContent.add(sidebarAudioButton);
         sidebarContent.add(sidebarBottomSpacer);
         sidebarContent.add(sidebarHelpButton);
@@ -633,6 +718,7 @@ final class DemoUiScreen : UiScreen
         sidebarSettingsButton.setCaption(sidebarExpanded ? "Cfg Settings" : "Cfg");
         sidebarWidgetButton.setCaption(sidebarExpanded ? "W  Widgets" : "W");
         sidebarChromeButton.setCaption(sidebarExpanded ? "C  Chrome" : "C");
+        sidebarInputButton.setCaption(sidebarExpanded ? "I  Input" : "I");
         sidebarAudioButton.setCaption(sidebarExpanded ? "A  Audio" : "A");
         sidebarExitButton.setCaption(sidebarExpanded ? "X  Exit" : "X");
         applySidebarButtonLayout(sidebarExpandButton);
@@ -641,6 +727,7 @@ final class DemoUiScreen : UiScreen
         applySidebarButtonLayout(sidebarSettingsButton);
         applySidebarButtonLayout(sidebarWidgetButton);
         applySidebarButtonLayout(sidebarChromeButton);
+        applySidebarButtonLayout(sidebarInputButton);
         applySidebarButtonLayout(sidebarAudioButton);
         applySidebarButtonLayout(sidebarExitButton);
     }
@@ -960,7 +1047,7 @@ final class DemoUiScreen : UiScreen
         statusModeLabel.text = format("Modus: %s", currentRenderModeName);
         statusRotationLabel.text = format("Rotation: Yaw %.1f deg, Pitch %.1f deg", yawDegrees, pitchDegrees);
         statusViewportLabel.text = format("Viewport: %.0f x %.0f", viewportWidth, viewportHeight);
-        helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length + audioWindows.length));
+        helpIntroLabel.text = format("Open demo windows: %u", cast(uint)(testWindows.length + chromeWindows.length + inputWindows.length + audioWindows.length));
         updateSettingsSummary();
     }
 
@@ -1098,6 +1185,47 @@ final class DemoUiScreen : UiScreen
         removeWindow(demoWindow.window);
     }
 
+    void spawnInputDemoWindow()
+    {
+        InputDemoWindow demoWindow = new InputDemoWindow(nextInputWindowSerial++, &openDropdownPopup);
+        const cascadeIndex = cast(float)(nextInputWindowSerial - 2);
+        demoWindow.window.x += cascadeIndex * 28.0f;
+        demoWindow.window.y += cascadeIndex * 24.0f;
+        autoSizeWindow(demoWindow.window, demoWindow.content, windowContentPaddingX, windowContentPaddingY, windowContentPaddingX, windowContentPaddingY, 420.0f, 286.0f);
+        demoWindow.window.onClose = ()
+        {
+            demoWindow.window.visible = false;
+            removeInputDemoWindow(demoWindow);
+            logLine("UiWindow close: ", demoWindow.window.title);
+        };
+        registerWindowInteractionHandlers(demoWindow.window);
+        inputWindows ~= demoWindow;
+        addWindow(demoWindow.window);
+        if (viewportWidth > 0.0f && viewportHeight > 0.0f)
+        {
+            ensureWindowLayout();
+            placeWindowWithoutOverlap(demoWindow.window);
+        }
+        logLine("UiWindow spawn: ", demoWindow.window.title);
+    }
+
+    void removeInputDemoWindow(InputDemoWindow demoWindow)
+    {
+        if (demoWindow is null)
+            return;
+
+        for (size_t index = 0; index < inputWindows.length; ++index)
+        {
+            if (inputWindows[index] is demoWindow)
+            {
+                inputWindows = inputWindows[0 .. index] ~ inputWindows[index + 1 .. $];
+                break;
+            }
+        }
+
+        removeWindow(demoWindow.window);
+    }
+
     void spawnAudioDemoWindow()
     {
         AudioDemoWindow demoWindow = new AudioDemoWindow(nextAudioWindowSerial++);
@@ -1164,8 +1292,10 @@ unittest
     assert(screen.windowsInFrontToBack().length >= 5);
     screen.spawnChromeDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 6);
-    screen.spawnAudioDemoWindow();
+    screen.spawnInputDemoWindow();
     assert(screen.windowsInFrontToBack().length >= 7);
+    screen.spawnAudioDemoWindow();
+    assert(screen.windowsInFrontToBack().length >= 8);
 }
 
 @("DemoUiScreen sidebar reveals and spawns demo windows")
@@ -1222,6 +1352,15 @@ unittest
     const chromeCount = screen.chromeWindows.length;
     screen.sidebarChromeButton.onClick();
     assert(screen.chromeWindows.length == chromeCount + 1);
+
+    const inputCount = screen.inputWindows.length;
+    screen.sidebarInputButton.onClick();
+    assert(screen.inputWindows.length == inputCount + 1);
+    auto inputDemo = screen.inputWindows[$ - 1];
+    inputDemo.nameField.setText("abc");
+    inputDemo.applyButton.onClick();
+    assert(inputDemo.summaryLabel.text.canFind("abc"));
+    assert(inputDemo.summaryLabel.text.canFind("apply=1"));
 
     const audioCount = screen.audioWindows.length;
     uint audioEvents;
@@ -1357,6 +1496,7 @@ unittest
     assert(screen.sidebarReservedLeft() > collapsedReserved);
     assert(screen.helpWindow.x >= screen.sidebarReservedLeft(), format("help x %.1f, reserved %.1f", screen.helpWindow.x, screen.sidebarReservedLeft()));
     assert(screen.sidebarHelpButton.caption == "?  Help Desk");
+    assert(screen.sidebarInputButton.caption == "I  Input");
     assert(screen.sidebarAudioButton.caption == "A  Audio");
     assert(screen.sidebarExitButton.caption == "X  Exit");
     UiLayoutContext context;
@@ -1368,6 +1508,7 @@ unittest
     assert(!screen.sidebarExpanded);
     assert(screen.sidebarWindow.width == sidebarCollapsedWidth);
     assert(screen.sidebarHelpButton.caption == "?");
+    assert(screen.sidebarInputButton.caption == "I");
     assert(screen.sidebarAudioButton.caption == "A");
     assert(screen.sidebarExitButton.caption == "X");
     screen.sidebarWindow.layoutWindow(context);

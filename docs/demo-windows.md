@@ -200,14 +200,19 @@ Planned extensions:
 - add default and cancel button examples for dialog chrome
 - add animated open and close transitions when the animation scheduler exists
 
-## Planned Input Demo Window
+## Input Demo Window
 
-The Input Demo should exercise input ownership and keyboard navigation. It should become the first window that makes Tab order, Shift-Tab order, activation keys, focus containment, and blocked global shortcuts visible.
+The Input Demo exercises input ownership and keyboard navigation with ordinary retained controls. It makes Tab order, text input, activation keys, dropdown focus, and value callbacks visible in one small form.
 
-Target use cases:
+Current behavior:
 
 - focus traversal across text fields, toggles, sliders, buttons, and dropdowns
 - keyboard activation for buttons and toggles
+- live summary updates from text, toggle, slider, dropdown, and button callbacks
+- repeatable window instances from the sidebar
+
+Planned extensions:
+
 - pointer capture visualization for dragging controls
 - disabled and blocked cursor states
 - optional modal focus containment after modal windows exist
