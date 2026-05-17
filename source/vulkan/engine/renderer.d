@@ -28,6 +28,7 @@ import demo.demo_settings : DemoSettings, saveDemoSettings;
 import demo.demo_ui : DemoUiScreen;
 import logging : logLine, logLineVerbose;
 import math.matrix;
+import vulkan.audio.audio_system : AudioBusId, AudioSystem;
 import vulkan.engine.device;
 import vulkan.engine.instance;
 import vulkan.engine.pipeline;
@@ -167,6 +168,7 @@ class VulkanRenderer
     private OverlayLayerResources overlayPanels;
     private OverlayLayerResources[7] overlayFonts;
     private UiWindowDrawRange[] uiWindowRanges;
+    private AudioSystem audioSystem;
     private enum textureWidth = 64;
     private enum textureHeight = 64;
     private enum sample7FontPixelHeight = 7;
@@ -260,6 +262,9 @@ class VulkanRenderer
         this.buildVersion = buildVersion;
         this.platformName = fromStringz(SDL_GetPlatform()).idup;
         this.demoSettings = demoSettings;
+        audioSystem = new AudioSystem();
+        if (demoSettings !is null)
+            applyAudioSettings(*demoSettings);
         uiScreen = new DemoUiScreen();
         uiScreen.onApplySettings = &applySettingsDialog;
         uiScreen.onSaveSettings = &saveSettingsDialog;
@@ -1714,6 +1719,7 @@ class VulkanRenderer
             return;
 
         *demoSettings = uiScreen.settingsDraft;
+        applyAudioSettings(*demoSettings);
     }
 
     /** Saves the current settings draft to disk after applying it locally. */
@@ -1723,7 +1729,27 @@ class VulkanRenderer
             return;
 
         *demoSettings = uiScreen.settingsDraft;
+        applyAudioSettings(*demoSettings);
         saveDemoSettings(*demoSettings);
+    }
+
+    /** Applies persisted demo audio settings through the engine audio event queue. */
+    private void applyAudioSettings(ref const(DemoSettings) settings)
+    {
+        if (audioSystem is null)
+            return;
+
+        audioSystem.applyVolumeSettings(settings.audio.masterVolume, settings.audio.musicVolume, settings.audio.effectsVolume);
+        audioSystem.processEvents();
+        logLineVerbose(
+            "Audio volumes applied: master=",
+            audioSystem.busVolume(AudioBusId.master),
+            ", music=",
+            audioSystem.busVolume(AudioBusId.music),
+            ", effects=",
+            audioSystem.busVolume(AudioBusId.effects),
+            ", ui=",
+            audioSystem.busVolume(AudioBusId.ui));
     }
 
     /** Resolves the configured startup shape name to a mesh index. */

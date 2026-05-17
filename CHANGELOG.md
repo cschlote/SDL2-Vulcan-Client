@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Wired demo audio settings into the runtime `AudioSystem` volume buses on startup, Apply, and Save.
 - Added backend-neutral audio bus/event scaffolding with settings volume mapping.
 - Added API-level UI window move and resize bounds transitions plus updated Help Desk shortcut text.
 - Wired normal `UiScreen` show, hide, and toggle paths plus demo singleton windows through UI window transitions.

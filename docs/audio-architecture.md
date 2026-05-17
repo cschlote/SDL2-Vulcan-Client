@@ -74,7 +74,7 @@ The existing demo settings already contain:
 - `musicVolume`
 - `effectsVolume`
 
-These map to the current buses through `AudioSystem.applyVolumeSettings`. `masterVolume` controls the master bus, `musicVolume` controls the music bus, and `effectsVolume` controls both effects and UI buses until the settings model gains a dedicated UI volume. The settings dialog can apply those values by emitting bus-volume events instead of writing directly into audio internals.
+These map to the current buses through `AudioSystem.applyVolumeSettings`. `masterVolume` controls the master bus, `musicVolume` controls the music bus, and `effectsVolume` controls both effects and UI buses until the settings model gains a dedicated UI volume. The renderer owns the first `AudioSystem` instance, applies loaded settings during startup, and re-applies the settings dialog values through the audio event queue on Apply or Save. This is still silent until the SDL device and mixer are added.
 
 ## Open Questions
 
