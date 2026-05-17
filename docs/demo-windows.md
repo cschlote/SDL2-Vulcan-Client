@@ -23,7 +23,7 @@ Current behavior:
 
 - anchors to the left edge of the SDL window
 - toggles singleton windows such as Help Desk, Status, and Settings
-- spawns repeatable windows such as Widget Demo and Chrome Demo when that action policy is useful
+- spawns repeatable windows such as Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
 - exposes bottom system actions for Help, Settings, and Exit
@@ -233,26 +233,32 @@ Primary classes to exercise:
 - `UiSlider`
 - `UiDropdown`
 
-## Planned Selection Demo Window
+## Selection Demo Window
 
-The Selection Demo should exercise popup and selection primitives once they exist. It should make dropdowns, popup placement, outside-click dismissal, list selection, and selection callbacks visible in one place.
+The Selection Demo exercises popup and selection primitives in one repeatable window. It makes dropdown-backed popups, popup placement, outside-click dismissal, list selection, keyboard movement, and selection callbacks visible without mixing those checks into the Settings dialog.
 
-Target use cases:
+Current behavior:
 
-- dropdown opening and closing
-- popup placement near viewport edges
-- selection list with highlighted active row
-- outside-click dismissal
-- keyboard selection movement
-- selection changing a label, preview, or dependent control
+- opens a dropdown through the shared transient popup path
+- offers an Edge popup button that requests popup placement near the window edge
+- shows a visible `UiListBox` with highlighted active row
+- updates a summary label from dropdown and list selections
+- supports keyboard selection movement through focused dropdown popups and the visible list
+- can be spawned repeatedly from the sidebar
 
 Primary classes to exercise:
 
-- future popup root
-- future menu/list widgets
+- `UiScreen` transient popup window policy
 - `UiDropdown`
+- `UiListBox`
 - `UiLabel`
 - `UiButton`
+
+Planned extensions:
+
+- add context-menu style popup examples after a reusable menu widget exists
+- add tooltip coverage after `UiTooltip` exists
+- replace the screen-level popup callback with a widget-level `UiPopupRoot` facade once multiple popup widget families share behavior
 
 ## Planned Media Demo Window
 
