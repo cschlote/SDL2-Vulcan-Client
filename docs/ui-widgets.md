@@ -138,7 +138,7 @@ Planned chrome attributes:
 Demo coverage:
 
 - all current UI windows are `UiWindow` instances.
-- UiWindow / Chrome Demo toggles current behavior flags, passive visibility flags, optional backfill, viewport-edge pinning, reset behavior, and common presets.
+- UiWindow Demo toggles current behavior flags, passive visibility flags, optional backfill, viewport-edge pinning, reset behavior, and common presets.
 - unit coverage verifies generated ids, title-independent lookup, and opaque tags.
 - the current demo sidebar exercises chrome-less window mode.
 - planned Animation Demo should exercise open and close transitions.
@@ -189,7 +189,7 @@ Implementation direction:
 Demo coverage:
 
 - The demo sidebar replaces the old Demo Control launcher.
-- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo, with compact icon mode and expanded labels.
+- The sidebar toggles Help Desk, Status, and Settings, and spawns Widget Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo, with compact icon mode and expanded labels.
 - The sidebar uses a vertical `UiSpacer` with `flexGrowY` to pin Help, Status, Settings, Close All, and Exit actions to the bottom.
 - The Close All action currently works through the demo screen's known singleton references and repeatable-window arrays. This avoids using window titles as identifiers; `UiWindow.windowId` is available for later registry-style workflows.
 
@@ -233,7 +233,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, Widget Demo, and Chrome Demo.
+- Help Desk, Status, Settings, Widget Demo, and UiWindow Demo.
 
 ### UiHBox
 
@@ -310,7 +310,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Widget Demo, and Chrome Demo.
+- Help Desk, Widget Demo, and UiWindow Demo.
 
 ### UiContentBox
 
@@ -434,7 +434,7 @@ Required behavior:
 
 Demo coverage:
 
-- Help Desk, Status, Settings, and Chrome Demo.
+- Help Desk, Status, Settings, and UiWindow Demo.
 
 ### UiTextBlock
 
@@ -521,7 +521,7 @@ Required behavior:
 
 Demo coverage:
 
-- Settings and Chrome Demo.
+- Settings and UiWindow Demo.
 
 ### UiSlider
 

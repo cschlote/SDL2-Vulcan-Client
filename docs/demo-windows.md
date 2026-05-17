@@ -23,7 +23,7 @@ Current behavior:
 
 - anchors to the left edge of the SDL window
 - toggles singleton windows such as Help Desk, Status, and Settings
-- spawns repeatable windows such as Widget Demo, Chrome Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
+- spawns repeatable windows such as Widget Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
 - toggles between compact and expanded label modes
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
 - exposes bottom system actions for Help, Status, Settings, Close All, and Exit
@@ -189,9 +189,9 @@ Planned extensions:
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family
 
-## UiWindow / Chrome Demo Window
+## UiWindow Demo Window
 
-The UiWindow / Chrome Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, optional window backfill, viewport-edge pinning, `UiDropdown`, `UiToggle`, `UiButton`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
+The UiWindow Demo window isolates top-level window behavior. It exercises `UiWindow` behavior flags, passive chrome visibility flags, optional window backfill, viewport-edge pinning, `UiDropdown`, `UiToggle`, `UiButton`, `UiLabel`, callbacks, close controls, resize rings, header dragging, border/content insets, and middle-click stacking.
 
 Current behavior:
 

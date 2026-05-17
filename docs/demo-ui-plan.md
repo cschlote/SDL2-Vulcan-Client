@@ -83,7 +83,7 @@ The demo should evolve from a test shell into a small application with clear win
 - UI sidebar: a left-edge icon launcher that toggles singleton windows, spawns repeatable demo windows, exits the app, and can optionally expand to show text labels next to the icons.
 - Status window: compact right-pinned overlay with configurable edge margins and fit-to-content sizing for app version, frame rate, active scene, current render mode, 3D object rotation, and viewport state.
 - Widget demo window: first control gallery for layout probes, content/frame boxes, buttons, toggles, sliders, dropdowns, text fields, tabs, lists, progress bars, separators, and future widgets.
-- UiWindow / Chrome demo window: runtime toggles, presets, and reset controls for sizeable, closable, dragable, stackable, passive chrome visibility, optional backfill, and viewport-edge pinning so content-root insets and independent chrome interactions can be checked against active chrome elements.
+- UiWindow Demo window: runtime toggles, presets, and reset controls for sizeable, closable, dragable, stackable, passive chrome visibility, optional backfill, and viewport-edge pinning so content-root insets and independent chrome interactions can be checked against active chrome elements.
 - Help Desk window: keyboard and mouse help first, then searchable help topics and a later AI-agent style question interface.
 - Settings window: Display, UI, and Audio pages now; Controls and Gameplay pages are planned when editable settings exist.
 - Presets/shortcuts window: common layouts, render profiles, and UI actions.
@@ -207,7 +207,7 @@ The next implementation passes should reduce infrastructure gaps that block mult
 
 1. Add renderer clipping for `UiScrollArea`, then use it in long Help Desk, Settings, and Widget Demo content.
 2. Extract a widget-level popup facade from the current screen-owned dropdown popup path so dropdowns, context menus, and tooltips share placement, dismissal, focus containment, and stacking policy.
-3. Add a modal/dialog demo slice to Chrome Demo or a small dedicated dialog example, covering default/cancel buttons, blocked background routing, and focused-window title tinting.
+3. Add a modal/dialog demo slice to UiWindow Demo or a small dedicated dialog example, covering default/cancel buttons, blocked background routing, and focused-window title tinting.
 4. Move the demo tooltip popup into a reusable widget-level popup facade and generalize the current hover delay/dismissal policy.
 5. Replace the rough PPM placeholder images with a coherent higher-resolution icon set, then keep the PPM files only as fallback/test fixtures until a real package image loader exists.
 6. Add Controls and Gameplay pages to Settings once there are real editable values; the current `UiTabBar` overflow support is ready for additional pages.

@@ -130,7 +130,7 @@ The demo should add an Animation Demo window now that the basic scheduler exists
 - keep window close behavior separable from window destruction
 - ensure spawned demo windows can be hidden first and removed after a transition later
 
-The Chrome Demo is the natural first place to test open and close transitions. The Widget Demo and future Media Demo are the natural places to test widget-local animation and animated images.
+The UiWindow Demo is the natural first place to test open and close transitions. The Widget Demo and future Media Demo are the natural places to test widget-local animation and animated images.
 
 ## Open Questions
 
