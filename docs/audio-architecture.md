@@ -1,6 +1,6 @@
 # Audio Architecture
 
-This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL device ownership, sample mixing, clips, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
+This document describes the planned audio layer for the engine prototype. A first backend-neutral runtime now exists for audio bus state, typed audio events, an event queue, and settings-to-bus volume mapping. SDL playback device ownership also exists as a small lifecycle wrapper. Sample mixing, clips, and streamed music are still planned and should be added behind the same reusable audio service instead of embedding playback directly in demo UI or renderer code.
 
 ## Goals
 
@@ -19,7 +19,7 @@ Core goals:
 
 A typical game audio architecture has these layers:
 
-- `AudioDevice`: owns the backend device, callback, sample format, channel count, and buffer size. Planned.
+- `AudioDevice`: owns the backend device, requested playback format, actual playback format, pause/resume, and shutdown. Basic SDL owner exists; callback and stream binding are planned.
 - `AudioMixer`: combines active voices into the device callback buffer. Planned.
 - `AudioBus`: groups voices by purpose, currently master, music, effects, and UI. Basic bus state exists.
 - `AudioClip`: decoded or preloaded short sound data for low-latency effects. Planned.
@@ -38,7 +38,7 @@ The expected event flow is:
 2. The main thread queues the event in the `AudioSystem`.
 3. The audio system resolves bus routing and playback parameters. Currently this applies bus-volume state and records fade targets.
 4. The mixer owns active voices and produces interleaved samples for the device callback. Planned.
-5. The backend writes mixed samples to the platform audio device. Planned.
+5. The backend writes mixed samples to the platform audio device. The SDL device owner exists, but is not opened automatically until the mixer/service integration is added.
 
 Audio events should stay small and serializable enough to log, test, or replay. Examples include `playUiClick`, `playEffect(assetId)`, `startMusic(trackId)`, `fadeBus(busId, targetVolume, duration)`, and `stopAll(busId)`.
 
@@ -64,7 +64,7 @@ SDL audio is the most natural first backend because SDL already owns window and 
 - simple streaming abstraction for music
 - backend-independent event and bus types
 
-The first version does not need positional 3D audio. Stereo pan, per-bus volume, per-voice gain, and music fades are enough to exercise the architecture.
+The first version does not need positional 3D audio. Stereo pan, per-bus volume, per-voice gain, and music fades are enough to exercise the architecture. The current `AudioDevice` wrapper requests stereo 48 kHz floating-point playback by default and stores the actual SDL format after opening.
 
 ## Settings
 

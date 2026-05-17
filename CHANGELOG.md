@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added an SDL audio device owner scaffold with requested and actual playback format state.
 - Added visible retained UI keyboard focus rings and focused-window header highlighting.
 - Wired demo audio settings into the runtime `AudioSystem` volume buses on startup, Apply, and Save.
 - Added backend-neutral audio bus/event scaffolding with settings volume mapping.
