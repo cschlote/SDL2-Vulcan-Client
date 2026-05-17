@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added first-pass `UiTabBar` overflow navigation with wheel scrolling, previous/next regions, selected-tab visibility, and edge fades.
 - Added generated `UiWindow.windowId`, optional `UiWindow.userTag`, and `UiScreen.windowById` lookup.
 - Documented the `UiWindow` identity direction: generated ids first, optional opaque application tags second, titles never as durable keys.
 - Moved Status into the sidebar bottom action group and added a Close All action for singleton and repeatable demo windows.

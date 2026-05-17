@@ -120,6 +120,7 @@ Current behavior:
 - edits window width and height with focused text fields
 - toggles VSync
 - switches between Display, UI, and Audio pages with a visual tab strip
+- uses a `UiTabBar` that already supports overflow scrolling for later additional pages
 - adjusts UI scale with a slider
 - selects a theme placeholder
 - toggles compact-window placeholder behavior
@@ -132,6 +133,7 @@ Useful regression checks:
 - `UiTextField` keeps focus and caret behavior while global renderer shortcuts stay blocked
 - slider dragging keeps pointer capture until button-up
 - tab switching changes only the active settings page
+- overflowing tab strips can scroll with the mouse wheel or previous/next button regions and keep the selected tab visible
 - dropdown popups open, stay above normal windows, and close through the screen popup policy
 - focused dropdowns open through Enter
 - the action row stays attached below the growable settings body

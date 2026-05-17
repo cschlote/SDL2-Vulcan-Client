@@ -670,12 +670,13 @@ Required behavior:
 - changed callback. Implemented.
 - keyboard navigation. Implemented for Left, Right, Home, and End when focused.
 - compact label measurement. Implemented.
-- overflow navigation with mouse wheel, arrow buttons, and edge fade indicators. Planned for tab sets that exceed the available width.
+- overflow navigation with mouse wheel, arrow buttons, automatic selected-tab visibility, and edge fade indicators. Implemented as a first retained tab-strip pass.
 
 Demo coverage:
 
 - Settings window for Display, UI, and Audio pages.
 - Widget Demo visible tab selection.
+- Unit coverage verifies pointer, keyboard, and overflow scrolling behavior.
 
 ### UiProgressBar
 

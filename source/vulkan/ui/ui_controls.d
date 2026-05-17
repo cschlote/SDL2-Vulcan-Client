@@ -25,12 +25,16 @@ private enum float controlPaddingX = 10.0f;
 private enum float controlGap = 8.0f;
 private enum float fallbackGlyphWidth = 8.0f;
 private enum float fallbackTextHeight = 14.0f;
+private enum float tabOverflowButtonWidth = 24.0f;
+private enum float tabOverflowMinTabWidth = 72.0f;
+private enum float tabOverflowFadeWidth = 12.0f;
 
 private immutable float[4] defaultFillColor = [0.16f, 0.18f, 0.24f, 0.96f];
 private immutable float[4] defaultBorderColor = [0.20f, 0.56f, 0.98f, 1.00f];
 private immutable float[4] defaultAccentColor = [0.34f, 0.82f, 0.46f, 1.00f];
 private immutable float[4] defaultTextColor = [1.00f, 1.00f, 1.00f, 1.00f];
 private immutable float[4] defaultMutedColor = [0.50f, 0.54f, 0.62f, 1.00f];
+private immutable float[4] defaultFadeColor = [0.02f, 0.03f, 0.04f, 0.42f];
 
 private float clampFloat(float value, float minimum, float maximum)
 {
@@ -441,6 +445,8 @@ final class UiTabBar : UiWidget
     string[] tabs;
     /** Index into `tabs` for the currently active page. */
     size_t selectedIndex;
+    /** First tab index currently visible when the tab strip overflows. */
+    size_t firstVisibleIndex;
     /** Font style used for tab labels. */
     UiTextStyle style;
     /** Tab bar fill color. */
@@ -460,6 +466,7 @@ final class UiTabBar : UiWidget
         super(x, y, width, height);
         this.tabs = tabs.dup;
         this.selectedIndex = tabs.length == 0 ? 0 : selectedIndex % tabs.length;
+        firstVisibleIndex = 0;
         this.style = style;
         focusable = true;
         fillColor = cast(float[4])defaultFillColor;
@@ -479,8 +486,29 @@ final class UiTabBar : UiWidget
             return;
 
         selectedIndex = normalizedIndex;
+        ensureSelectedTabVisible();
         if (onChanged !is null)
             onChanged(selectedIndex, tabs[selectedIndex]);
+    }
+
+    /** Moves the visible tab strip window left or right when the tabs overflow. */
+    void scrollTabs(int delta)
+    {
+        if (tabs.length == 0 || !hasOverflow())
+            return;
+
+        const visibleCount = visibleTabCount();
+        const maximumFirst = maxFirstVisibleIndex(visibleCount);
+        if (delta < 0)
+        {
+            const amount = cast(size_t)(-delta);
+            firstVisibleIndex = amount > firstVisibleIndex ? 0 : firstVisibleIndex - amount;
+        }
+        else if (delta > 0)
+        {
+            const amount = cast(size_t)delta;
+            firstVisibleIndex = min(firstVisibleIndex + amount, maximumFirst);
+        }
     }
 
 protected:
@@ -502,11 +530,30 @@ protected:
             return;
 
         appendQuad(context, 0.0f, height - 2.0f, width, height, context.depthBase - 0.001f, borderColor);
-        const tabWidth = width / cast(float)tabs.length;
-        foreach (index, tab; tabs)
+        const overflow = hasOverflow();
+        const visibleCount = overflow ? visibleTabCount() : tabs.length;
+        const firstIndex = overflow ? clampedFirstVisibleIndex(visibleCount) : 0;
+        const trackLeft = overflow ? tabOverflowButtonWidth : 0.0f;
+        const trackRight = overflow ? max(width - tabOverflowButtonWidth, trackLeft) : width;
+        const trackWidth = max(trackRight - trackLeft, 0.0f);
+
+        if (overflow)
         {
-            const left = cast(float)index * tabWidth;
-            const right = index + 1 == tabs.length ? width : left + tabWidth;
+            appendSurfaceFrame(context, 0.0f, 4.0f, tabOverflowButtonWidth, height, fillColor, borderColor, context.depthBase - 0.002f);
+            appendSurfaceFrame(context, width - tabOverflowButtonWidth, 4.0f, width, height, fillColor, borderColor, context.depthBase - 0.002f);
+            appendTextLine(context, style, "<", 8.0f, 4.0f + centeredTextY(height - 4.0f, fallbackTextHeight), firstIndex > 0 ? textColor : defaultMutedColor, context.depthBase - 0.005f);
+            appendTextLine(context, style, ">", width - tabOverflowButtonWidth + 8.0f, 4.0f + centeredTextY(height - 4.0f, fallbackTextHeight), firstIndex + visibleCount < tabs.length ? textColor : defaultMutedColor, context.depthBase - 0.005f);
+        }
+
+        const tabWidth = visibleCount == 0 ? 0.0f : trackWidth / cast(float)visibleCount;
+        foreach (visibleOffset; 0 .. visibleCount)
+        {
+            const index = firstIndex + visibleOffset;
+            if (index >= tabs.length)
+                break;
+            const tab = tabs[index];
+            const left = trackLeft + cast(float)visibleOffset * tabWidth;
+            const right = visibleOffset + 1 == visibleCount ? trackRight : left + tabWidth;
             const selected = index == selectedIndex;
             const top = selected ? 0.0f : 5.0f;
             const bottom = selected ? height : height - 1.0f;
@@ -516,19 +563,67 @@ protected:
                 appendQuad(context, left + 1.0f, height - 2.0f, right - 1.0f, height + 2.0f, context.depthBase - 0.004f, selectedColor);
             appendTextLine(context, style, tab, left + controlPaddingX, top + centeredTextY(bottom - top, fallbackTextHeight), textColor, context.depthBase - 0.005f);
         }
+
+        if (overflow)
+        {
+            if (firstIndex > 0)
+                appendQuad(context, trackLeft, 0.0f, min(trackLeft + tabOverflowFadeWidth, trackRight), height, context.depthBase - 0.006f, defaultFadeColor);
+            if (firstIndex + visibleCount < tabs.length)
+                appendQuad(context, max(trackRight - tabOverflowFadeWidth, trackLeft), 0.0f, trackRight, height, context.depthBase - 0.006f, defaultFadeColor);
+        }
     }
 
     override bool handlePointerEvent(ref UiPointerEvent event)
     {
-        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1 || tabs.length == 0)
+        if (tabs.length == 0)
             return false;
 
         const localX = event.x - x;
         if (localX < 0.0f)
             return false;
 
-        const tabWidth = width / cast(float)tabs.length;
-        const index = cast(size_t)(localX / tabWidth);
+        if (event.kind == UiPointerEventKind.wheel)
+        {
+            if (!hasOverflow())
+                return false;
+
+            const oldFirst = firstVisibleIndex;
+            if (event.wheelY < 0.0f || event.wheelX > 0.0f)
+                scrollTabs(1);
+            else if (event.wheelY > 0.0f || event.wheelX < 0.0f)
+                scrollTabs(-1);
+            return firstVisibleIndex != oldFirst;
+        }
+
+        if (event.kind != UiPointerEventKind.buttonDown || event.button != 1)
+            return false;
+
+        const overflow = hasOverflow();
+        const visibleCount = overflow ? visibleTabCount() : tabs.length;
+        const firstIndex = overflow ? clampedFirstVisibleIndex(visibleCount) : 0;
+        const trackLeft = overflow ? tabOverflowButtonWidth : 0.0f;
+        const trackRight = overflow ? max(width - tabOverflowButtonWidth, trackLeft) : width;
+
+        if (overflow && localX < tabOverflowButtonWidth)
+        {
+            const oldFirst = firstVisibleIndex;
+            scrollTabs(-1);
+            return firstVisibleIndex != oldFirst;
+        }
+        if (overflow && localX >= width - tabOverflowButtonWidth)
+        {
+            const oldFirst = firstVisibleIndex;
+            scrollTabs(1);
+            return firstVisibleIndex != oldFirst;
+        }
+        if (localX < trackLeft || localX >= trackRight)
+            return false;
+
+        const tabWidth = visibleCount == 0 ? 0.0f : (trackRight - trackLeft) / cast(float)visibleCount;
+        if (tabWidth <= 0.0f)
+            return false;
+
+        const index = firstIndex + cast(size_t)((localX - trackLeft) / tabWidth);
         if (index >= tabs.length)
             return false;
 
@@ -571,6 +666,50 @@ protected:
     override UiCursorKind cursorSelf(float localX, float localY)
     {
         return tabs.length == 0 ? UiCursorKind.default_ : UiCursorKind.pointer;
+    }
+
+private:
+    bool hasOverflow() const
+    {
+        return tabs.length > 0 && width > tabOverflowButtonWidth * 2.0f && cast(float)tabs.length * tabOverflowMinTabWidth > width;
+    }
+
+    size_t visibleTabCount() const
+    {
+        if (!hasOverflow())
+            return tabs.length;
+
+        const trackWidth = max(width - tabOverflowButtonWidth * 2.0f, tabOverflowMinTabWidth);
+        const byWidth = max(cast(size_t)(trackWidth / tabOverflowMinTabWidth), cast(size_t)1);
+        return min(byWidth, tabs.length);
+    }
+
+    size_t maxFirstVisibleIndex(size_t visibleCount) const
+    {
+        if (visibleCount >= tabs.length)
+            return 0;
+        return tabs.length - visibleCount;
+    }
+
+    size_t clampedFirstVisibleIndex(size_t visibleCount) const
+    {
+        return min(firstVisibleIndex, maxFirstVisibleIndex(visibleCount));
+    }
+
+    void ensureSelectedTabVisible()
+    {
+        if (!hasOverflow())
+        {
+            firstVisibleIndex = 0;
+            return;
+        }
+
+        const visibleCount = visibleTabCount();
+        if (selectedIndex < firstVisibleIndex)
+            firstVisibleIndex = selectedIndex;
+        else if (selectedIndex >= firstVisibleIndex + visibleCount)
+            firstVisibleIndex = selectedIndex - visibleCount + 1;
+        firstVisibleIndex = clampedFirstVisibleIndex(visibleCount);
     }
 }
 
@@ -1216,6 +1355,50 @@ unittest
     keyEvent.key = UiKeyCode.home;
     assert(tabBar.dispatchKeyEvent(keyEvent));
     assert(tabBar.selectedIndex == 0);
+}
+
+@("UiTabBar scrolls overflowing tabs and keeps selection visible")
+unittest
+{
+    auto tabBar = new UiTabBar(["One", "Two", "Three", "Four", "Five"], 0, 0.0f, 0.0f, 220.0f, 28.0f);
+    assert(tabBar.firstVisibleIndex == 0);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.wheel;
+    event.x = 40.0f;
+    event.y = 12.0f;
+    event.wheelY = -1.0f;
+    assert(tabBar.dispatchPointerEvent(event));
+    assert(tabBar.firstVisibleIndex == 1);
+
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 10.0f;
+    event.y = 12.0f;
+    assert(tabBar.dispatchPointerEvent(event));
+    assert(tabBar.firstVisibleIndex == 0);
+
+    tabBar.selectIndex(4);
+    assert(tabBar.selectedIndex == 4);
+    assert(tabBar.firstVisibleIndex == 3);
+
+    event.x = 36.0f;
+    assert(tabBar.dispatchPointerEvent(event));
+    assert(tabBar.selectedIndex == 3);
+}
+
+@("UiTabBar ignores wheel when all tabs fit")
+unittest
+{
+    auto tabBar = new UiTabBar(["Display", "UI", "Audio"], 0, 0.0f, 0.0f, 240.0f, 28.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.wheel;
+    event.x = 40.0f;
+    event.y = 12.0f;
+    event.wheelY = -1.0f;
+    assert(!tabBar.dispatchPointerEvent(event));
+    assert(tabBar.firstVisibleIndex == 0);
 }
 
 @("UiListBox selects clicked rows")
