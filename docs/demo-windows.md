@@ -25,9 +25,12 @@ Current behavior:
 - toggles singleton windows such as Help Desk, Status, and Settings
 - spawns repeatable windows such as Widget Demo, UiWindow Demo, Input Demo, Selection Demo, and Audio Demo when that action policy is useful
 - toggles between compact and expanded label modes
+- animates expand and collapse through the window bounds-transition path
 - uses a vertically growable spacer to separate demo-window actions from bottom-aligned system actions
 - exposes bottom system actions for Help, Status, Settings, Close All, and Exit
 - hides singleton windows and removes repeatable demo-window instances through the Close All action
+- shows active markers for visible singleton target windows
+- shows delayed tooltips for collapsed icon-only actions
 - keeps the number of visible sidebar actions intentionally small for the current minimum SDL window size
 - stays chrome-less: no header, no title, no close button, normally no resize ring
 
@@ -49,11 +52,8 @@ Planned extensions:
 - decide whether dragging ordinary windows into the reserved sidebar strip should be blocked immediately or only corrected by relayout after sidebar expand/shrink
 - scroll the upper launcher action group with the mouse wheel once the number of demo entries exceeds the available height
 - show fade-out indicators at the top or bottom of the scrollable action group when more entries exist offscreen
-- active or visible-state markers for target windows
-- tooltips for collapsed icon-only actions
 - texture-backed icons with generated fallback cells; the current low-resolution PPM files are placeholders until a coherent high-resolution icon set and package image loader exist
 - `UiIconButton` or equivalent icon-plus-label action rows with fixed icon slot and separate label region
-- optional animation support for expand/collapse
 
 ## Help Desk Window
 
