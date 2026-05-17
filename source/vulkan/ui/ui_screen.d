@@ -383,6 +383,7 @@ class UiScreen
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
 
+            applyWindowPresentation(geometry, range, window);
             drawRanges ~= range;
         }
 
@@ -692,6 +693,44 @@ protected:
     }
 
 private:
+    void applyWindowPresentation(ref UiOverlayGeometry geometry, ref UiWindowDrawRange range, UiWindow window) const
+    {
+        if (window is null)
+            return;
+
+        const alpha = range.alpha;
+        const scale = range.scale;
+        const offsetX = range.offsetX;
+        const offsetY = range.offsetY;
+        if (alpha == 1.0f && scale == 1.0f && offsetX == 0.0f && offsetY == 0.0f)
+            return;
+
+        const extentWidth = viewportWidth_ > 0.0f ? viewportWidth_ : 1.0f;
+        const extentHeight = viewportHeight_ > 0.0f ? viewportHeight_ : 1.0f;
+        const centerX = (window.x + window.width * 0.5f) / extentWidth * 2.0f - 1.0f;
+        const centerY = (window.y + window.height * 0.5f) / extentHeight * 2.0f - 1.0f;
+        const ndcOffsetX = offsetX / extentWidth * 2.0f;
+        const ndcOffsetY = offsetY / extentHeight * 2.0f;
+
+        transformWindowVertices(geometry.panels, range.panelsStart, range.panelsCount, centerX, centerY, scale, ndcOffsetX, ndcOffsetY, alpha);
+        foreach (layerIndex; 0 .. geometry.textLayers.length)
+            transformWindowVertices(geometry.textLayers[layerIndex], range.textStarts[layerIndex], range.textCounts[layerIndex], centerX, centerY, scale, ndcOffsetX, ndcOffsetY, alpha);
+    }
+
+    void transformWindowVertices(ref typeof(UiOverlayGeometry.init.panels) vertices, uint start, uint count, float centerX, float centerY, float scale, float offsetX, float offsetY, float alpha) const
+    {
+        const end = cast(size_t)start + cast(size_t)count;
+        if (end > vertices.length)
+            return;
+
+        foreach (index; cast(size_t)start .. end)
+        {
+            vertices[index].position[0] = centerX + (vertices[index].position[0] - centerX) * scale + offsetX;
+            vertices[index].position[1] = centerY + (vertices[index].position[1] - centerY) * scale + offsetY;
+            vertices[index].color[3] *= alpha;
+        }
+    }
+
     void focusNextWidget(bool reverse)
     {
         auto widgets = focusableWidgetsInTraversalOrder();
@@ -1097,6 +1136,8 @@ unittest
     assert(geometry.windows[0].alpha > 0.49f && geometry.windows[0].alpha < 0.51f);
     assert(geometry.windows[0].scale > 0.97f && geometry.windows[0].scale < 0.99f);
     assert(geometry.windows[0].offsetY < 0.0f);
+    assert(geometry.panels[0].color[3] > 0.49f && geometry.panels[0].color[3] < 0.51f);
+    assert(geometry.panels[0].position[0] > (window.x / 220.0f * 2.0f - 1.0f));
 }
 
 @("UiScreen reports context-sensitive cursor intent")

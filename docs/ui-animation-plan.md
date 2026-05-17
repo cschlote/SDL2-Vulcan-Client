@@ -1,6 +1,6 @@
 # UI Animation Plan
 
-This document captures the planned animation model for the retained UI layer. A first frame-time dispatch runtime exists; concrete animated widgets and window transitions are still planned. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and window transitions can be added without rewriting input routing or layout.
+This document captures the planned animation model for the retained UI layer. A first frame-time dispatch runtime exists, window transitions can already export and apply basic presentation values, and concrete animated widgets are still planned. The goal is to reserve clean ownership boundaries now so later animated widgets, media widgets, and richer window transitions can be added without rewriting input routing or layout.
 
 ## Goals
 
@@ -91,7 +91,7 @@ Common transition properties:
 - translation offset. Exported per window through `UiWindowDrawRange.offsetX` and `offsetY`.
 - optional shadow or border emphasis
 
-Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes and exports alpha, scale, and offset to the window draw range; Vulkan-side visual application and demo wiring are still planned.
+Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes, exports alpha, scale, and offset to the window draw range, and applies those values to generated UI vertices before upload; demo wiring is still planned.
 
 Input policy must be explicit:
 
@@ -112,7 +112,7 @@ Exceptions should be rare and documented. For example, an animated expanding pan
 
 ## Renderer Boundary
 
-The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. `UiWindowDrawRange` already carries window-level alpha, scale, and offset so the renderer can later apply transitions per retained window. Further renderer-facing UI geometry may later need:
+The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. `UiWindowDrawRange` carries window-level alpha, scale, and offset, and `UiScreen.buildOverlayGeometry` currently applies those values to the emitted vertex positions and colors. Further renderer-facing UI geometry may later need:
 
 - texture frame references for image widgets
 - clipping rectangles for animated panels or media widgets
