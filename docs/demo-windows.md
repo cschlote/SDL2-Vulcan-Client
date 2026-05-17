@@ -84,7 +84,7 @@ Planned extensions:
 
 ## Status Window
 
-The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiLabel`, per-frame text updates, and viewport-aware anchoring.
+The Status window is a live read-only inspector. It exercises `UiWindow`, `UiVBox`, `UiLabel`, per-frame text updates, viewport-edge pinning, and a chrome-less no-backfill presentation.
 
 Current behavior:
 
@@ -94,12 +94,13 @@ Current behavior:
 - displays current render mode
 - displays 3D object yaw and pitch angles
 - displays viewport size
-- anchors near the top-right viewport corner
+- pins to the top-right SDL viewport edge
+- renders without header, border, resize chrome, or window backfill so only the status widgets are visible
 
 Useful regression checks:
 
 - per-frame label updates do not allocate window objects repeatedly
-- viewport changes keep the window visible and clamped
+- viewport changes keep the window attached to the top-right edge and clamped
 - changing render mode or scene shape updates the status text immediately
 - keyboard or mouse rotation updates the yaw/pitch text without moving the window
 - numeric text remains aligned enough to scan during rendering tests

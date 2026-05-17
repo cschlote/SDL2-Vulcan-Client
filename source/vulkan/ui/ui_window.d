@@ -68,7 +68,16 @@ final class UiWindow : UiWidget
     bool showHeader = true;                         ///< True when the title/header band is rendered and hit-tested.
     bool showTitle = true;                          ///< True when the title text is rendered inside the header.
     bool showBorder = true;                         ///< True when the outer border is rendered and reserved for content.
+    bool showBackfill = true;                       ///< True when the body/header background fill is rendered.
     bool hasKeyboardFocus;                          ///< True while one widget inside this window owns keyboard focus.
+    bool pinLeft;                                   ///< True when layout keeps the left edge attached to the screen.
+    bool pinRight;                                  ///< True when layout keeps the right edge attached to the screen.
+    bool pinTop;                                    ///< True when layout keeps the top edge attached to the screen.
+    bool pinBottom;                                 ///< True when layout keeps the bottom edge attached to the screen.
+    float pinMarginLeft;                            ///< Distance from the left screen edge when pinned.
+    float pinMarginRight;                           ///< Distance from the right screen edge when pinned.
+    float pinMarginTop;                             ///< Distance from the top screen edge when pinned.
+    float pinMarginBottom;                          ///< Distance from the bottom screen edge when pinned.
     bool dragTracking;                              ///< True while a drag gesture is active.
     bool resizeTracking;                            ///< True while a resize gesture is active.
     UiResizeHandle resizeHandle = UiResizeHandle.none; ///< Active resize corner while a resize gesture is running.
@@ -425,6 +434,43 @@ final class UiWindow : UiWidget
         updateChromeLayout();
     }
 
+    /** Updates whether the window body/header background is rendered. */
+    void setBackfillVisible(bool showBackfill)
+    {
+        this.showBackfill = showBackfill;
+    }
+
+    /** Updates the window background fill colors. Alpha values are honored by the renderer. */
+    void setBackfillColor(float[4] bodyColor, float[4] headerColor)
+    {
+        this.bodyColor = bodyColor;
+        this.headerColor = headerColor;
+    }
+
+    /** Pins one or more window edges to the current screen viewport. */
+    void setPinnedEdges(bool left, bool right, bool top, bool bottom)
+    {
+        pinLeft = left;
+        pinRight = right;
+        pinTop = top;
+        pinBottom = bottom;
+    }
+
+    /** Sets the margins used by viewport-edge pinning. */
+    void setPinMargins(float left, float top, float right, float bottom)
+    {
+        pinMarginLeft = max(left, 0.0f);
+        pinMarginTop = max(top, 0.0f);
+        pinMarginRight = max(right, 0.0f);
+        pinMarginBottom = max(bottom, 0.0f);
+    }
+
+    /** Returns true when at least one edge is pinned to the viewport. */
+    bool hasPinnedEdges() const
+    {
+        return pinLeft || pinRight || pinTop || pinBottom;
+    }
+
     /** Returns the top-level non-content height that auto sizing must reserve. */
     float verticalChromeExtent() const
     {
@@ -631,7 +677,8 @@ protected:
         if (activeCloseButton())
             headerRightInset += closeButton.width + 8.0f;
 
-        appendWindowFrame(context, 0.0f, 0.0f, width, height, renderedHeaderHeight, bodyFill, headerFill, context.depthBase, gripInset, headerRightInset);
+        if (showBackfill)
+            appendWindowFrame(context, 0.0f, 0.0f, width, height, renderedHeaderHeight, bodyFill, headerFill, context.depthBase, gripInset, headerRightInset);
 
         if (activeResizeRing())
             appendResizeGrips(context);

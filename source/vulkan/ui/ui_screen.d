@@ -274,6 +274,7 @@ class UiScreen
 
         layoutWindows();
         anchorWindows();
+        applyPinnedWindowsToViewport();
         clampWindowsToViewport();
         keepActiveModalFront();
         keepActivePopupFront();
@@ -1154,6 +1155,48 @@ private:
         foreach (window; windows_)
             clampWindowToViewport(window);
     }
+
+    void applyPinnedWindowsToViewport()
+    {
+        foreach (window; windows_)
+            applyPinnedWindowToViewport(window);
+    }
+
+    void applyPinnedWindowToViewport(UiWindow window)
+    {
+        if (window is null || !window.hasPinnedEdges())
+            return;
+
+        if (window.pinLeft && window.pinRight)
+        {
+            window.x = window.pinMarginLeft;
+            const pinnedWidth = viewportWidth_ - window.pinMarginLeft - window.pinMarginRight;
+            window.width = max(pinnedWidth, window.minimumWidth);
+        }
+        else if (window.pinLeft)
+        {
+            window.x = window.pinMarginLeft;
+        }
+        else if (window.pinRight)
+        {
+            window.x = viewportWidth_ - window.width - window.pinMarginRight;
+        }
+
+        if (window.pinTop && window.pinBottom)
+        {
+            window.y = window.pinMarginTop;
+            const pinnedHeight = viewportHeight_ - window.pinMarginTop - window.pinMarginBottom;
+            window.height = max(pinnedHeight, window.minimumHeight);
+        }
+        else if (window.pinTop)
+        {
+            window.y = window.pinMarginTop;
+        }
+        else if (window.pinBottom)
+        {
+            window.y = viewportHeight_ - window.height - window.pinMarginBottom;
+        }
+    }
 }
 
 @("UiScreen reorders windows without z values")
@@ -1250,6 +1293,64 @@ unittest
     assert(geometry.panels.length > 0);
     assert(geometry.windows[0].panelsStart == 0);
     assert(geometry.windows[0].panelsCount == geometry.panels.length);
+}
+
+@("UiScreen keeps pinned windows attached to viewport edges")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("pinned", 0.0f, 0.0f, 30.0f, 20.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    window.setPinnedEdges(false, true, false, true);
+    window.setPinMargins(0.0f, 0.0f, 5.0f, 7.0f);
+    screen.addWindow(window);
+
+    screen.syncViewport(200.0f, 150.0f);
+    assert(window.x == 165.0f);
+    assert(window.y == 123.0f);
+
+    screen.syncViewport(260.0f, 180.0f);
+    assert(window.x == 225.0f);
+    assert(window.y == 153.0f);
+}
+
+@("UiScreen stretches windows pinned to opposite viewport edges")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("pinned", 0.0f, 0.0f, 30.0f, 20.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    window.minimumWidth = 24.0f;
+    window.minimumHeight = 16.0f;
+    window.setPinnedEdges(true, true, true, true);
+    window.setPinMargins(4.0f, 6.0f, 8.0f, 10.0f);
+    screen.addWindow(window);
+
+    screen.syncViewport(200.0f, 150.0f);
+    assert(window.x == 4.0f);
+    assert(window.y == 6.0f);
+    assert(window.width == 188.0f);
+    assert(window.height == 134.0f);
+}
+
+@("UiScreen omits window background geometry when backfill is hidden")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto window = new UiWindow("transparent", 10.0f, 10.0f, 70.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    window.setChromeVisibility(false, false, false);
+    window.setBackfillVisible(false);
+    screen.addWindow(window);
+
+    auto geometry = screen.buildOverlayGeometry();
+    assert(geometry.windows.length == 1);
+    assert(geometry.panels.length == 0);
+    assert(geometry.windows[0].panelsCount == 0);
 }
 
 @("UiScreen exports window transition presentation parameters")

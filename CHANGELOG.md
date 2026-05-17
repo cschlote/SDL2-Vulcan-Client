@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added optional `UiWindow` backfill rendering, viewport-edge pinning, and a chrome-less right-pinned Status window.
+
 ## Release 26.20.9540
 
 - Reviewed documentation consistency and updated the near-term UI/audio planning order.

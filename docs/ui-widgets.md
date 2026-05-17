@@ -112,17 +112,21 @@ Required behavior:
 - direct content widgets receive the useful body area
 - chrome flags can independently control sizeability, closability, draggability, and stackability
 - chrome visibility can independently control header, title, and border
+- backfill visibility can hide all body/header background quads while preserving content, hit testing, and optional border rendering
 - cursor regions match resize, move, action, and blocked states
 - close/hide/destroy behavior remains distinguishable
 - generated `windowId` remains stable when titles change or when multiple windows share the same title
 - optional opaque `userTag` never replaces engine-owned identity
+- viewport-edge pinning keeps docked windows attached during SDL window resizing
 
 Implemented chrome attributes:
 
 - header visibility
 - title visibility
 - border visibility and thickness
+- body/header backfill visibility and RGBA color values
 - content padding per side
+- viewport-edge pinning with per-edge margins
 
 Planned chrome attributes:
 

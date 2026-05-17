@@ -89,7 +89,9 @@ Window content should be ordinary widgets. Application code should build a windo
 
 Window chrome owns the resize ring, stack behavior, and header controls. Edge grips resize one dimension, corner grips resize two dimensions, and chrome buttons or grips receive middle and right mouse buttons before the generic middle-click window stacking fallback. Stackability is separate from draggability: disabling header drag should not disable middle-click front/back ordering on free chrome. The content root is inset away from active chrome, border, and resize ring so application widgets do not overlap window affordances.
 
-`UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, and border visibility define how much passive chrome is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border.
+`UiWindow` separates interactive chrome policy from passive chrome visibility. Sizeability, closability, draggability, and stackability define the built-in window affordances; programmatic movement, resizing, hiding, or closing remain application/API actions outside those flags. Header, title, border, and backfill visibility define how much passive chrome and background is shown and reserved for content layout. A chrome-less dock/sidebar window can therefore use the same top-level class: with no header and no border the content root fills the complete window; with a border enabled the content root starts inside that border. A window can also hide body/header backfill entirely or set RGBA body/header fill colors, which covers the "no backfill" and translucent-window use cases without changing input or layout ownership.
+
+Windows can be pinned to viewport edges. `UiScreen` applies pinned edges after subclass anchoring and before viewport clamping, so a right-pinned or bottom-pinned window stays attached when the SDL window is resized. Pinning opposite edges on the same axis stretches the window across the remaining viewport space, bounded by its minimum size.
 
 Each `UiWindow` has a generated stable `windowId` for title-independent lookup through `UiScreen.windowById`. The visible title remains presentation text. `UiWindow.userTag` is available as an optional pointer-sized application integration value, but engine code should prefer generated ids and owned collections for identity.
 
@@ -99,7 +101,7 @@ Modal dialog conventions are attached to `UiWindow` through optional default and
 
 The reusable UI package currently provides these retained widgets:
 
-- `UiWindow`: framed, draggable, resizeable top-level window with an internal content root
+- `UiWindow`: framed, draggable, resizeable or chrome-less top-level window with an internal content root, optional backfill, and viewport-edge pinning
 - `UiLabel`: single-line text label
 - `UiTextBlock`: text block placeholder for multi-line text rendering
 - `UiButton`: framed button with optional icon and label content row

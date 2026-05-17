@@ -465,7 +465,7 @@ private enum float sidebarFallbackHeight = 260.0f;
 private enum float helpWidth = 462.0f;
 private enum float helpHeight = 252.0f;
 private enum float statusWidth = 348.0f;
-private enum float statusHeight = 210.0f;
+private enum float statusHeight = 144.0f;
 private enum float settingsWidth = 372.0f;
 private enum float settingsHeight = 282.0f;
 private enum float settingsPageHeight = 138.0f;
@@ -878,7 +878,12 @@ final class DemoUiScreen : UiScreen
 
     void buildStatusWindow()
     {
-        statusWindow = new UiWindow("Status", windowMargin, windowMargin, statusWidth, statusHeight, cast(float[4])statusBodyColor, cast(float[4])statusHeaderColor, cast(float[4])statusTitleColor, true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        statusWindow = new UiWindow("Status", windowMargin, windowMargin, statusWidth, statusHeight, cast(float[4])statusBodyColor, cast(float[4])statusHeaderColor, cast(float[4])statusTitleColor, false, false, false, 10.0f, 10.0f, 10.0f, 10.0f);
+        statusWindow.setChromeFlags(false, false, false, true);
+        statusWindow.setChromeVisibility(false, false, false);
+        statusWindow.setBackfillVisible(false);
+        statusWindow.setPinnedEdges(false, true, true, false);
+        statusWindow.setPinMargins(0.0f, windowMargin, 0.0f, 0.0f);
 
         statusContent = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, contentSpacing);
         statusBuildLabel = new UiLabel("Build: pending", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])statusTextColor);
@@ -1176,7 +1181,7 @@ final class DemoUiScreen : UiScreen
 
         if (!statusAnchored)
         {
-            statusWindow.x = viewportWidth > statusWindow.width + sidebarReservedLeft() ? viewportWidth - statusWindow.width - windowMargin : sidebarReservedLeft();
+            statusWindow.x = viewportWidth > statusWindow.width + sidebarReservedLeft() ? viewportWidth - statusWindow.width : sidebarReservedLeft();
             statusWindow.y = windowMargin;
             statusAnchored = true;
         }
@@ -1718,6 +1723,13 @@ unittest
     screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test", 12.5f, -7.25f);
 
     assert(screen.statusRotationLabel.text == "Rotation: Yaw 12.5 deg, Pitch -7.2 deg");
+    assert(!screen.statusWindow.showHeader);
+    assert(!screen.statusWindow.showBorder);
+    assert(!screen.statusWindow.showBackfill);
+    assert(screen.statusWindow.pinRight);
+    assert(screen.statusWindow.pinTop);
+    assert(screen.statusWindow.x == 800.0f - screen.statusWindow.width);
+    assert(screen.statusWindow.y == windowMargin);
 }
 
 @("DemoUiScreen sidebar expands labels and reserves width")
