@@ -86,7 +86,7 @@ class UiScreen
 
         if (event.kind == UiPointerEventKind.buttonDown && activePopupWindow !is null)
         {
-            if (!activePopupWindow.visible)
+            if (!activePopupWindow.acceptsInput())
                 activePopupWindow = null;
             else if (!windowContainsPointer(activePopupWindow, event.x, event.y))
             {
@@ -99,7 +99,7 @@ class UiScreen
 
         if (activeModalWindow !is null)
         {
-            if (!activeModalWindow.visible)
+            if (!activeModalWindow.acceptsInput())
                 activeModalWindow = null;
             else if (!windowContainsPointer(activeModalWindow, event.x, event.y))
             {
@@ -112,18 +112,18 @@ class UiScreen
         if (event.kind == UiPointerEventKind.buttonDown && event.button == 1)
             setFocusedWidget(focusTargetAt(event.x, event.y));
 
-        if (activeResizeWindow !is null && activeResizeWindow.visible)
+        if (activeResizeWindow !is null && activeResizeWindow.acceptsInput())
             return activeResizeWindow.dispatchPointerEvent(event);
 
-        if (activeDragWindow !is null && activeDragWindow.visible)
+        if (activeDragWindow !is null && activeDragWindow.acceptsInput())
             return activeDragWindow.dispatchPointerEvent(event);
 
-        if (activeModalWindow !is null && activeModalWindow.visible)
+        if (activeModalWindow !is null && activeModalWindow.acceptsInput())
             return activeModalWindow.dispatchPointerEvent(event);
 
         foreach_reverse (window; windowsInFrontToBack())
         {
-            if (!window.visible)
+            if (!window.acceptsInput())
                 continue;
 
             if (window.dispatchPointerEvent(event))
@@ -191,12 +191,12 @@ class UiScreen
         return focusedWidget;
     }
 
-    /** Returns true when the point is inside any visible window. */
+    /** Returns true when the point is inside any currently interactive window. */
     bool containsPointer(float x, float y) const
     {
         foreach_reverse (window; windowsInFrontToBack())
         {
-            if (!window.visible)
+            if (!window.acceptsInput())
                 continue;
 
             if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
@@ -215,12 +215,12 @@ class UiScreen
         if (activeDragWindow !is null && activeDragWindow.visible)
             return UiCursorKind.move;
 
-        if (activeModalWindow !is null && activeModalWindow.visible && !windowContainsPointer(activeModalWindow, x, y))
+        if (activeModalWindow !is null && activeModalWindow.acceptsInput() && !windowContainsPointer(activeModalWindow, x, y))
             return UiCursorKind.blocked;
 
         foreach_reverse (window; windowsInFrontToBack())
         {
-            if (!window.visible)
+            if (!window.acceptsInput())
                 continue;
 
             if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
@@ -255,6 +255,45 @@ class UiScreen
         keepActivePopupFront();
     }
 
+    /** Shows a normal window and starts its open transition. */
+    void showWindow(UiWindow window, bool animated = true)
+    {
+        if (window is null)
+            return;
+
+        if (windowIndex(window) < 0)
+            addWindow(window);
+
+        if (animated)
+            window.beginOpenTransition();
+        else
+            window.beginOpenTransition(0.0f);
+
+        bringWindowToFront(window);
+        ensureWindowLayout();
+    }
+
+    /** Starts a normal window close transition and clears active routing state. */
+    void hideWindow(UiWindow window, bool animated = true)
+    {
+        if (window is null)
+            return;
+
+        if (isInteractingWith(window))
+            endWindowInteraction();
+        if (activePopupWindow is window)
+            activePopupWindow = null;
+        if (activeModalWindow is window)
+            activeModalWindow = null;
+        if (focusedWidget !is null && windowOwnsWidget(window, focusedWidget))
+            setFocusedWidget(null);
+
+        if (animated)
+            window.beginCloseTransition();
+        else
+            window.beginCloseTransition(0.0f);
+    }
+
     /** Shows a modal window and blocks routing to windows behind it. */
     void showModalWindow(UiWindow modal)
     {
@@ -262,13 +301,13 @@ class UiScreen
             return;
 
         if (activeModalWindow !is null && activeModalWindow !is modal)
-            activeModalWindow.visible = false;
+            hideWindow(activeModalWindow);
 
         if (windowIndex(modal) < 0)
             addWindow(modal);
 
         endWindowInteraction();
-        modal.visible = true;
+        modal.beginOpenTransition();
         activeModalWindow = modal;
         bringWindowToFront(modal);
     }
@@ -282,14 +321,14 @@ class UiScreen
         if (focusedWidget !is null && windowOwnsWidget(activeModalWindow, focusedWidget))
             setFocusedWidget(null);
 
-        activeModalWindow.visible = false;
+        activeModalWindow.beginCloseTransition();
         activeModalWindow = null;
     }
 
     /** Returns true while a visible modal window is active. */
     bool hasActiveModal() const
     {
-        return activeModalWindow !is null && activeModalWindow.visible;
+        return activeModalWindow !is null && activeModalWindow.acceptsInput();
     }
 
     /** Shows a transient popup window near an anchor rectangle in screen coordinates. */
@@ -299,12 +338,12 @@ class UiScreen
             return;
 
         if (activePopupWindow !is null && activePopupWindow !is popup)
-            activePopupWindow.visible = false;
+            hideWindow(activePopupWindow, false);
 
         if (windowIndex(popup) < 0)
             addWindow(popup);
 
-        popup.visible = true;
+        popup.beginOpenTransition(0.0f);
         activePopupWindow = popup;
         placePopupNearAnchor(popup, anchorX, anchorY, anchorWidth, anchorHeight);
         bringWindowToFront(popup);
@@ -316,14 +355,14 @@ class UiScreen
         if (activePopupWindow is null)
             return;
 
-        activePopupWindow.visible = false;
+        activePopupWindow.beginCloseTransition(0.0f);
         activePopupWindow = null;
     }
 
     /** Returns true while a visible transient popup is active. */
     bool hasActivePopup() const
     {
-        return activePopupWindow !is null && activePopupWindow.visible;
+        return activePopupWindow !is null && activePopupWindow.acceptsInput();
     }
 
     /** Advances retained UI animation state for one frame.
@@ -483,18 +522,13 @@ protected:
         if (window is null)
             return;
 
-        window.visible = !window.visible;
+        if (window.acceptsInput())
+        {
+            hideWindow(window);
+            return;
+        }
 
-        if (!window.visible && isInteractingWith(window))
-            endWindowInteraction();
-        if (!window.visible && activePopupWindow is window)
-            activePopupWindow = null;
-        if (!window.visible && activeModalWindow is window)
-            activeModalWindow = null;
-        else if (window.visible)
-            bringWindowToFront(window);
-
-        ensureWindowLayout();
+        showWindow(window);
         if (window.visible)
             placeWindowWithoutOverlap(window);
     }
@@ -764,7 +798,7 @@ private:
     UiWidget[] focusableWidgetsInTraversalOrder()
     {
         UiWidget[] widgets;
-        if (activeModalWindow !is null && activeModalWindow.visible)
+        if (activeModalWindow !is null && activeModalWindow.acceptsInput())
         {
             collectFocusableWidgets(activeModalWindow, widgets);
             return widgets;
@@ -772,7 +806,7 @@ private:
 
         foreach_reverse (window; windowsInFrontToBack())
         {
-            if (!window.visible)
+            if (!window.acceptsInput())
                 continue;
 
             collectFocusableWidgets(window, widgets);
@@ -849,12 +883,12 @@ private:
 
     UiWidget focusTargetAt(float x, float y)
     {
-        if (activeModalWindow !is null && activeModalWindow.visible)
+        if (activeModalWindow !is null && activeModalWindow.acceptsInput())
             return activeModalWindow.focusTargetAt(x, y);
 
         foreach_reverse (window; windowsInFrontToBack())
         {
-            if (!window.visible)
+            if (!window.acceptsInput())
                 continue;
 
             auto target = window.focusTargetAt(x, y);
@@ -1288,6 +1322,9 @@ unittest
 
     screen.dismissActiveModal();
     assert(!screen.hasActiveModal());
+    assert(!modal.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!modal.visible);
     assert(screen.currentFocusedWidget() is null);
 }
@@ -1328,6 +1365,9 @@ unittest
     assert(screen.dispatchKeyEvent(keyEvent));
     assert(cancelClicked);
     assert(!screen.hasActiveModal());
+    assert(!modal.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!modal.visible);
 }
 
@@ -1393,6 +1433,37 @@ unittest
     assert(probe.lastDelta == 0.05f);
 
     assert(screen.clampUiTickDelta(-1.0f) == 0.0f);
+}
+
+@("UiScreen toggles windows through open and close transitions")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(320.0f, 220.0f);
+
+    auto window = new UiWindow("animated", 0.0f, 0.0f, 120.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    window.visible = false;
+    screen.addWindow(window);
+
+    screen.toggleWindow(window);
+    assert(window.visible);
+    assert(window.acceptsInput());
+    assert(window.hasActiveTransition());
+
+    foreach (_; 0 .. 3)
+        screen.tickUi(0.05f);
+    assert(window.visible);
+    assert(!window.hasActiveTransition());
+
+    screen.toggleWindow(window);
+    assert(window.visible);
+    assert(!window.acceptsInput());
+    assert(window.hasActiveTransition());
+
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
+    assert(!window.visible);
 }
 
 @("UiScreen can place a window away from existing visible windows")

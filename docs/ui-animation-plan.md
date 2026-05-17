@@ -91,7 +91,7 @@ Common transition properties:
 - translation offset. Exported per window through `UiWindowDrawRange.offsetX` and `offsetY`.
 - optional shadow or border emphasis
 
-Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes, exports alpha, scale, and offset to the window draw range, and applies those values to generated UI vertices before upload; demo wiring is still planned.
+Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes, exports alpha, scale, and offset to the window draw range, and applies those values to generated UI vertices before upload. `UiScreen.showWindow`, `hideWindow`, and `toggleWindow` use these transitions for normal windows, and the demo singleton windows are wired through that path.
 
 Input policy must be explicit:
 

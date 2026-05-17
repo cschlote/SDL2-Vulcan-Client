@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Wired normal `UiScreen` show, hide, and toggle paths plus demo singleton windows through UI window transitions.
 - Applied UI window transition alpha, scale, and offset to generated overlay vertices before upload.
 - Added renderer-facing window presentation parameters for UI transition alpha, scale, and offset.
 - Added logical `UiWindow` open and close transition states with progress ticking.

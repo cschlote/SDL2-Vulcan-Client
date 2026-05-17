@@ -448,11 +448,9 @@ final class DemoUiScreen : UiScreen
         if (window is null)
             return;
 
-        window.visible = true;
-        bringWindowToFront(window);
+        showWindow(window);
         if (sidebarWindow !is null)
             bringWindowToFront(sidebarWindow);
-        ensureWindowLayout();
     }
 
     void requestQuit()
@@ -484,9 +482,9 @@ final class DemoUiScreen : UiScreen
 
     void updateWindowState()
     {
-        helpWindow.visible = false;
-        statusWindow.visible = false;
-        settingsWindow.visible = false;
+        hideWindow(helpWindow, false);
+        hideWindow(statusWindow, false);
+        hideWindow(settingsWindow, false);
     }
 
     void buildSidebarWindow()
@@ -613,7 +611,7 @@ final class DemoUiScreen : UiScreen
         helpWindow.visible = false;
         helpWindow.onClose = ()
         {
-            helpWindow.visible = false;
+            hideWindow(helpWindow);
             logLine("UiWindow close: Help Desk");
         };
         registerWindowInteractionHandlers(helpWindow);
@@ -640,7 +638,7 @@ final class DemoUiScreen : UiScreen
         statusWindow.visible = false;
         statusWindow.onClose = ()
         {
-            statusWindow.visible = false;
+            hideWindow(statusWindow);
             logLine("UiWindow close: Status");
         };
         registerWindowInteractionHandlers(statusWindow);
@@ -731,7 +729,7 @@ final class DemoUiScreen : UiScreen
         settingsWindow.visible = false;
         settingsWindow.onClose = ()
         {
-            settingsWindow.visible = false;
+            hideWindow(settingsWindow);
             logLine("UiWindow close: Settings");
         };
         registerWindowInteractionHandlers(settingsWindow);
@@ -1021,6 +1019,9 @@ unittest
     screen.toggleSettingsWindow();
     assert(screen.settingsWindow.visible);
     screen.toggleSettingsWindow();
+    assert(!screen.settingsWindow.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!screen.settingsWindow.visible);
     screen.spawnLayoutTestWindow();
     assert(screen.windowsInFrontToBack().length >= 5);
@@ -1050,18 +1051,27 @@ unittest
     screen.sidebarHelpButton.onClick();
     assert(screen.helpWindow.visible);
     screen.sidebarHelpButton.onClick();
+    assert(!screen.helpWindow.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!screen.helpWindow.visible);
 
     assert(!screen.statusWindow.visible);
     screen.sidebarStatusButton.onClick();
     assert(screen.statusWindow.visible);
     screen.sidebarStatusButton.onClick();
+    assert(!screen.statusWindow.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!screen.statusWindow.visible);
 
     assert(!screen.settingsWindow.visible);
     screen.sidebarSettingsButton.onClick();
     assert(screen.settingsWindow.visible);
     screen.sidebarSettingsButton.onClick();
+    assert(!screen.settingsWindow.acceptsInput());
+    foreach (_; 0 .. 2)
+        screen.tickUi(0.05f);
     assert(!screen.settingsWindow.visible);
 
     const testCount = screen.testWindows.length;

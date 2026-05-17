@@ -56,6 +56,7 @@ Generic responsibilities belong in `UiScreen`:
 - drive layout for registered windows
 - clamp windows to the viewport
 - place windows in free screen space when possible
+- start normal window open and close transitions through shared show, hide, and toggle helpers
 - provide shared helpers for window dragging, resizing, toggling, registration, and removal
 
 Responsibilities that do not belong in `UiScreen`:
@@ -69,7 +70,7 @@ Responsibilities that do not belong in `UiScreen`:
 
 Those belong in a subclass such as `DemoUiScreen`, or later in a game-specific screen class.
 
-`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, and viewport clamping. The next cleanup question is whether renderer-facing overlay geometry should also become a generic `vulkan.ui` type.
+`UiScreen` is still experimental, but `DemoUiScreen` now uses it for window registration, iteration, hit testing, layout, dragging, resizing, viewport clamping, and normal window show/hide transitions.
 
 ## UiWindow
 

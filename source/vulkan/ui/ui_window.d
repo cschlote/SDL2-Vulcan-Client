@@ -205,6 +205,12 @@ final class UiWindow : UiWidget
         return transitionState == UiWindowTransitionState.opening || transitionState == UiWindowTransitionState.closing;
     }
 
+    /** Returns true when this window should currently accept user input. */
+    bool acceptsInput() const
+    {
+        return visible && transitionState != UiWindowTransitionState.closing && transitionState != UiWindowTransitionState.hidden;
+    }
+
     /** Returns the renderer-facing alpha for the current transition frame. */
     float presentationAlpha() const
     {
@@ -878,6 +884,7 @@ unittest
     assert(window.transitionState == UiWindowTransitionState.closing);
     assert(window.visible);
     assert(window.presentationAlpha() == 1.0f);
+    assert(!window.acceptsInput());
 
     assert(window.tickTransition(0.10f));
     assert(window.transitionState == UiWindowTransitionState.hidden);
