@@ -280,7 +280,7 @@ abstract class UiWidget
         auto localContext = context.offset(x, y);
         renderSelf(localContext);
 
-        auto childContext = localContext.offset(childOffsetX, childOffsetY);
+        auto childContext = childRenderContext(localContext.offset(childOffsetX, childOffsetY));
         foreach (index, child; children)
         {
             childContext.depthBase = localContext.depthBase - cast(float)(index + 1) * 0.001f;
@@ -310,6 +310,12 @@ protected:
     }
 
     abstract void renderSelf(ref UiRenderContext context);
+
+    /** Allows containers to alter the render context used for children. */
+    UiRenderContext childRenderContext(UiRenderContext context)
+    {
+        return context;
+    }
 
     /** Returns the debug bounds color for this widget type. */
     float[4] debugBoundsColor() const

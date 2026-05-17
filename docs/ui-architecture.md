@@ -115,7 +115,7 @@ The reusable UI package currently provides these retained widgets:
 - `UiVBox`: vertical stack with spacing, padding, and flex-style growth/shrink hints
 - `UiHBox`: horizontal row with spacing, padding, and flex-style growth/shrink hints
 - `UiGrid`: weighted grid with explicit cell placement
-- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, scrollbar thumbs, and edge indicators
+- `UiScrollArea`: partial viewport for oversized content with retained scroll offsets, wheel handling, child-geometry clipping, scrollbar thumbs, and edge indicators
 - `UiToggle`: boolean checkbox-style setting control
 - `UiSlider`: horizontal floating-point value control with pointer dragging
 - `UiTabBar`: horizontal page selector with keyboard navigation and first-pass overflow scrolling
@@ -127,9 +127,9 @@ The reusable UI package currently provides these retained widgets:
 
 The D-key debug overlay outlines these boxes at runtime. The current color map is orange for `UiWindow`, cyan for `UiContentBox` and `UiFrameBox`, green for `UiVBox`, blue for `UiHBox`, purple for `UiGrid`, yellow for `UiSpacer`, and red for the generic widget fallback used by basic controls.
 
-Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior with renderer clipping, a generalized icon-capable action button, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and `UiSidebarAction` rows. Those rows already keep icon slot and expanded label region separate, show active singleton markers, and expose delayed collapsed-mode tooltips; the remaining sidebar work is a reusable sidebar container, scrollable launcher group, stronger visual design, and better authored image assets.
+Planned widgets and widget variants include reusable `UiSidebar`, draggable-scrollbar `UiScrollArea` behavior, a generalized icon-capable action button, richer `UiTabBar` and `UiListBox` variants, `UiPopupRoot`, `UiTooltip`, and media-oriented widgets such as animated `UiImage` and future `UiVideo`. The current demo sidebar is a composition of a chrome-less `UiWindow`, `UiVBox`, and `UiSidebarAction` rows. Those rows already keep icon slot and expanded label region separate, show active singleton markers, and expose delayed collapsed-mode tooltips; the remaining sidebar work is a reusable sidebar container, scrollable launcher group, stronger visual design, and better authored image assets.
 
-`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The first `UiScrollArea` implementation owns retained offsets and wheel handling; renderer clipping and scrollbar widgets are still open.
+`UiContentBox` and `UiFrameBox` should not become scrollable content solutions. They remain simple content/frame boxes. Oversized content belongs in a separate `UiScrollArea` that owns a viewport, scroll offsets, clipping, and horizontal or vertical scrollbars. The current `UiScrollArea` implementation owns retained offsets, wheel handling, child-geometry clipping, visible scrollbar thumbs, and edge indicators; direct scrollbar dragging is still open.
 
 ## Context-Sensitive Cursors
 

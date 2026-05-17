@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added retained UI clip rectangles and `UiScrollArea` child-geometry clipping for panel, image, and text draw commands.
 - Documented the asset and localization pipeline direction: PNG for authored UI images, PPM as fallback/test data, glTF/GLB for 3D models, and gettext PO catalogs for localization.
 - Reprioritized the demo UI roadmap into grouped infrastructure, asset, demo, audio, 3D, localization, and package-boundary tracks.
 - Added optional `UiWindow` backfill rendering, viewport-edge pinning, and a chrome-less right-pinned Status window.

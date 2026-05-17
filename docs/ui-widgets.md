@@ -366,9 +366,9 @@ Demo coverage:
 
 Status: Partial.
 
-`UiScrollArea` is the planned widget for content that can be larger than the visible region. It should own a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
+`UiScrollArea` is the widget for content that can be larger than the visible region. It owns a viewport, scroll offsets, optional horizontal and vertical scrollbars, clipping, and pointer-event coordinate translation into the scrolled content.
 
-The first implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Renderer clipping and direct scrollbar dragging are still planned.
+The current implementation owns retained `scrollX` and `scrollY` offsets, measures content extent, clamps scrolling to content bounds, translates child input by the current scroll offset, consumes mouse-wheel events, clips child panel/image/text geometry to the viewport, and renders thin overlay scrollbar thumbs plus edge overflow indicators. Direct scrollbar dragging is still planned.
 
 Common use cases:
 
@@ -401,7 +401,7 @@ Implementation direction:
 Demo coverage:
 
 - planned Widget Demo gallery should use it once the gallery grows beyond one window.
-- Help Desk should use it for long help content after renderer clipping and text-block content exist.
+- Help Desk should use it for long help content after text-block content exists.
 - Settings should use it when tab pages or grouped settings exceed the current window height.
 
 Open questions:

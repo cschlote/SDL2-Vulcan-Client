@@ -80,7 +80,7 @@ Planned extensions:
 - add search over built-in help topics and documentation snippets
 - add an AI-agent style question interface after the help data model and safety boundaries are clear
 - add a scrolling log region after a text-area or text-block viewport exists
-- use `UiScrollArea` for long help and log content once renderer clipping exists
+- use `UiScrollArea` for long help and log content once text-block content is ready
 - add filter controls for input, UI, renderer, and audio messages
 - add a copy/export command after clipboard support exists
 
@@ -188,7 +188,7 @@ Planned extensions:
 - replace the rough low-resolution placeholder image assets with a coherent higher-resolution icon/image set
 - move richer image browsing and animated-image examples into the planned Media Demo
 - add future controls to the gallery
-- wrap the gallery in `UiScrollArea` after renderer clipping exists
+- wrap the gallery in `UiScrollArea` once the gallery grows beyond the available window height
 - add popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family

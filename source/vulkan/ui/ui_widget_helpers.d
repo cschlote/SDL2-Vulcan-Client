@@ -9,6 +9,7 @@
  */
 module vulkan.ui.ui_widget_helpers;
 
+import std.algorithm : max, min;
 import std.math : isInfinity, isNaN;
 
 import vulkan.font.font_legacy : appendText;
@@ -40,18 +41,50 @@ void appendImageQuad(ref UiRenderContext context, string assetId, float left, fl
     if (context.images is null || assetId.length == 0 || right <= left || bottom <= top)
         return;
 
+    float clippedLeft = context.originX + left;
+    float clippedTop = context.originY + top;
+    float clippedRight = context.originX + right;
+    float clippedBottom = context.originY + bottom;
+    float clippedU0 = uvRect[0];
+    float clippedV0 = uvRect[1];
+    float clippedU1 = uvRect[2];
+    float clippedV1 = uvRect[3];
+
+    if (context.clipEnabled)
+    {
+        const originalLeft = clippedLeft;
+        const originalTop = clippedTop;
+        const originalRight = clippedRight;
+        const originalBottom = clippedBottom;
+        clippedLeft = max(clippedLeft, context.clipLeft);
+        clippedTop = max(clippedTop, context.clipTop);
+        clippedRight = min(clippedRight, context.clipRight);
+        clippedBottom = min(clippedBottom, context.clipBottom);
+        if (clippedRight <= clippedLeft || clippedBottom <= clippedTop)
+            return;
+
+        const originalWidth = originalRight - originalLeft;
+        const originalHeight = originalBottom - originalTop;
+        const uSpan = uvRect[2] - uvRect[0];
+        const vSpan = uvRect[3] - uvRect[1];
+        clippedU0 = uvRect[0] + uSpan * ((clippedLeft - originalLeft) / originalWidth);
+        clippedU1 = uvRect[0] + uSpan * ((clippedRight - originalLeft) / originalWidth);
+        clippedV0 = uvRect[1] + vSpan * ((clippedTop - originalTop) / originalHeight);
+        clippedV1 = uvRect[1] + vSpan * ((clippedBottom - originalTop) / originalHeight);
+    }
+
     UiImageDrawCommand command;
     command.assetId = assetId;
     command.fallbackColor = fallbackColor;
 
-    const x0 = toNdcX(context, left);
-    const y0 = toNdcY(context, top);
-    const x1 = toNdcX(context, right);
-    const y1 = toNdcY(context, bottom);
-    const u0 = uvRect[0];
-    const v0 = uvRect[1];
-    const u1 = uvRect[2];
-    const v1 = uvRect[3];
+    const x0 = absoluteToNdcX(context, clippedLeft);
+    const y0 = absoluteToNdcY(context, clippedTop);
+    const x1 = absoluteToNdcX(context, clippedRight);
+    const y1 = absoluteToNdcY(context, clippedBottom);
+    const u0 = clippedU0;
+    const v0 = clippedV0;
+    const u1 = clippedU1;
+    const v1 = clippedV1;
 
     command.vertices[0] = Vertex([x0, y0, z], tintColor, [0.0f, 0.0f, 1.0f], [u0, v0]);
     command.vertices[1] = Vertex([x1, y0, z], tintColor, [0.0f, 0.0f, 1.0f], [u1, v0]);
@@ -133,7 +166,16 @@ void appendTextLine(ref UiRenderContext context, UiTextStyle style, string text,
     if (atlas is null || vertices is null)
         return;
 
-    appendText(*vertices, *atlas, text, context.originX + x, context.originY + y, z, color, context.extentWidth, context.extentHeight);
+    if (!context.clipEnabled)
+    {
+        appendText(*vertices, *atlas, text, context.originX + x, context.originY + y, z, color, context.extentWidth, context.extentHeight);
+        return;
+    }
+
+    Vertex[] emitted;
+    appendText(emitted, *atlas, text, context.originX + x, context.originY + y, z, color, context.extentWidth, context.extentHeight);
+    foreach (index; 0 .. emitted.length / 6)
+        appendClippedTexturedQuad(context, *vertices, emitted[index * 6 .. index * 6 + 6]);
 }
 
 /** Returns the active vertex buffer for the requested text style. */
@@ -145,10 +187,25 @@ Vertex[]* textVerticesFor(ref UiRenderContext context, UiTextStyle style)
 /** Appends a colored quad to the panel vertex buffer in normalized device space. */
 void appendQuad(ref UiRenderContext context, float left, float top, float right, float bottom, float z, float[4] color)
 {
-    const x0 = toNdcX(context, left);
-    const y0 = toNdcY(context, top);
-    const x1 = toNdcX(context, right);
-    const y1 = toNdcY(context, bottom);
+    float clippedLeft = context.originX + left;
+    float clippedTop = context.originY + top;
+    float clippedRight = context.originX + right;
+    float clippedBottom = context.originY + bottom;
+
+    if (context.clipEnabled)
+    {
+        clippedLeft = max(clippedLeft, context.clipLeft);
+        clippedTop = max(clippedTop, context.clipTop);
+        clippedRight = min(clippedRight, context.clipRight);
+        clippedBottom = min(clippedBottom, context.clipBottom);
+        if (clippedRight <= clippedLeft || clippedBottom <= clippedTop)
+            return;
+    }
+
+    const x0 = absoluteToNdcX(context, clippedLeft);
+    const y0 = absoluteToNdcY(context, clippedTop);
+    const x1 = absoluteToNdcX(context, clippedRight);
+    const y1 = absoluteToNdcY(context, clippedBottom);
 
     (*context.panels) ~= Vertex([x0, y0, z], color);
     (*context.panels) ~= Vertex([x1, y0, z], color);
@@ -157,6 +214,54 @@ void appendQuad(ref UiRenderContext context, float left, float top, float right,
     (*context.panels) ~= Vertex([x0, y0, z], color);
     (*context.panels) ~= Vertex([x1, y1, z], color);
     (*context.panels) ~= Vertex([x0, y1, z], color);
+}
+
+/** Appends one already-generated textured text quad after clipping it in pixel space. */
+private void appendClippedTexturedQuad(ref UiRenderContext context, ref Vertex[] vertices, Vertex[] quad)
+{
+    if (quad.length != 6)
+        return;
+
+    const left = ndcToAbsoluteX(context, quad[0].position[0]);
+    const top = ndcToAbsoluteY(context, quad[0].position[1]);
+    const right = ndcToAbsoluteX(context, quad[1].position[0]);
+    const bottom = ndcToAbsoluteY(context, quad[2].position[1]);
+    if (right <= left || bottom <= top)
+        return;
+
+    const clippedLeft = max(left, context.clipLeft);
+    const clippedTop = max(top, context.clipTop);
+    const clippedRight = min(right, context.clipRight);
+    const clippedBottom = min(bottom, context.clipBottom);
+    if (clippedRight <= clippedLeft || clippedBottom <= clippedTop)
+        return;
+
+    const u0 = quad[0].uv[0];
+    const v0 = quad[0].uv[1];
+    const u1 = quad[1].uv[0];
+    const v1 = quad[2].uv[1];
+    const uSpan = u1 - u0;
+    const vSpan = v1 - v0;
+    const width = right - left;
+    const height = bottom - top;
+    const clippedU0 = u0 + uSpan * ((clippedLeft - left) / width);
+    const clippedU1 = u0 + uSpan * ((clippedRight - left) / width);
+    const clippedV0 = v0 + vSpan * ((clippedTop - top) / height);
+    const clippedV1 = v0 + vSpan * ((clippedBottom - top) / height);
+    const z = quad[0].position[2];
+    const color = quad[0].color;
+    const x0 = absoluteToNdcX(context, clippedLeft);
+    const y0 = absoluteToNdcY(context, clippedTop);
+    const x1 = absoluteToNdcX(context, clippedRight);
+    const y1 = absoluteToNdcY(context, clippedBottom);
+
+    vertices ~= Vertex([x0, y0, z], color, [0.0f, 0.0f, 1.0f], [clippedU0, clippedV0]);
+    vertices ~= Vertex([x1, y0, z], color, [0.0f, 0.0f, 1.0f], [clippedU1, clippedV0]);
+    vertices ~= Vertex([x1, y1, z], color, [0.0f, 0.0f, 1.0f], [clippedU1, clippedV1]);
+
+    vertices ~= Vertex([x0, y0, z], color, [0.0f, 0.0f, 1.0f], [clippedU0, clippedV0]);
+    vertices ~= Vertex([x1, y1, z], color, [0.0f, 0.0f, 1.0f], [clippedU1, clippedV1]);
+    vertices ~= Vertex([x0, y1, z], color, [0.0f, 0.0f, 1.0f], [clippedU0, clippedV1]);
 }
 
 /** Appends a colored triangle to the panel vertex buffer in normalized device space.
@@ -191,15 +296,39 @@ void appendTriangle(ref UiRenderContext context, float x0Pixels, float y0Pixels,
 /** Converts a local X coordinate from pixels to normalized device space. */
 float toNdcX(ref UiRenderContext context, float pixelX)
 {
-    const extentWidth = safeExtent(context.extentWidth);
-    return (context.originX + pixelX) / extentWidth * 2.0f - 1.0f;
+    return absoluteToNdcX(context, context.originX + pixelX);
 }
 
 /** Converts a local Y coordinate from pixels to normalized device space. */
 float toNdcY(ref UiRenderContext context, float pixelY)
 {
+    return absoluteToNdcY(context, context.originY + pixelY);
+}
+
+/** Converts an absolute X coordinate from pixels to normalized device space. */
+float absoluteToNdcX(ref UiRenderContext context, float pixelX)
+{
+    const extentWidth = safeExtent(context.extentWidth);
+    return pixelX / extentWidth * 2.0f - 1.0f;
+}
+
+/** Converts an absolute Y coordinate from pixels to normalized device space. */
+float absoluteToNdcY(ref UiRenderContext context, float pixelY)
+{
     const extentHeight = safeExtent(context.extentHeight);
-    return (context.originY + pixelY) / extentHeight * 2.0f - 1.0f;
+    return pixelY / extentHeight * 2.0f - 1.0f;
+}
+
+/** Converts an NDC X coordinate back to absolute pixels. */
+float ndcToAbsoluteX(ref UiRenderContext context, float ndcX)
+{
+    return (ndcX + 1.0f) * 0.5f * safeExtent(context.extentWidth);
+}
+
+/** Converts an NDC Y coordinate back to absolute pixels. */
+float ndcToAbsoluteY(ref UiRenderContext context, float ndcY)
+{
+    return (ndcY + 1.0f) * 0.5f * safeExtent(context.extentHeight);
 }
 
 /** Clamps invalid or zero extents to a safe positive fallback value. */

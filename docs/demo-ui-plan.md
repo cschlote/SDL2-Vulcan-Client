@@ -68,7 +68,7 @@ Next widgets:
 - reusable left-edge sidebar or dock bar
 - icon button for sidebar and toolbar actions
 - tooltip for collapsed icon-only controls
-- scroll area clipping plus draggable horizontal/vertical scrollbars
+- draggable horizontal/vertical scrollbars for scroll areas
 - icon/image widget backed by renderer texture data; asset-id draw intents, a fixed UI image atlas, atlas-region registry, and first file-backed low-resolution PPM demo assets exist; high-resolution authored PNG icons and package image loading remain planned
 - widget-level popup/menu facade for dropdowns, context menus, and tooltips
 - animated image/media widgets
@@ -120,7 +120,7 @@ The current Close All sidebar action does not use `UiWindow.title` as an identit
 
 `UiWindow.title` is presentation text, not identity. The window identity model gives every `UiWindow` a stable generated id and exposes an opaque pointer-sized `userTag` for application integration. That opaque value can be a numeric tag or pointer-sized reference-style value, but it should not become the primary engine identity. Raw object or `void*` references can hide ownership and lifetime assumptions, especially when D call syntax makes `myFct(x, ...)` look like `x.myFct(...)`; this makes accidental coupling easy to miss. The safer default is: engine code searches by generated id or owned collections, application code may attach an opaque tag only when it owns the lifetime contract.
 
-The number of directly visible sidebar actions should stay limited while the minimum SDL window size is small. At the current minimum SDL window height, the upper launcher group should stay at eight direct actions or fewer. When the demo grows more windows than the sidebar can display comfortably, the upper launcher group should become scrollable by mouse wheel and use fade-out indicators to show that more entries exist above or below. The bottom system group should remain pinned and should not scroll with the launcher actions. The initial `UiScrollArea` already supports retained scroll offsets, wheel routing, scrollbar thumbs, and edge overflow indicators, but it still needs renderer clipping and direct scrollbar dragging before it should be used for this sidebar launcher group.
+The number of directly visible sidebar actions should stay limited while the minimum SDL window size is small. At the current minimum SDL window height, the upper launcher group should stay at eight direct actions or fewer. When the demo grows more windows than the sidebar can display comfortably, the upper launcher group should become scrollable by mouse wheel and use fade-out indicators to show that more entries exist above or below. The bottom system group should remain pinned and should not scroll with the launcher actions. `UiScrollArea` already supports retained scroll offsets, wheel routing, child-geometry clipping, scrollbar thumbs, and edge overflow indicators, but it still needs direct scrollbar dragging before it should be used for this sidebar launcher group.
 
 Interactive controls that drag, such as sliders, need local pointer capture after button-down so move and button-up events keep updating the active control until the gesture ends.
 
@@ -203,13 +203,12 @@ These items are considered baseline and should not be re-planned unless a regres
 
 These items unblock several existing windows and should be addressed before expanding the demo with more content:
 
-1. Add renderer clipping for `UiScrollArea`.
-2. Add direct scrollbar dragging for `UiScrollArea`.
-3. Use scroll areas in long Help Desk, Settings, Widget Demo, and future sidebar launcher overflow content.
-4. Extract a widget-level popup facade from the current screen-owned dropdown popup path.
-5. Move tooltip behavior onto that popup facade, including hover delay, placement, input transparency, and dismissal policy.
-6. Keep dropdowns, context menus, and tooltips on one shared popup placement/focus/stacking model.
-7. Add a modal/dialog demo slice covering default buttons, cancel buttons, blocked background routing, and focused-window title tinting.
+1. Add direct scrollbar dragging for `UiScrollArea`.
+2. Use scroll areas in long Help Desk, Settings, Widget Demo, and future sidebar launcher overflow content.
+3. Extract a widget-level popup facade from the current screen-owned dropdown popup path.
+4. Move tooltip behavior onto that popup facade, including hover delay, placement, input transparency, and dismissal policy.
+5. Keep dropdowns, context menus, and tooltips on one shared popup placement/focus/stacking model.
+6. Add a modal/dialog demo slice covering default buttons, cancel buttons, blocked background routing, and focused-window title tinting.
 
 Rationale: scroll clipping and popup ownership are structural. Without them, every new long panel, help page, menu, tooltip, or selection widget risks growing its own special case.
 
