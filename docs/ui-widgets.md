@@ -666,9 +666,9 @@ Demo coverage:
 
 ### UiProgressBar
 
-Status: Planned.
+Status: Partial.
 
-`UiProgressBar` displays determinate or indeterminate progress.
+`UiProgressBar` displays determinate progress as a horizontal filled track with optional percentage text. Indeterminate animation is still planned.
 
 Common use cases:
 
@@ -679,13 +679,14 @@ Common use cases:
 
 Required behavior:
 
-- clamped value display
-- optional text label
-- future indeterminate animation
+- clamped value display. Implemented.
+- optional text label. Implemented.
+- future indeterminate animation. Planned.
 
 Demo coverage:
 
-- planned Animation Demo and Widget Demo.
+- Widget Demo uses an Amount slider to update a determinate progress bar.
+- planned Animation Demo.
 
 ### UiListBox
 

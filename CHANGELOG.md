@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added a determinate `UiProgressBar` and wired the Widget Demo slider to update it.
 - Matched window header transparency to the body fill and centered titles by font ascent/descent metrics.
 - Kept keyboard focus inside open dropdown popups and lowered synthetic UI audio preview gain.
 - Added visible `UiScrollArea` scrollbar thumbs and edge overflow indicators.

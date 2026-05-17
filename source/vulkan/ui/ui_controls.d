@@ -340,6 +340,100 @@ protected:
     }
 }
 
+/** Determinate horizontal progress indicator with optional text. */
+final class UiProgressBar : UiWidget
+{
+    /** Optional label prefix rendered in the bar. */
+    string label;
+    /** Smallest represented value. */
+    float minimum;
+    /** Largest represented value. */
+    float maximum;
+    /** Current clamped value. */
+    float value;
+    /** Font style used for optional text. */
+    UiTextStyle style;
+    /** Track fill color. */
+    float[4] fillColor;
+    /** Track border color. */
+    float[4] borderColor;
+    /** Filled progress color. */
+    float[4] accentColor;
+    /** Text color. */
+    float[4] textColor;
+    /** Whether percentage text is drawn inside the bar. */
+    bool showText = true;
+
+    /** Creates a determinate progress bar.
+     *
+     * Params:
+     *   label = Optional label prefix.
+     *   minimum = Smallest represented value.
+     *   maximum = Largest represented value; adjusted above `minimum` if needed.
+     *   value = Initial value, clamped to the configured range.
+     *   x = Left edge in parent coordinates.
+     *   y = Top edge in parent coordinates.
+     *   width = Optional explicit width in pixels.
+     *   height = Optional explicit height in pixels.
+     *   style = Font style used for the optional text.
+     */
+    this(string label = "", float minimum = 0.0f, float maximum = 1.0f, float value = 0.0f, float x = 0.0f, float y = 0.0f, float width = 220.0f, float height = 22.0f, UiTextStyle style = UiTextStyle.medium)
+    {
+        super(x, y, width, height);
+        this.label = label;
+        this.minimum = minimum;
+        this.maximum = maximum > minimum ? maximum : minimum + 1.0f;
+        this.value = clampFloat(value, this.minimum, this.maximum);
+        this.style = style;
+        fillColor = cast(float[4])defaultFillColor;
+        borderColor = cast(float[4])defaultBorderColor;
+        accentColor = cast(float[4])defaultAccentColor;
+        textColor = cast(float[4])defaultTextColor;
+    }
+
+    /** Sets the progress value and returns whether it changed. */
+    bool setValue(float newValue)
+    {
+        const clampedValue = clampFloat(newValue, minimum, maximum);
+        if (clampedValue == value)
+            return false;
+
+        value = clampedValue;
+        return true;
+    }
+
+    /** Returns normalized progress in the range 0..1. */
+    float normalizedValue() const
+    {
+        const span = maximum - minimum;
+        return span > 0.0f ? clampFloat((value - minimum) / span, 0.0f, 1.0f) : 0.0f;
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        const textHeightValue = textHeight(context, style);
+        const measuredHeight = preferredHeight > 0.0f ? preferredHeight : max(height, textHeightValue + 8.0f);
+        const measuredWidth = preferredWidth > 0.0f ? preferredWidth : width;
+        return UiLayoutSize(measuredWidth, measuredHeight);
+    }
+
+    override void renderSelf(ref UiRenderContext context)
+    {
+        appendSurfaceFrame(context, 0.0f, 0.0f, width, height, fillColor, borderColor, context.depthBase);
+
+        const progressRight = 1.0f + (width - 2.0f) * normalizedValue();
+        if (progressRight > 1.0f)
+            appendQuad(context, 1.0f, 1.0f, progressRight, height - 1.0f, context.depthBase - 0.001f, accentColor);
+
+        if (showText)
+        {
+            const text = label.length == 0 ? format("%.0f%%", normalizedValue() * 100.0f) : format("%s %.0f%%", label, normalizedValue() * 100.0f);
+            appendTextLine(context, style, text, controlPaddingX, centeredTextY(height, fallbackTextHeight), textColor, context.depthBase - 0.002f);
+        }
+    }
+}
+
 /** Horizontal tab selector for switching between related pages. */
 final class UiTabBar : UiWidget
 {
@@ -1032,6 +1126,21 @@ unittest
     event.kind = UiPointerEventKind.buttonUp;
     assert(slider.dispatchPointerEvent(event));
     assert(commits == 1);
+}
+
+@("UiProgressBar clamps determinate progress values")
+unittest
+{
+    auto progress = new UiProgressBar("Load", 0.0f, 100.0f, 25.0f, 0.0f, 0.0f, 180.0f, 22.0f);
+
+    assert(progress.normalizedValue() == 0.25f);
+    assert(progress.setValue(120.0f));
+    assert(progress.value == 100.0f);
+    assert(progress.normalizedValue() == 1.0f);
+    assert(progress.setValue(-20.0f));
+    assert(progress.value == 0.0f);
+    assert(progress.normalizedValue() == 0.0f);
+    assert(!progress.setValue(0.0f));
 }
 
 @("UiDropdown requests popup anchors and selects by index")

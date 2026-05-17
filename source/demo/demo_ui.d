@@ -27,7 +27,7 @@ import logging : logLine;
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
-import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiSlider, UiTabBar, UiTextField, UiToggle;
+import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiProgressBar, UiSlider, UiTabBar, UiTextField, UiToggle;
 import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
@@ -123,17 +123,22 @@ final class LayoutDemoWindow
         controlsBody.add(controlsRowA);
         auto controlsRowB = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         controlsRowB.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
-        controlsRowB.add(new UiSlider("Amount", 0.0f, 1.0f, 0.42f, 0.0f, 0.0f, 220.0f, 34.0f));
+        auto amountSlider = new UiSlider("Amount", 0.0f, 1.0f, 0.42f, 0.0f, 0.0f, 220.0f, 34.0f);
+        controlsRowB.add(amountSlider);
         controlsRowB.add(new UiTextField("demo", "type here", 0.0f, 0.0f, 160.0f, 28.0f));
         controlsBody.add(controlsRowB);
+        auto progressBar = new UiProgressBar("Progress", 0.0f, 1.0f, amountSlider.value, 0.0f, 0.0f, 0.0f, 24.0f);
+        progressBar.setLayoutHint(0.0f, 24.0f, 0.0f, 24.0f, float.max, 24.0f, 1.0f, 0.0f);
+        amountSlider.onChanged = (value) { progressBar.setValue(value); };
+        controlsBody.add(progressBar);
         auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
         actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
         actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
         controlsBody.add(actionRow);
 
-        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 150.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        controlsSection.setLayoutHint(0.0f, 150.0f, 0.0f, 150.0f, float.max, 150.0f, 1.0f, 0.0f);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 182.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 182.0f, 0.0f, 182.0f, float.max, 182.0f, 1.0f, 0.0f);
         controlsSection.add(controlsBody);
 
         content.add(layoutSection);
