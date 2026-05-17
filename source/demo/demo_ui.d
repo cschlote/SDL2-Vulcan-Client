@@ -32,7 +32,7 @@ import vulkan.ui.ui_cursor : UiCursorKind;
 import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSeparator, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
 import vulkan.ui.ui_widget : UiWidget;
@@ -131,6 +131,7 @@ final class LayoutDemoWindow
         progressBar.setLayoutHint(0.0f, 24.0f, 0.0f, 24.0f, float.max, 24.0f, 1.0f, 0.0f);
         amountSlider.onChanged = (value) { progressBar.setValue(value); };
         controlsBody.add(progressBar);
+        controlsBody.add(new UiSeparator());
         auto selectionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         selectionRow.setLayoutHint(0.0f, 78.0f, 0.0f, 78.0f, float.max, 78.0f, 1.0f, 0.0f);
         auto listBox = new UiListBox(["Alpha", "Beta", "Gamma"], 1, 0.0f, 0.0f, 150.0f, 72.0f, UiTextStyle.medium, 24.0f);
@@ -147,14 +148,15 @@ final class LayoutDemoWindow
         tabsRow.add(demoTabs);
         tabsRow.add(tabSummary);
         controlsBody.add(tabsRow);
+        controlsBody.add(new UiSeparator());
         auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
         actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
         actionRow.add(new UiButton("Primary", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText));
         actionRow.add(new UiButton("Secondary", 0.0f, 0.0f, 124.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])probeBorderB, cast(float[4])initButtonText));
         controlsBody.add(actionRow);
 
-        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 308.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        controlsSection.setLayoutHint(0.0f, 308.0f, 0.0f, 308.0f, float.max, 308.0f, 1.0f, 0.0f);
+        auto controlsSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 326.0f, [0.10f, 0.15f, 0.16f, 0.92f], [0.34f, 0.82f, 0.46f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        controlsSection.setLayoutHint(0.0f, 326.0f, 0.0f, 326.0f, float.max, 326.0f, 1.0f, 0.0f);
         controlsSection.add(controlsBody);
 
         content.add(layoutSection);

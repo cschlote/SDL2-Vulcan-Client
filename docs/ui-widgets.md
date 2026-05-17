@@ -720,9 +720,9 @@ Demo coverage:
 
 ### UiSeparator
 
-Status: Planned.
+Status: Implemented.
 
-`UiSeparator` is a thin visual divider for grouped content.
+`UiSeparator` is a thin non-interactive visual divider for grouped content. It supports horizontal and vertical orientation and participates in box layout through fixed-thickness hints.
 
 Common use cases:
 
@@ -732,12 +732,13 @@ Common use cases:
 
 Required behavior:
 
-- horizontal and vertical variants
-- predictable spacing in `UiVBox` and `UiHBox`
-- no input behavior
+- horizontal and vertical variants. Implemented.
+- predictable spacing in `UiVBox` and `UiHBox`. Implemented through fixed-thickness layout hints.
+- no input behavior. Implemented.
 
 Demo coverage:
 
+- Widget Demo groups related control rows with horizontal separators.
 - Sidebar after grouped launcher sections exist.
 - Settings after tabs/grouped panels exist.
 

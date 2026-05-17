@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added `UiSeparator` and used it to group controls in the Widget Demo.
 - Added a visible `UiTabBar` selection example to the Widget Demo.
 - Added a visible `UiListBox` selection example to the Widget Demo.
 - Added a determinate `UiProgressBar` and wired the Widget Demo slider to update it.

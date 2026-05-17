@@ -144,13 +144,14 @@ Planned extensions:
 
 ## Widget Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 
 - spawns as independent windows with serial titles
 - contains a layout and box section with nested probe boxes and a padded content-box example
 - contains a retained-controls section with buttons, toggle, slider, dropdown, list, tab, and text field examples
+- groups related control rows with non-interactive separators
 - updates a progress bar from the Amount slider
 - updates a summary label from the list selection
 - updates a summary label from the tab selection

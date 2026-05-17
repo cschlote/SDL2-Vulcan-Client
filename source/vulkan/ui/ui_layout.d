@@ -26,8 +26,16 @@ private immutable float[4] scrollAreaDebugBoundsColor = [1.00f, 0.72f, 0.18f, 0.
 private immutable float[4] scrollTrackColor = [0.02f, 0.03f, 0.04f, 0.34f];
 private immutable float[4] scrollThumbColor = [0.78f, 0.84f, 0.90f, 0.58f];
 private immutable float[4] scrollFadeColor = [0.02f, 0.03f, 0.04f, 0.42f];
+private immutable float[4] separatorColor = [0.78f, 0.84f, 0.90f, 0.30f];
 private enum float scrollIndicatorThickness = 5.0f;
 private enum float scrollFadeSize = 12.0f;
+
+/** Axis direction for non-interactive layout separators. */
+enum UiSeparatorOrientation
+{
+    horizontal,
+    vertical,
+}
 
 /** Invisible widget that only contributes space to a layout. */
 final class UiSpacer : UiWidget
@@ -52,6 +60,60 @@ protected:
 
     override void renderSelf(ref UiRenderContext context)
     {
+    }
+
+    override bool dispatchPointerEvent(ref UiPointerEvent event)
+    {
+        return false;
+    }
+
+    override float[4] debugBoundsColor() const
+    {
+        return cast(float[4])spacerDebugBoundsColor;
+    }
+}
+
+/** Non-interactive visual divider for grouped retained UI content. */
+final class UiSeparator : UiWidget
+{
+    UiSeparatorOrientation orientation;
+    float thickness;
+    float[4] color;
+
+    this(UiSeparatorOrientation orientation = UiSeparatorOrientation.horizontal, float length = 0.0f, float thickness = 1.0f)
+    {
+        const width = orientation == UiSeparatorOrientation.horizontal ? length : thickness;
+        const height = orientation == UiSeparatorOrientation.horizontal ? thickness : length;
+        super(0.0f, 0.0f, width, height);
+        this.orientation = orientation;
+        this.thickness = thickness > 0.0f ? thickness : 1.0f;
+        color = cast(float[4])separatorColor;
+        if (orientation == UiSeparatorOrientation.horizontal)
+            setLayoutHint(0.0f, this.thickness, length, this.thickness, float.max, this.thickness, 1.0f, 0.0f);
+        else
+            setLayoutHint(this.thickness, 0.0f, this.thickness, length, this.thickness, float.max, 0.0f, 1.0f);
+    }
+
+protected:
+    override UiLayoutSize measureSelf(ref UiLayoutContext context)
+    {
+        if (orientation == UiSeparatorOrientation.horizontal)
+            return UiLayoutSize(preferredWidth > 0.0f ? preferredWidth : width, thickness);
+        return UiLayoutSize(thickness, preferredHeight > 0.0f ? preferredHeight : height);
+    }
+
+    override void renderSelf(ref UiRenderContext context)
+    {
+        if (orientation == UiSeparatorOrientation.horizontal)
+        {
+            const top = height > thickness ? (height - thickness) * 0.5f : 0.0f;
+            appendQuad(context, 0.0f, top, width, top + thickness, context.depthBase, color);
+        }
+        else
+        {
+            const left = width > thickness ? (width - thickness) * 0.5f : 0.0f;
+            appendQuad(context, left, 0.0f, left + thickness, height, context.depthBase, color);
+        }
     }
 
     override bool dispatchPointerEvent(ref UiPointerEvent event)
@@ -96,6 +158,29 @@ unittest
 
     const measured = child.measure(context);
     assert(measured.height == 0.0f);
+}
+
+@("UiSeparator exposes horizontal and vertical layout hints")
+unittest
+{
+    auto horizontal = new UiSeparator(UiSeparatorOrientation.horizontal, 80.0f, 2.0f);
+    assert(horizontal.minimumHeight == 2.0f);
+    assert(horizontal.maximumHeight == 2.0f);
+    assert(horizontal.flexGrowX == 1.0f);
+    assert(horizontal.flexGrowY == 0.0f);
+
+    auto vertical = new UiSeparator(UiSeparatorOrientation.vertical, 40.0f, 3.0f);
+    assert(vertical.minimumWidth == 3.0f);
+    assert(vertical.maximumWidth == 3.0f);
+    assert(vertical.flexGrowX == 0.0f);
+    assert(vertical.flexGrowY == 1.0f);
+
+    UiPointerEvent event;
+    event.kind = UiPointerEventKind.buttonDown;
+    event.button = 1;
+    event.x = 1.0f;
+    event.y = 1.0f;
+    assert(!horizontal.dispatchPointerEvent(event));
 }
 
 private float clampFloat(float value, float minimum, float maximum)
