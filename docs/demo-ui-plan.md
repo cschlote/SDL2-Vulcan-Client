@@ -31,6 +31,7 @@ Implemented or partially implemented:
 - D-key debug bounds overlay with color-coded widget and layout outlines
 - generic keyboard focus dispatch, SDL text input routing, and editable single-line text fields
 - audio settings data for master, music, and effects volumes
+- backend-neutral audio bus/event scaffolding with settings-to-volume mapping
 
 Remaining migration debt:
 
@@ -40,7 +41,7 @@ Remaining migration debt:
 - settings tabs exist for Display, UI, and Audio; Controls and Gameplay pages are still planned once those settings are editable.
 - reusable sidebar/icon-button classes, expanded sidebar labels, tooltips, and real icon assets are still planned.
 - context-sensitive system mouse cursors exist for current controls and window chrome; monochrome custom bitmap cursor registration is available for theme overrides and is exercised by the widget demo probe boxes.
-- audio output, audio events, and music playback are still planned engine work.
+- audio output, sample mixing, clips, and music playback are still planned engine work; backend-neutral audio events, bus state, and settings volume mapping exist.
 - UI animation scheduling, basic window transition state/geometry application, demo singleton open/close wiring, and API-level bounds transitions exist; animated media widgets and broader demo transition coverage are still planned engine work.
 
 ## UI Design Direction
@@ -131,16 +132,16 @@ UI elements should also leave room for future animation. Local widget animation 
 
 ## Audio Direction
 
-The engine should add a reusable audio system after the current UI fundamentals settle. The first target is a small SDL-backed audio service with an event queue, a mixer, short sound effects, and streamed music.
+The engine now has a first reusable audio-system scaffold for typed events, queued processing, master/music/effects/UI bus state, and settings-to-bus volume mapping. The next target is an SDL-backed audio service with a mixer, short sound effects, and streamed music.
 
 The usual split is:
 
 - audio device ownership for SDL callback setup, sample format, buffer size, and shutdown
-- audio events for play, stop, fade, and bus-volume changes
+- audio events for play, stop, fade, and bus-volume changes; basic event types exist
 - audio mixer for active voices and bus routing
 - preloaded clips for UI and game sound effects
 - streamed music tracks with fade and loop support
-- master, music, effects, and possibly UI buses
+- master, music, effects, and UI buses; basic bus state exists
 
 Gameplay and UI code should emit audio events instead of calling backend playback APIs directly. This keeps sound policy reusable, testable, and independent from `DemoUiScreen` and `VulkanRenderer`.
 
@@ -195,7 +196,7 @@ The next work should continue from reusable engine foundations toward demo polis
 12. Demo control gallery: replace the current layout probe role with a real widget demo that exercises buttons, toggles, sliders, dropdowns, text fields, tabs, lists, and progress. Partial for boxes and current controls.
 13. Demo window expansion: add Input, Selection, Media, Animation, and Audio demo windows so new UI classes are visible through realistic workflows.
 14. UI animation foundation: add frame-time dispatch, widget-local animation hooks, window transition states, and renderer-facing alpha/transform data. Partial for `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, renderer frame dispatch, logical `UiWindow` transition states, per-window draw-range alpha/scale/offset export, CPU-side vertex application, normal-window show/hide wiring, and API-level move/resize bounds transitions.
-15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup.
+15. Audio foundation: add audio device ownership, event queue, bus definitions, mixer, clips, and settings-to-bus volume hookup. Partial for backend-neutral event queue, bus definitions, volume state, and settings-to-bus mapping.
 16. Audio behavior: add UI click sounds, demo sound events, music streams, loop/fade/crossfade support, and an audio settings preview.
 17. Asset and package boundary: decide which cursor, texture, font, shader, mesh, and audio asset conventions belong in the reusable engine package.
 
@@ -230,7 +231,7 @@ The next work should continue from reusable engine foundations toward demo polis
 27. Add settings tabs or grouped settings panes for display, controls, gameplay, audio, and UI. Partial for Display, UI, and Audio.
 28. Add UI animation scaffolding: frame-time dispatch, widget-local tick hooks, window transition states, and renderer-facing animation parameters. Partial for frame dispatch, widget-local tick hooks, window transition state/progress, renderer-facing window presentation parameters, generated-geometry application, singleton window transition wiring, and API move/resize bounds transitions.
 29. Add animated `UiImage` or media-widget coverage once texture-backed image rendering exists.
-30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup.
+30. Add audio architecture scaffolding: device owner, event queue, buses, mixer, clips, and volume settings hookup. Partial for backend-neutral event queue, buses, bus-volume state, and settings hookup.
 31. Add UI and demo audio events, such as button click feedback and settings volume preview.
 32. Add music playback with stream support, loop handling, fade in/out, and crossfade.
 33. Review package boundaries again after UI cursors, first animation support, and the first audio service exist.
