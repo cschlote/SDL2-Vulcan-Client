@@ -31,7 +31,7 @@ import logging : logLine, logLineVerbose;
 import math.matrix;
 import vulkan.audio.audio_device : AudioDevice, AudioDeviceConfig;
 import vulkan.audio.audio_mixer : AudioMixer;
-import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId;
+import vulkan.audio.audio_system : AudioBusId, AudioEvent, AudioSystem, uiClickClipId, uiEffectsPreviewClipId, uiMasterPreviewClipId, uiMusicPreviewClipId;
 import vulkan.engine.device;
 import vulkan.engine.instance;
 import vulkan.engine.pipeline;
@@ -2016,7 +2016,7 @@ class VulkanRenderer
             uiScreen.settingsDraft.audio.masterVolume,
             uiScreen.settingsDraft.audio.musicVolume,
             uiScreen.settingsDraft.audio.effectsVolume);
-        queueUiClipAudio(audioPreviewBus(previewKind));
+        queueUiClipAudio(audioPreviewClip(previewKind), audioPreviewBus(previewKind));
     }
 
     /** Applies persisted demo audio settings through the engine audio event queue. */
@@ -2044,16 +2044,31 @@ class VulkanRenderer
         if (audioSystem is null)
             return;
 
-        queueUiClipAudio(AudioBusId.ui, 0.45f);
+        queueUiClipAudio(uiClickClipId, AudioBusId.ui, 0.45f);
     }
 
-    private void queueUiClipAudio(AudioBusId bus, float gain = 0.55f)
+    private void queueUiClipAudio(string clipId, AudioBusId bus, float gain = 0.55f)
     {
         if (audioSystem is null)
             return;
 
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, gain));
+        audioSystem.emit(AudioEvent.playClip(clipId, bus, gain));
         audioSystem.processEvents();
+    }
+
+    private string audioPreviewClip(DemoAudioPreviewKind previewKind) const
+    {
+        final switch (previewKind)
+        {
+            case DemoAudioPreviewKind.ui:
+                return uiClickClipId;
+            case DemoAudioPreviewKind.master:
+                return uiMasterPreviewClipId;
+            case DemoAudioPreviewKind.music:
+                return uiMusicPreviewClipId;
+            case DemoAudioPreviewKind.effects:
+                return uiEffectsPreviewClipId;
+        }
     }
 
     private AudioBusId audioPreviewBus(DemoAudioPreviewKind previewKind) const

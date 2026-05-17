@@ -165,6 +165,7 @@ Current behavior:
 - spawns as independent windows with serial titles
 - contains separate HBox, VBox, and Grid preview areas
 - uses sliders to change row/column spacing, grow weights, and grid spacing at runtime
+- includes a Defaults button and short labels that state which layout objects each slider affects
 - uses varied fill and border colors sparingly so layout movement remains visible
 - can be resized and stacked like normal windows
 - removes itself from the screen owner when closed
@@ -174,6 +175,8 @@ Useful regression checks:
 - growing and then shrinking the window does not corrupt intrinsic preferred sizes
 - nested `UiHBox` and `UiVBox` containers preserve spacing while sliders change layout values
 - the growable spacer and growable probe boxes consume extra space predictably
+- sliders embedded in horizontal rows still use their own local pointer coordinates
+- grid spacing is subtracted from the available cell area so children do not overflow when the window is shrunk
 - debug bounds show expected row, column, grid, spacer, and widget outlines
 - multiple instances do not share mutable window state accidentally
 
@@ -189,6 +192,7 @@ Current behavior:
 
 - spawns as independent windows with serial titles
 - contains custom `LayoutDemoProbeBox` instances with strong diagnostic colors
+- uses a visible `UiFrameBox` as a manually composed demo group, not as window chrome
 - contains a padded content-box example with an inner row so the custom probe no longer sits on top of the surrounding frame
 - applies a custom crosshair cursor over probe boxes
 - can be resized and stacked like normal windows
@@ -198,6 +202,7 @@ Useful regression checks:
 
 - custom widget rendering and cursor intent still work after reusable widget refactors
 - content/frame padding remains visually understandable
+- the yellow content probe remains inside the blue framed demo group at minimum useful window size
 - multiple instances do not share mutable window state accidentally
 
 ## ScrollArea Demo Window
@@ -403,7 +408,7 @@ The Audio Demo exercises the current audio service from ordinary retained UI con
 Current behavior:
 
 - button click sound event
-- one-shot preview buttons for UI, master, music, and effects bus routing
+- one-shot preview buttons for UI, master, music, and effects bus routing with distinct synthetic clips until real audio assets exist
 - repeatable window instances from the sidebar
 - no direct dependency on SDL audio backend code
 

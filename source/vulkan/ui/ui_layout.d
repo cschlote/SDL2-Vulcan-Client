@@ -916,6 +916,10 @@ protected:
 
         const totalWidth = innerWidth();
         const totalHeight = innerHeight();
+        const totalSpacingX = columnWeights.length > 1 ? spacingX * cast(float)(columnWeights.length - 1) : 0.0f;
+        const totalSpacingY = rowWeights.length > 1 ? spacingY * cast(float)(rowWeights.length - 1) : 0.0f;
+        const cellAreaWidth = max(totalWidth - totalSpacingX, 0.0f);
+        const cellAreaHeight = max(totalHeight - totalSpacingY, 0.0f);
 
         float columnWeightSum = 0.0f;
         foreach (weight; columnWeights)
@@ -937,7 +941,7 @@ protected:
         float usedWidth = 0.0f;
         foreach (index, weight; columnWeights)
         {
-            const columnSize = columnWeightSum > 0.0f ? totalWidth * (weight / columnWeightSum) : 0.0f;
+            const columnSize = columnWeightSum > 0.0f ? cellAreaWidth * (weight / columnWeightSum) : 0.0f;
             columnSizes[index] = columnSize;
             columnOffsets[index] = usedWidth;
             usedWidth += columnSize + spacingX;
@@ -946,7 +950,7 @@ protected:
         float usedHeight = 0.0f;
         foreach (index, weight; rowWeights)
         {
-            const rowSize = rowWeightSum > 0.0f ? totalHeight * (weight / rowWeightSum) : 0.0f;
+            const rowSize = rowWeightSum > 0.0f ? cellAreaHeight * (weight / rowWeightSum) : 0.0f;
             rowSizes[index] = rowSize;
             rowOffsets[index] = usedHeight;
             usedHeight += rowSize + spacingY;
@@ -972,15 +976,45 @@ protected:
 
             child.x = childX;
             child.y = childY;
-            if (child.width <= 0.0f)
-                child.width = childWidth;
-            if (child.height <= 0.0f)
-                child.height = childHeight;
+            child.width = max(childWidth, 0.0f);
+            child.height = max(childHeight, 0.0f);
         }
+    }
+
+    override void layoutSelf(ref UiLayoutContext context)
+    {
+        layoutChildren();
+        foreach (child; children)
+            child.layout(context);
     }
 
     override float[4] debugBoundsColor() const
     {
         return cast(float[4])gridLayoutDebugBoundsColor;
     }
+}
+
+@("UiGrid subtracts spacing from available cell area and relayouts children")
+unittest
+{
+    auto grid = new UiGrid(1, 2, 0.0f, 0.0f, 100.0f, 20.0f, 10.0f, 0.0f);
+    auto left = new UiSpacer();
+    auto right = new UiSpacer();
+    grid.add(left, 0, 0);
+    grid.add(right, 0, 1);
+
+    UiLayoutContext context;
+    grid.layout(context);
+
+    assert(left.x == 0.0f);
+    assert(left.width == 45.0f);
+    assert(right.x == 55.0f);
+    assert(right.width == 45.0f);
+
+    grid.spacingX = 20.0f;
+    grid.layout(context);
+
+    assert(left.width == 40.0f);
+    assert(right.x == 60.0f);
+    assert(right.width == 40.0f);
 }

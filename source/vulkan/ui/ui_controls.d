@@ -244,7 +244,14 @@ final class UiSlider : UiWidget
     override bool dispatchPointerEvent(ref UiPointerEvent event)
     {
         if (dragging)
-            return handlePointerEvent(event);
+        {
+            auto localEvent = event;
+            localEvent.x -= x;
+            localEvent.y -= y;
+            const handled = handlePointerEvent(localEvent);
+            event.actionActivated = event.actionActivated || localEvent.actionActivated;
+            return handled;
+        }
 
         return super.dispatchPointerEvent(event);
     }

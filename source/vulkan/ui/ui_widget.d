@@ -158,7 +158,12 @@ abstract class UiWidget
             }
         }
 
-        return handlePointerEvent(event);
+        auto localEvent = event;
+        localEvent.x -= x;
+        localEvent.y -= y;
+        const handled = handlePointerEvent(localEvent);
+        event.actionActivated = event.actionActivated || localEvent.actionActivated;
+        return handled;
     }
 
     /** Returns the deepest focusable widget at the given point in parent space. */
@@ -439,4 +444,45 @@ unittest
 
     assert(child.screenX() == 133.0f);
     assert(child.screenY() == 74.0f);
+}
+
+@("UiWidget dispatches own pointer events in widget-local coordinates")
+unittest
+{
+    final class PointerWidget : UiWidget
+    {
+        float lastX;
+        float lastY;
+
+        this(float x = 0.0f, float y = 0.0f)
+        {
+            super(x, y, 20.0f, 20.0f);
+        }
+
+    protected:
+        override void renderSelf(ref UiRenderContext context)
+        {
+        }
+
+        override bool handlePointerEvent(ref UiPointerEvent event)
+        {
+            lastX = event.x;
+            lastY = event.y;
+            return true;
+        }
+    }
+
+    auto root = new PointerWidget();
+    root.width = 100.0f;
+    root.height = 100.0f;
+    auto child = new PointerWidget(30.0f, 40.0f);
+    root.add(child);
+
+    UiPointerEvent event;
+    event.x = 35.0f;
+    event.y = 46.0f;
+
+    assert(root.dispatchPointerEvent(event));
+    assert(child.lastX == 5.0f);
+    assert(child.lastY == 6.0f);
 }

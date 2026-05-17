@@ -90,7 +90,7 @@ final class CustomDemoWindow
     this(uint serial, void delegate() onClose = null, void delegate(float, float) onHeaderDragStart = null, void delegate(float, float) onHeaderDragMove = null, void delegate() onHeaderDragEnd = null, void delegate(UiResizeHandle) onResizeStart = null, void delegate(UiResizeHandle, float, float) onResizeMove = null, void delegate(UiResizeHandle) onResizeEnd = null)
     {
         const windowTitle = format("Custom Demo #%u", serial);
-        window = new UiWindow(windowTitle, 36.0f, 36.0f, 390.0f, 260.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
+        window = new UiWindow(windowTitle, 36.0f, 36.0f, 390.0f, 330.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
 
         content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 12.0f);
 
@@ -110,8 +110,8 @@ final class CustomDemoWindow
         contentInnerRow.add(new UiSpacer());
         contentBox.add(contentInnerRow);
         layoutSectionBody.add(contentBox);
-        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 164.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        layoutSection.setLayoutHint(0.0f, 164.0f, 0.0f, 164.0f, float.max, 164.0f, 1.0f, 0.0f);
+        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 220.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        layoutSection.setLayoutHint(0.0f, 220.0f, 0.0f, 220.0f, float.max, 220.0f, 1.0f, 0.0f);
         layoutSection.add(layoutSectionBody);
 
         content.add(layoutSection);
@@ -157,6 +157,9 @@ final class LayoutDemoWindow
     private UiSpacer columnSpacer;
     private LayoutDemoProbeBox rowGrowBox;
     private LayoutDemoProbeBox columnGrowBox;
+    private UiSlider spacingSlider;
+    private UiSlider growSlider;
+    private UiSlider gridSpacingSlider;
     private UiLabel summaryLabel;
 
     this(uint serial)
@@ -165,6 +168,7 @@ final class LayoutDemoWindow
         window = new UiWindow(windowTitle, 38.0f, 38.0f, 520.0f, 420.0f, [0.10f, 0.12f, 0.16f, 0.95f], [0.14f, 0.16f, 0.20f, 0.98f], [1.00f, 0.98f, 0.82f, 1.00f], true, true, true, 14.0f, 12.0f, 14.0f, 12.0f);
         content = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);
         content.add(new UiLabel("HBox, VBox, Grid, Spacer", 0.0f, 0.0f, UiTextStyle.medium, cast(float[4])helpAccentColor));
+        content.add(new UiLabel("Spacing changes HBox/VBox gaps. Grow changes the flexible boxes. Grid changes cell gaps.", 0.0f, 0.0f, UiTextStyle.small, cast(float[4])helpTextColor));
 
         previewRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         previewRow.setLayoutHint(0.0f, 54.0f, 0.0f, 54.0f, float.max, 54.0f, 1.0f, 0.0f);
@@ -212,9 +216,9 @@ final class LayoutDemoWindow
 
         auto controlRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
         controlRow.setLayoutHint(0.0f, 34.0f, 0.0f, 34.0f, float.max, 34.0f, 1.0f, 0.0f);
-        auto spacingSlider = new UiSlider("Spacing", 0.0f, 24.0f, previewRow.spacing, 0.0f, 0.0f, 190.0f, 34.0f);
-        auto growSlider = new UiSlider("Grow", 0.0f, 3.0f, rowGrowBox.flexGrowX, 0.0f, 0.0f, 160.0f, 34.0f);
-        auto gridSpacingSlider = new UiSlider("Grid", 0.0f, 18.0f, previewGrid.spacingX, 0.0f, 0.0f, 160.0f, 34.0f);
+        spacingSlider = new UiSlider("Spacing", 0.0f, 24.0f, previewRow.spacing, 0.0f, 0.0f, 190.0f, 34.0f);
+        growSlider = new UiSlider("Grow", 0.0f, 3.0f, rowGrowBox.flexGrowX, 0.0f, 0.0f, 160.0f, 34.0f);
+        gridSpacingSlider = new UiSlider("Grid", 0.0f, 18.0f, previewGrid.spacingX, 0.0f, 0.0f, 160.0f, 34.0f);
         spacingSlider.onChanged = (value) { previewRow.spacing = value; previewColumn.spacing = value * 0.5f; updateSummary(); };
         growSlider.onChanged = (value) { rowGrowBox.flexGrowX = value; columnGrowBox.flexGrowY = value; updateSummary(); };
         gridSpacingSlider.onChanged = (value) { previewGrid.spacingX = value; previewGrid.spacingY = value; updateSummary(); };
@@ -223,6 +227,13 @@ final class LayoutDemoWindow
         controlRow.add(gridSpacingSlider);
         content.add(new UiSeparator());
         content.add(controlRow);
+        auto actionRow = new UiHBox(0.0f, 0.0f, 0.0f, 0.0f, 10.0f);
+        actionRow.setLayoutHint(0.0f, 32.0f, 0.0f, 32.0f, float.max, 32.0f, 1.0f, 0.0f);
+        auto resetButton = new UiButton("Defaults", 0.0f, 0.0f, 104.0f, 30.0f, cast(float[4])initButtonFill, cast(float[4])initButtonBorder, cast(float[4])initButtonText);
+        resetButton.onClick = &resetLayoutDefaults;
+        actionRow.add(resetButton);
+        actionRow.add(new UiLabel("Reset restores spacing 10, grow 1, grid gap 8.", 0.0f, 0.0f, UiTextStyle.small, cast(float[4])helpTextColor));
+        content.add(actionRow);
         summaryLabel = new UiLabel("", 0.0f, 0.0f, UiTextStyle.small, cast(float[4])helpTextColor);
         content.add(summaryLabel);
         updateSummary();
@@ -234,6 +245,14 @@ final class LayoutDemoWindow
     private void updateSummary()
     {
         summaryLabel.text = format("HBox spacing %.1f, grow %.1f, grid spacing %.1f", previewRow.spacing, rowGrowBox.flexGrowX, previewGrid.spacingX);
+    }
+
+    private void resetLayoutDefaults()
+    {
+        spacingSlider.setValue(10.0f);
+        growSlider.setValue(1.0f);
+        gridSpacingSlider.setValue(8.0f);
+        updateSummary();
     }
 }
 
@@ -716,7 +735,7 @@ private enum float dropdownPopupRowHeight = 28.0f;
 private enum float layoutDemoWidth = 520.0f;
 private enum float layoutDemoHeight = 420.0f;
 private enum float customDemoWidth = 390.0f;
-private enum float customDemoHeight = 270.0f;
+private enum float customDemoHeight = 330.0f;
 private enum float contentSpacing = 6.0f;
 private enum float sectionSpacing = 8.0f;
 private enum float probeSpacing = 10.0f;

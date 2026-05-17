@@ -284,6 +284,8 @@ Required behavior:
 - deterministic cell placement
 - clear debug bounds
 - useful weighted row and column allocation
+- horizontal and vertical spacing is reserved before cell sizes are distributed, so increasing gaps cannot push children outside the grid bounds
+- children are assigned fresh cell geometry on every layout pass, allowing live spacing controls and window resizes to relayout correctly
 
 Demo coverage:
 
