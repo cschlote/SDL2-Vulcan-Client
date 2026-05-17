@@ -998,10 +998,12 @@ final class DemoUiScreen : UiScreen
         {
             dropdown.selectIndex(index);
             dismissActivePopup();
+            setFocusedWidget(dropdown);
         };
 
         dropdownPopupWindow.add(list);
         showPopupWindow(dropdownPopupWindow, anchorX, anchorY, anchorWidth, anchorHeight);
+        setFocusedWidget(list);
     }
 
     void updateSettingsSummary()
@@ -1439,6 +1441,38 @@ unittest
     assert(screen.settingsDraft.ui.theme == "midnight");
 
     assert(!screen.hasActivePopup());
+}
+
+@("DemoUiScreen keeps keyboard focus inside open dropdown popups")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+
+    screen.settingsThemeDropdown.selectIndex(0);
+    screen.openDropdownPopup(screen.settingsThemeDropdown, 300.0f, 200.0f, 220.0f, 28.0f);
+
+    assert(screen.hasActivePopup());
+    auto popupFocus = screen.currentFocusedWidget();
+    assert(popupFocus !is null);
+
+    UiKeyEvent keyEvent;
+    keyEvent.kind = UiKeyEventKind.keyDown;
+    keyEvent.key = UiKeyCode.tab;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    assert(screen.currentFocusedWidget() is popupFocus);
+    assert(screen.hasActivePopup());
+
+    keyEvent.key = UiKeyCode.down;
+    assert(screen.dispatchKeyEvent(keyEvent));
+    keyEvent.key = UiKeyCode.enter;
+    assert(screen.dispatchKeyEvent(keyEvent));
+
+    assert(screen.settingsThemeDropdown.selectedText() == "classic");
+    assert(screen.settingsDraft.ui.theme == "classic");
+    assert(!screen.hasActivePopup());
+    assert(screen.currentFocusedWidget() is screen.settingsThemeDropdown);
 }
 
 @("DemoUiScreen switches settings pages with tabs")

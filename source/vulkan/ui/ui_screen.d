@@ -390,6 +390,9 @@ class UiScreen
         if (activePopupWindow is null)
             return;
 
+        if (focusedWidget !is null && windowOwnsWidget(activePopupWindow, focusedWidget))
+            setFocusedWidget(null);
+
         activePopupWindow.beginCloseTransition(0.0f);
         activePopupWindow = null;
     }
@@ -842,6 +845,12 @@ private:
     UiWidget[] focusableWidgetsInTraversalOrder()
     {
         UiWidget[] widgets;
+        if (activePopupWindow !is null && activePopupWindow.acceptsInput())
+        {
+            collectFocusableWidgets(activePopupWindow, widgets);
+            return widgets;
+        }
+
         if (activeModalWindow !is null && activeModalWindow.acceptsInput())
         {
             collectFocusableWidgets(activeModalWindow, widgets);

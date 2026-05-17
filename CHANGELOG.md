@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Kept keyboard focus inside open dropdown popups and lowered synthetic UI audio preview gain.
 - Added visible `UiScrollArea` scrollbar thumbs and edge overflow indicators.
 - Made focused window titles visually distinct, opened focused dropdowns with Enter, and rendered settings tabs as attached tab-strip tabs.
 - Added a repeatable Input Demo window with text, toggle, slider, dropdown, and activation callback coverage.

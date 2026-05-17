@@ -1804,15 +1804,15 @@ class VulkanRenderer
         if (audioSystem is null)
             return;
 
-        queueUiClipAudio(AudioBusId.ui);
+        queueUiClipAudio(AudioBusId.ui, 0.45f);
     }
 
-    private void queueUiClipAudio(AudioBusId bus)
+    private void queueUiClipAudio(AudioBusId bus, float gain = 0.55f)
     {
         if (audioSystem is null)
             return;
 
-        audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, 1.0f));
+        audioSystem.emit(AudioEvent.playClip(uiClickClipId, bus, gain));
         audioSystem.processEvents();
     }
 
