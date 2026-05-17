@@ -158,7 +158,7 @@ Planned extensions:
 
 ## Widget Demo Window
 
-The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
+The Widget Demo window is the first control-gallery window. It exercises `UiWindow`, `UiVBox`, `UiHBox`, `UiSpacer`, `UiSeparator`, `UiContentBox`, `UiFrameBox`, `UiScrollArea`, `UiButton`, `UiImage`, `UiToggle`, `UiSlider`, `UiProgressBar`, `UiDropdown`, visible `UiListBox` selection, `UiListBox` through dropdown popups, visible `UiTabBar` selection, `UiTextField`, custom demo widgets derived from `UiWidget`, preferred-size measurement, nested layout, resize behavior, debug bounds, and custom cursor registration.
 
 Current behavior:
 
@@ -170,6 +170,7 @@ Current behavior:
 - updates a progress bar from the Amount slider
 - updates a summary label from the list selection
 - updates a summary label from the tab selection
+- includes a compact `UiScrollArea` with larger colored child content to show clipping, wheel scrolling, scrollbar thumbs, and edge indicators
 - uses varied fill and border colors to make layout movement visible
 - applies a custom crosshair cursor over probe boxes
 - can be resized and stacked like normal windows
@@ -180,6 +181,7 @@ Useful regression checks:
 - growing and then shrinking the window does not corrupt intrinsic preferred sizes
 - nested `UiHBox` and `UiVBox` containers preserve spacing
 - debug bounds show expected row, column, spacer, and widget outlines
+- scrolling inside the compact scroll-area section clips oversized child geometry to the viewport
 - custom cursor fallback and override behavior is visible at runtime
 - multiple instances do not share mutable window state accidentally
 
@@ -188,7 +190,7 @@ Planned extensions:
 - replace the rough low-resolution placeholder image assets with a coherent higher-resolution icon/image set
 - move richer image browsing and animated-image examples into the planned Media Demo
 - add future controls to the gallery
-- wrap the gallery in `UiScrollArea` once the gallery grows beyond the available window height
+- wrap the whole gallery in `UiScrollArea` once the complete gallery grows beyond the available window height
 - add popup examples as those widgets land
 - add interaction examples where one control changes another widget's value or visibility
 - add disabled, focused, hover, pressed, and validation states for each control family

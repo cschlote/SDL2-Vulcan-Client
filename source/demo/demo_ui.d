@@ -33,7 +33,7 @@ import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEven
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_image : UiImage;
 import vulkan.ui.ui_label : UiLabel;
-import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSeparator, UiSpacer, UiVBox;
+import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiScrollArea, UiSeparator, UiSpacer, UiVBox;
 import vulkan.ui.ui_layout_context : UiLayoutContext, UiLayoutSize;
 import vulkan.ui.ui_screen : UiScreen;
 import vulkan.ui.ui_sidebar_action : UiSidebarAction;
@@ -112,9 +112,20 @@ final class LayoutDemoWindow
         contentBox.setLayoutHint(0.0f, 44.0f, 0.0f, 44.0f, float.max, 44.0f, 1.0f, 0.0f);
         contentBox.add(new LayoutDemoProbeBox(260.0f, 28.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
         layoutSectionBody.add(contentBox);
+        auto scrollDemo = new UiScrollArea(0.0f, 0.0f, 0.0f, 72.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+        scrollDemo.setLayoutHint(0.0f, 72.0f, 0.0f, 72.0f, float.max, 72.0f, 1.0f, 0.0f);
+        auto scrollContent = new UiVBox(0.0f, 0.0f, 0.0f, 144.0f, 4.0f, 0.0f, 0.0f, 8.0f, 0.0f);
+        scrollContent.setLayoutHint(0.0f, 144.0f, 0.0f, 144.0f, float.max, 144.0f, 1.0f, 0.0f);
+        scrollContent.add(new LayoutDemoProbeBox(460.0f, 24.0f, cast(float[4])probeFillA, cast(float[4])probeBorderA));
+        scrollContent.add(new LayoutDemoProbeBox(520.0f, 24.0f, cast(float[4])probeFillB, cast(float[4])probeBorderB));
+        scrollContent.add(new LayoutDemoProbeBox(420.0f, 24.0f, cast(float[4])probeFillC, cast(float[4])probeBorderC));
+        scrollContent.add(new LayoutDemoProbeBox(560.0f, 24.0f, cast(float[4])probeFillD, cast(float[4])probeBorderD));
+        scrollContent.add(new LayoutDemoProbeBox(380.0f, 24.0f, cast(float[4])sidebarIconViolet, cast(float[4])probeBorderA));
+        scrollDemo.add(scrollContent);
+        layoutSectionBody.add(scrollDemo);
 
-        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 164.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
-        layoutSection.setLayoutHint(0.0f, 164.0f, 0.0f, 164.0f, float.max, 164.0f, 1.0f, 0.0f);
+        auto layoutSection = new UiFrameBox(0.0f, 0.0f, 0.0f, 246.0f, [0.11f, 0.13f, 0.18f, 0.92f], [0.24f, 0.58f, 0.80f, 1.00f], 10.0f, 8.0f, 10.0f, 8.0f);
+        layoutSection.setLayoutHint(0.0f, 246.0f, 0.0f, 246.0f, float.max, 246.0f, 1.0f, 0.0f);
         layoutSection.add(layoutSectionBody);
 
         auto controlsBody = new UiVBox(0.0f, 0.0f, 0.0f, 0.0f, 8.0f);

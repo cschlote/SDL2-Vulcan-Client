@@ -400,7 +400,7 @@ Implementation direction:
 
 Demo coverage:
 
-- planned Widget Demo gallery should use it once the gallery grows beyond one window.
+- Widget Demo includes a compact `UiScrollArea` example with oversized colored child content for visible clipping and wheel scrolling.
 - Help Desk should use it for long help content after text-block content exists.
 - Settings should use it when tab pages or grouped settings exceed the current window height.
 
