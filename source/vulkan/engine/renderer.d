@@ -460,7 +460,7 @@ class VulkanRenderer
                 return true;
             case SDL_EventType.keyDown:
                 if (dispatchUiKeyEvent(event, UiKeyEventKind.keyDown))
-                    return false;
+                    return uiScreen.quitRequested;
                 if (event.key.scancode == SDL_Scancode.escape)
                     return true;
                 if (!event.key.repeat && (event.key.scancode == SDL_Scancode.equals || event.key.scancode == SDL_Scancode.kpPlus))
@@ -498,7 +498,7 @@ class VulkanRenderer
                 return handleMouseWheel(event);
             case SDL_EventType.keyUp:
                 if (dispatchUiKeyEvent(event, UiKeyEventKind.keyUp))
-                    return false;
+                    return uiScreen.quitRequested;
                 if (event.key.scancode == SDL_Scancode.left)
                     rotateLeft = false;
                 else if (event.key.scancode == SDL_Scancode.right)

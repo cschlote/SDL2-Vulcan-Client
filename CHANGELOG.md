@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Included dropdowns in keyboard focus traversal, made focused-window chrome subtler by tinting only the title, and fixed keyboard-activated sidebar Exit handling.
 - Added a repeatable Audio Demo window with semantic UI/master/music/effects preview buttons.
 - Documented idle UI click latency as an open audio issue after removing ineffective stream keepalive workarounds.
 - Added live 3D rotation angles to the Status window.

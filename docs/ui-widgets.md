@@ -534,7 +534,7 @@ Demo coverage:
 
 Status: Partial.
 
-`UiDropdown` is a compact option selector that requests a transient popup list on click. The current demo wires those requests to a chrome-less popup `UiWindow`; the later reusable step is extracting that option-list surface into a proper selection/list widget.
+`UiDropdown` is a compact option selector that requests a transient popup list on click. It participates in keyboard focus traversal and shows the generic focus ring while focused. The current demo wires pointer activation requests to a chrome-less popup `UiWindow`; the later reusable step is extracting that option-list surface into a proper selection/list widget.
 
 Common use cases:
 
@@ -550,7 +550,7 @@ Required behavior:
 - emit changed callback
 - open popup list through `UiScreen` popup primitives
 - dismiss popup on outside click
-- support keyboard selection later
+- support keyboard popup opening and selection later
 
 Demo coverage:
 

@@ -516,6 +516,7 @@ final class UiDropdown : UiWidget
         this.options = options.dup;
         this.selectedIndex = options.length == 0 ? 0 : selectedIndex % options.length;
         this.style = style;
+        focusable = true;
         fillColor = cast(float[4])defaultFillColor;
         borderColor = cast(float[4])defaultBorderColor;
         textColor = cast(float[4])defaultTextColor;
@@ -1005,6 +1006,8 @@ unittest
 unittest
 {
     auto dropdown = new UiDropdown("Theme", ["midnight", "classic"], 0, 0.0f, 0.0f, 160.0f, 28.0f);
+    assert(dropdown.focusable);
+
     bool opened;
     float anchorX;
     float anchorY;

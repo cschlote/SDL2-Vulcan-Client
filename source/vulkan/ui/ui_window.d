@@ -29,7 +29,7 @@ private enum float chromeTopInset = 7.0f;
 private enum float defaultOpenTransitionSeconds = 0.12f;
 private enum float defaultCloseTransitionSeconds = 0.10f;
 private enum float defaultBoundsTransitionSeconds = 0.14f;
-private immutable float[4] windowFocusHeaderTint = [0.34f, 0.82f, 0.46f, 1.00f];
+private immutable float[4] windowFocusTitleTint = [0.72f, 0.96f, 1.00f, 1.00f];
 
 /** Logical top-level window presentation state for future visual transitions. */
 enum UiWindowTransitionState
@@ -597,7 +597,7 @@ protected:
     {
         updateChromeLayout();
 
-        const headerFill = showHeader ? focusedHeaderColor() : bodyColor;
+        const headerFill = showHeader ? headerColor : bodyColor;
         const bodyFill = bodyColor;
         const renderedHeaderHeight = showHeader ? headerHeight : 0.0f;
 
@@ -619,7 +619,7 @@ protected:
         {
             const titleX = activeResizeRing() ? resizeGripHitSize + 6.0f : 10.0f;
             const titleY = max(0.0f, (headerHeight - titleTextHeight(context)) * 0.5f);
-            appendTextLine(context, UiTextStyle.large, title, titleX, titleY, titleColor, context.depthBase - 0.001f);
+            appendTextLine(context, UiTextStyle.large, title, titleX, titleY, focusedTitleColor(), context.depthBase - 0.001f);
         }
 
         if (showHeader && headerExtras.children.length > 0)
@@ -683,16 +683,16 @@ private:
         return atlas is null ? fallbackTitleTextHeight : max(atlas.lineHeight, atlas.ascent + atlas.descent);
     }
 
-    /** Returns the header fill adjusted for an active keyboard focus owner. */
-    float[4] focusedHeaderColor() const
+    /** Returns the title color adjusted for an active keyboard focus owner. */
+    float[4] focusedTitleColor() const
     {
         if (!hasKeyboardFocus)
-            return headerColor;
+            return titleColor;
 
         float[4] color;
         foreach (index; 0 .. 3)
-            color[index] = headerColor[index] * 0.62f + windowFocusHeaderTint[index] * 0.38f;
-        color[3] = headerColor[3];
+            color[index] = titleColor[index] * 0.65f + windowFocusTitleTint[index] * 0.35f;
+        color[3] = titleColor[3];
         return color;
     }
 

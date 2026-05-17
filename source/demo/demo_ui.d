@@ -29,7 +29,7 @@ import vulkan.ui.ui_button : UiButton;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
 import vulkan.ui.ui_controls : UiDropdown, UiListBox, UiSlider, UiTabBar, UiTextField, UiToggle;
 import vulkan.ui.ui_cursor : UiCursorKind;
-import vulkan.ui.ui_event : UiPointerEvent, UiPointerEventKind, UiResizeHandle;
+import vulkan.ui.ui_event : UiKeyCode, UiKeyEvent, UiKeyEventKind, UiPointerEvent, UiPointerEventKind, UiResizeHandle;
 import vulkan.ui.ui_geometry : UiOverlayGeometry;
 import vulkan.ui.ui_label : UiLabel;
 import vulkan.ui.ui_layout : UiContentBox, UiFrameBox, UiHBox, UiSpacer, UiVBox;
@@ -1235,6 +1235,43 @@ unittest
 
     assert(!screen.quitRequested);
     screen.sidebarExitButton.onClick();
+    assert(screen.quitRequested);
+}
+
+@("DemoUiScreen tabs through dropdowns and activates sidebar exit")
+unittest
+{
+    DemoUiScreen screen = new DemoUiScreen();
+    screen.initialize([]);
+    screen.syncViewport(800.0f, 600.0f, 0.0f, "test", "test", "test");
+    screen.toggleSettingsWindow();
+
+    UiKeyEvent event;
+    event.kind = UiKeyEventKind.keyDown;
+    event.key = UiKeyCode.tab;
+
+    bool reachedDropdown;
+    foreach (_; 0 .. 80)
+    {
+        assert(screen.dispatchKeyEvent(event));
+        if (screen.currentFocusedWidget() is screen.settingsWindowModeDropdown)
+        {
+            reachedDropdown = true;
+            break;
+        }
+    }
+    assert(reachedDropdown);
+
+    foreach (_; 0 .. 80)
+    {
+        assert(screen.dispatchKeyEvent(event));
+        if (screen.currentFocusedWidget() is screen.sidebarExitButton)
+            break;
+    }
+    assert(screen.currentFocusedWidget() is screen.sidebarExitButton);
+
+    event.key = UiKeyCode.enter;
+    assert(screen.dispatchKeyEvent(event));
     assert(screen.quitRequested);
 }
 
