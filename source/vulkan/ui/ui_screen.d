@@ -368,6 +368,10 @@ class UiScreen
                 continue;
 
             UiWindowDrawRange range;
+            range.alpha = window.presentationAlpha();
+            range.scale = window.presentationScale();
+            range.offsetX = window.presentationOffsetX();
+            range.offsetY = window.presentationOffsetY();
             range.panelsStart = cast(uint)geometry.panels.length;
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
@@ -1073,6 +1077,26 @@ unittest
     assert(geometry.panels.length > 0);
     assert(geometry.windows[0].panelsStart == 0);
     assert(geometry.windows[0].panelsCount == geometry.panels.length);
+}
+
+@("UiScreen exports window transition presentation parameters")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(220.0f, 160.0f);
+
+    auto window = new UiWindow("animated", 20.0f, 20.0f, 80.0f, 60.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    screen.addWindow(window);
+
+    window.beginOpenTransition(0.10f);
+    assert(window.tickTransition(0.05f));
+
+    auto geometry = screen.buildOverlayGeometry();
+    assert(geometry.windows.length == 1);
+    assert(geometry.windows[0].alpha > 0.49f && geometry.windows[0].alpha < 0.51f);
+    assert(geometry.windows[0].scale > 0.97f && geometry.windows[0].scale < 0.99f);
+    assert(geometry.windows[0].offsetY < 0.0f);
 }
 
 @("UiScreen reports context-sensitive cursor intent")

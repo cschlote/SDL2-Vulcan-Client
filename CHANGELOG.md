@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Added renderer-facing window presentation parameters for UI transition alpha, scale, and offset.
 - Added logical `UiWindow` open and close transition states with progress ticking.
 - Added the first UI animation scheduler hooks with `UiScreen.tickUi`, recursive `UiWidget.tick`, delta clamping, and renderer frame dispatch.
 - Added blocked cursor feedback for background regions behind active modal windows.

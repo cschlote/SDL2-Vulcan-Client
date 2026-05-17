@@ -86,12 +86,12 @@ Common transition states:
 
 Common transition properties:
 
-- alpha
-- scale
-- translation offset
+- alpha. Exported per window through `UiWindowDrawRange.alpha`.
+- scale. Exported per window through `UiWindowDrawRange.scale`.
+- translation offset. Exported per window through `UiWindowDrawRange.offsetX` and `offsetY`.
 - optional shadow or border emphasis
 
-Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes; visual alpha, scale, translation, and demo wiring are still planned.
+Apple-style pop-in behavior can be approximated with a short scale-and-alpha ease from the window center. The current transition state machine already hides a window when a close transition completes and exports alpha, scale, and offset to the window draw range; Vulkan-side visual application and demo wiring are still planned.
 
 Input policy must be explicit:
 
@@ -112,10 +112,8 @@ Exceptions should be rare and documented. For example, an animated expanding pan
 
 ## Renderer Boundary
 
-The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. To support animation, renderer-facing UI geometry may later need:
+The current UI renderer consumes `UiOverlayGeometry` and `UiWindowDrawRange`. `UiWindowDrawRange` already carries window-level alpha, scale, and offset so the renderer can later apply transitions per retained window. Further renderer-facing UI geometry may later need:
 
-- per-window or per-widget alpha
-- optional 2D transform data
 - texture frame references for image widgets
 - clipping rectangles for animated panels or media widgets
 

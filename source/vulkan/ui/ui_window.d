@@ -205,6 +205,40 @@ final class UiWindow : UiWidget
         return transitionState == UiWindowTransitionState.opening || transitionState == UiWindowTransitionState.closing;
     }
 
+    /** Returns the renderer-facing alpha for the current transition frame. */
+    float presentationAlpha() const
+    {
+        final switch (transitionState)
+        {
+            case UiWindowTransitionState.hidden:
+                return 0.0f;
+            case UiWindowTransitionState.opening:
+                return transitionProgress;
+            case UiWindowTransitionState.visible:
+                return 1.0f;
+            case UiWindowTransitionState.closing:
+                return max(0.0f, 1.0f - transitionProgress);
+        }
+    }
+
+    /** Returns the renderer-facing scale for the current transition frame. */
+    float presentationScale() const
+    {
+        return 0.96f + presentationAlpha() * 0.04f;
+    }
+
+    /** Returns the renderer-facing X translation for the current transition frame. */
+    float presentationOffsetX() const
+    {
+        return 0.0f;
+    }
+
+    /** Returns the renderer-facing Y translation for the current transition frame. */
+    float presentationOffsetY() const
+    {
+        return (1.0f - presentationAlpha()) * -6.0f;
+    }
+
     /** Advances the window transition state without applying visual transforms yet. */
     bool tickTransition(float deltaSeconds)
     {
@@ -830,6 +864,9 @@ unittest
     assert(window.tickTransition(0.05f));
     assert(window.transitionState == UiWindowTransitionState.opening);
     assert(window.transitionProgress > 0.49f && window.transitionProgress < 0.51f);
+    assert(window.presentationAlpha() > 0.49f && window.presentationAlpha() < 0.51f);
+    assert(window.presentationScale() > 0.97f && window.presentationScale() < 0.99f);
+    assert(window.presentationOffsetY() < 0.0f);
 
     assert(window.tickTransition(0.05f));
     assert(window.transitionState == UiWindowTransitionState.visible);
@@ -840,9 +877,11 @@ unittest
     window.beginCloseTransition(0.10f);
     assert(window.transitionState == UiWindowTransitionState.closing);
     assert(window.visible);
+    assert(window.presentationAlpha() == 1.0f);
 
     assert(window.tickTransition(0.10f));
     assert(window.transitionState == UiWindowTransitionState.hidden);
     assert(window.transitionProgress == 1.0f);
     assert(!window.visible);
+    assert(window.presentationAlpha() == 0.0f);
 }

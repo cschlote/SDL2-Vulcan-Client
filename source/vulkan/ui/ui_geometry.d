@@ -28,6 +28,14 @@ struct UiWindowDrawRange
     uint[7] textStarts;
     /** Vertex counts for text geometry, indexed by UiTextStyle. */
     uint[7] textCounts;
+    /** Presentation alpha for future window transition rendering. */
+    float alpha = 1.0f;
+    /** Presentation scale for future window transition rendering. */
+    float scale = 1.0f;
+    /** Presentation X offset in pixels for future window transition rendering. */
+    float offsetX;
+    /** Presentation Y offset in pixels for future window transition rendering. */
+    float offsetY;
 }
 
 /** Holds the panel and text geometry for the UI overlay.
