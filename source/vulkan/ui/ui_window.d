@@ -69,6 +69,8 @@ final class UiWindow : UiWidget
     bool showTitle = true;                          ///< True when the title text is rendered inside the header.
     bool showBorder = true;                         ///< True when the outer border is rendered and reserved for content.
     bool showBackfill = true;                       ///< True when the body/header background fill is rendered.
+    bool backdrop;                                  ///< True when this window stays behind normal windows.
+    bool inputTransparent;                          ///< True when this visible overlay does not accept input.
     bool hasKeyboardFocus;                          ///< True while one widget inside this window owns keyboard focus.
     bool pinLeft;                                   ///< True when layout keeps the left edge attached to the screen.
     bool pinRight;                                  ///< True when layout keeps the right edge attached to the screen.
@@ -289,7 +291,7 @@ final class UiWindow : UiWidget
     /** Returns true when this window should currently accept user input. */
     bool acceptsInput() const
     {
-        return visible && transitionState != UiWindowTransitionState.closing && transitionState != UiWindowTransitionState.hidden;
+        return visible && !inputTransparent && transitionState != UiWindowTransitionState.closing && transitionState != UiWindowTransitionState.hidden;
     }
 
     /** Returns the renderer-facing alpha for the current transition frame. */
@@ -445,6 +447,18 @@ final class UiWindow : UiWidget
     {
         this.bodyColor = bodyColor;
         this.headerColor = headerColor;
+    }
+
+    /** Updates whether the window belongs to the always-behind backdrop layer. */
+    void setBackdrop(bool backdrop)
+    {
+        this.backdrop = backdrop;
+    }
+
+    /** Updates whether this window is ignored by hit testing and focus routing. */
+    void setInputTransparent(bool inputTransparent)
+    {
+        this.inputTransparent = inputTransparent;
     }
 
     /** Pins one or more window edges to the current screen viewport. */
@@ -1087,6 +1101,19 @@ unittest
     assert(window.transitionProgress == 1.0f);
     assert(!window.visible);
     assert(window.presentationAlpha() == 0.0f);
+}
+
+@("UiWindow input-transparent overlays do not accept input")
+unittest
+{
+    auto window = new UiWindow("Tooltip", 10.0f, 20.0f, 100.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    assert(window.acceptsInput());
+    window.setInputTransparent(true);
+    assert(window.visible);
+    assert(!window.acceptsInput());
+    window.setInputTransparent(false);
+    assert(window.acceptsInput());
 }
 
 @("UiWindow animates programmatic bounds changes")

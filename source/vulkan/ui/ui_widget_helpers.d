@@ -14,6 +14,7 @@ import std.math : isInfinity, isNaN;
 import vulkan.font.font_legacy : appendText;
 import vulkan.engine.pipeline : Vertex;
 import vulkan.ui.ui_context : UiRenderContext, UiTextStyle;
+import vulkan.ui.ui_geometry : UiImageDrawCommand;
 
 /** Appends a generic surface fill with an optional border. */
 void appendSurfaceFrame(ref UiRenderContext context, float left, float top, float right, float bottom, float[4] backgroundColor, float[4] borderColor, float z, bool drawBackground = true, bool drawBorder = true)
@@ -31,6 +32,35 @@ void appendSurfaceFrame(ref UiRenderContext context, float left, float top, floa
         appendQuad(context, left, top, left + 1.0f, bottom, z - 0.001f, borderColor);
         appendQuad(context, right - 1.0f, top, right, bottom, z - 0.001f, borderColor);
     }
+}
+
+/** Appends one texture-backed image draw intent with local widget coordinates. */
+void appendImageQuad(ref UiRenderContext context, string assetId, float left, float top, float right, float bottom, float z, float[4] tintColor, float[4] fallbackColor, float[4] uvRect)
+{
+    if (context.images is null || assetId.length == 0 || right <= left || bottom <= top)
+        return;
+
+    UiImageDrawCommand command;
+    command.assetId = assetId;
+    command.fallbackColor = fallbackColor;
+
+    const x0 = toNdcX(context, left);
+    const y0 = toNdcY(context, top);
+    const x1 = toNdcX(context, right);
+    const y1 = toNdcY(context, bottom);
+    const u0 = uvRect[0];
+    const v0 = uvRect[1];
+    const u1 = uvRect[2];
+    const v1 = uvRect[3];
+
+    command.vertices[0] = Vertex([x0, y0, z], tintColor, [0.0f, 0.0f, 1.0f], [u0, v0]);
+    command.vertices[1] = Vertex([x1, y0, z], tintColor, [0.0f, 0.0f, 1.0f], [u1, v0]);
+    command.vertices[2] = Vertex([x1, y1, z], tintColor, [0.0f, 0.0f, 1.0f], [u1, v1]);
+    command.vertices[3] = Vertex([x0, y0, z], tintColor, [0.0f, 0.0f, 1.0f], [u0, v0]);
+    command.vertices[4] = Vertex([x1, y1, z], tintColor, [0.0f, 0.0f, 1.0f], [u1, v1]);
+    command.vertices[5] = Vertex([x0, y1, z], tintColor, [0.0f, 0.0f, 1.0f], [u0, v1]);
+
+    (*context.images) ~= command;
 }
 
 /** Appends the body and header quads for a retained window frame.

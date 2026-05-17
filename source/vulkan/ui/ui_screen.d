@@ -28,6 +28,8 @@ version (unittest)
     import vulkan.ui.ui_context : UiRenderContext;
 version (unittest)
     import vulkan.ui.ui_controls : UiTextField;
+version (unittest)
+    import vulkan.ui.ui_layout : UiSpacer;
 
 private enum float maxUiTickDeltaSeconds = 0.05f;
 
@@ -52,6 +54,9 @@ class UiScreen
     private UiWidget focusedWidget;
     private UiWindow activePopupWindow;
     private UiWindow activeModalWindow;
+    protected bool hasPointerPosition_;
+    protected float pointerX_;
+    protected float pointerY_;
 
     /** Initializes the screen with the font atlases used for layout. */
     void initialize(const(FontAtlas)[] liveFonts)
@@ -64,6 +69,9 @@ class UiScreen
         activeResizeWindow = null;
         activePopupWindow = null;
         activeModalWindow = null;
+        hasPointerPosition_ = false;
+        pointerX_ = 0.0f;
+        pointerY_ = 0.0f;
         resizeStartHandle = UiResizeHandle.none;
         setFocusedWidget(null);
         onInitialize();
@@ -81,6 +89,7 @@ class UiScreen
     /** Routes a pointer event to active interactions or the front-most window. */
     bool dispatchPointerEvent(ref UiPointerEvent event)
     {
+        updatePointerPosition(event.x, event.y);
         event.screenX = event.x;
         event.screenY = event.y;
 
@@ -228,6 +237,53 @@ class UiScreen
         }
 
         return UiCursorKind.default_;
+    }
+
+    /** Returns tooltip text for the front-most visible UI region, or empty. */
+    string tooltipAt(float x, float y)
+    {
+        if (activeResizeWindow !is null || activeDragWindow !is null)
+            return "";
+
+        if (activeModalWindow !is null && activeModalWindow.acceptsInput() && !windowContainsPointer(activeModalWindow, x, y))
+            return "";
+
+        foreach_reverse (window; windowsInFrontToBack())
+        {
+            if (!window.acceptsInput())
+                continue;
+
+            if (x >= window.x && x < window.x + window.width && y >= window.y && y < window.y + window.height)
+                return window.tooltipAt(x, y);
+        }
+
+        return "";
+    }
+
+    /** Records the last known pointer position for hover-dependent UI. */
+    void updatePointerPosition(float x, float y)
+    {
+        hasPointerPosition_ = true;
+        pointerX_ = x;
+        pointerY_ = y;
+    }
+
+    /** Returns true when a pointer position has been observed. */
+    bool hasPointerPosition() const
+    {
+        return hasPointerPosition_;
+    }
+
+    /** Last known pointer x-coordinate in viewport pixels. */
+    float pointerX() const
+    {
+        return pointerX_;
+    }
+
+    /** Last known pointer y-coordinate in viewport pixels. */
+    float pointerY() const
+    {
+        return pointerY_;
     }
 
     /** Returns the windows in draw order from back to front. */
@@ -458,6 +514,7 @@ class UiScreen
     {
         UiOverlayGeometry geometry;
         geometry.panels = [];
+        geometry.images = [];
         foreach (layerIndex; 0 .. geometry.textLayers.length)
             geometry.textLayers[layerIndex] = [];
 
@@ -475,6 +532,7 @@ class UiScreen
             range.offsetX = window.presentationOffsetX();
             range.offsetY = window.presentationOffsetY();
             range.panelsStart = cast(uint)geometry.panels.length;
+            range.imagesStart = cast(uint)geometry.images.length;
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textStarts[layerIndex] = cast(uint)geometry.textLayers[layerIndex].length;
 
@@ -482,6 +540,7 @@ class UiScreen
             window.render(context);
 
             range.panelsCount = cast(uint)(geometry.panels.length - range.panelsStart);
+            range.imagesCount = cast(uint)(geometry.images.length - range.imagesStart);
             foreach (layerIndex; 0 .. geometry.textLayers.length)
                 range.textCounts[layerIndex] = cast(uint)(geometry.textLayers[layerIndex].length - range.textStarts[layerIndex]);
 
@@ -534,7 +593,10 @@ protected:
         if (window is null)
             return;
 
-        windows_ ~= window;
+        if (window.backdrop)
+            windows_ = window ~ windows_;
+        else
+            windows_ ~= window;
     }
 
     /** Removes a registered window and cancels active interactions for it. */
@@ -599,6 +661,12 @@ protected:
     /** Moves a registered window to the front of the draw order. */
     void bringWindowToFront(UiWindow window)
     {
+        if (window !is null && window.backdrop)
+        {
+            moveBackdropWindowToBack(window);
+            return;
+        }
+
         if (!moveWindowToFront(window))
             return;
 
@@ -618,7 +686,10 @@ protected:
         if (index <= 0)
             return;
 
-        windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
+        if (window.backdrop)
+            windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
+        else
+            windows_ = windows_[0 .. backdropWindowCount()] ~ window ~ windows_[backdropWindowCount() .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
     }
 
     /** Brings a window forward, or sends it back when it is already front-most. */
@@ -757,6 +828,7 @@ protected:
         foreach (index; 0 .. context.fonts.length)
             context.fonts[index] = index < fontAtlases_.length ? &fontAtlases_[index] : null;
         context.panels = &geometry.panels;
+        context.images = &geometry.images;
         foreach (index; 0 .. context.textLayers.length)
             context.textLayers[index] = &geometry.textLayers[index];
         return context;
@@ -784,6 +856,29 @@ protected:
             window.width = minimumWindowWidth;
         if (window.height < minimumWindowHeight)
             window.height = minimumWindowHeight;
+    }
+
+    /** Measures content and fits the window to the current preferred content size.
+     *
+     * Unlike `autoSizeWindow`, this method may shrink an already larger window.
+     * It is intended for overlay/status windows whose size is derived from live
+     * label content rather than from user-resizable state.
+     */
+    void fitWindowToContent(UiWindow window, UiWidget content, float paddingLeft, float paddingTop, float paddingRight, float paddingBottom, float minimumWidth, float minimumHeight)
+    {
+        if (window is null || content is null)
+            return;
+
+        auto sizeContext = buildLayoutContext(fontAtlases_);
+        const contentSize = content.measure(sizeContext);
+        const desiredWidth = max(minimumWidth, contentSize.width + paddingLeft + paddingRight);
+        const desiredHeight = max(minimumHeight, contentSize.height + paddingTop + paddingBottom + window.verticalChromeExtent());
+
+        window.minimumWidth = desiredWidth;
+        window.minimumHeight = desiredHeight;
+        window.width = desiredWidth;
+        window.height = desiredHeight;
+        window.layoutWindow(sizeContext);
     }
 
     /** Keeps a window fully inside the current viewport when possible. */
@@ -819,8 +914,27 @@ private:
         const ndcOffsetY = offsetY / extentHeight * 2.0f;
 
         transformWindowVertices(geometry.panels, range.panelsStart, range.panelsCount, centerX, centerY, scale, ndcOffsetX, ndcOffsetY, alpha);
+        transformWindowImages(geometry.images, range.imagesStart, range.imagesCount, centerX, centerY, scale, ndcOffsetX, ndcOffsetY, alpha);
         foreach (layerIndex; 0 .. geometry.textLayers.length)
             transformWindowVertices(geometry.textLayers[layerIndex], range.textStarts[layerIndex], range.textCounts[layerIndex], centerX, centerY, scale, ndcOffsetX, ndcOffsetY, alpha);
+    }
+
+    void transformWindowImages(ref typeof(UiOverlayGeometry.init.images) images, uint start, uint count, float centerX, float centerY, float scale, float offsetX, float offsetY, float alpha) const
+    {
+        const end = cast(size_t)start + cast(size_t)count;
+        if (end > images.length)
+            return;
+
+        foreach (imageIndex; cast(size_t)start .. end)
+        {
+            foreach (ref vertex; images[imageIndex].vertices)
+            {
+                vertex.position[0] = centerX + (vertex.position[0] - centerX) * scale + offsetX;
+                vertex.position[1] = centerY + (vertex.position[1] - centerY) * scale + offsetY;
+                vertex.color[3] *= alpha;
+            }
+            images[imageIndex].fallbackColor[3] *= alpha;
+        }
     }
 
     void transformWindowVertices(ref typeof(UiOverlayGeometry.init.panels) vertices, uint start, uint count, float centerX, float centerY, float scale, float offsetX, float offsetY, float alpha) const
@@ -940,11 +1054,39 @@ private:
     bool moveWindowToFront(UiWindow window)
     {
         const index = windowIndex(window);
-        if (index < 0 || cast(size_t)index + 1 == windows_.length)
+        if (index < 0)
+            return false;
+
+        if (window.backdrop)
+            return moveBackdropWindowToBack(window);
+
+        if (cast(size_t)index + 1 == windows_.length)
             return false;
 
         windows_ = windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $] ~ window;
         return true;
+    }
+
+    bool moveBackdropWindowToBack(UiWindow window)
+    {
+        const index = windowIndex(window);
+        if (index <= 0)
+            return index == 0;
+
+        windows_ = window ~ windows_[0 .. cast(size_t)index] ~ windows_[cast(size_t)index + 1 .. $];
+        return true;
+    }
+
+    size_t backdropWindowCount() const
+    {
+        size_t count;
+        foreach (window; windows_)
+        {
+            if (!window.backdrop)
+                break;
+            ++count;
+        }
+        return count;
     }
 
     void keepActivePopupFront()
@@ -1217,6 +1359,33 @@ unittest
     assert(screen.windowsInFrontToBack()[0] is first);
 }
 
+@("UiScreen keeps backdrop windows behind normal windows")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto backdrop = new UiWindow("backdrop", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto normal = new UiWindow("normal", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto other = new UiWindow("other", 0.0f, 0.0f, 40.0f, 40.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+
+    backdrop.setBackdrop(true);
+    screen.addWindow(normal);
+    screen.addWindow(backdrop);
+    screen.addWindow(other);
+
+    assert(screen.windowsInFrontToBack()[0] is backdrop);
+    assert(screen.isFrontWindow(other));
+
+    screen.bringWindowToFront(backdrop);
+    assert(screen.windowsInFrontToBack()[0] is backdrop);
+    assert(!screen.isFrontWindow(backdrop));
+
+    screen.sendWindowToBack(other);
+    assert(screen.windowsInFrontToBack()[0] is backdrop);
+    assert(screen.windowsInFrontToBack()[1] is other);
+}
+
 @("UiScreen finds registered windows by generated id")
 unittest
 {
@@ -1315,6 +1484,24 @@ unittest
     assert(window.y == 153.0f);
 }
 
+@("UiScreen fits windows to current content size")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+
+    auto window = new UiWindow("fit", 0.0f, 0.0f, 120.0f, 90.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], false, false, false);
+    auto content = new UiSpacer(40.0f, 20.0f);
+    screen.fitWindowToContent(window, content, 2.0f, 3.0f, 4.0f, 5.0f, 0.0f, 0.0f);
+    assert(window.width == 46.0f);
+    assert(window.height == 20.0f + 3.0f + 5.0f + window.verticalChromeExtent());
+
+    content = new UiSpacer(70.0f, 30.0f);
+    screen.fitWindowToContent(window, content, 2.0f, 3.0f, 4.0f, 5.0f, 0.0f, 0.0f);
+    assert(window.width == 76.0f);
+    assert(window.height == 30.0f + 3.0f + 5.0f + window.verticalChromeExtent());
+}
+
 @("UiScreen stretches windows pinned to opposite viewport edges")
 unittest
 {
@@ -1391,6 +1578,25 @@ unittest
     assert(screen.cursorAt(80.0f, 20.0f) == UiCursorKind.move);
     assert(screen.cursorAt(25.0f, 48.0f) == UiCursorKind.text);
     assert(screen.cursorAt(240.0f, 160.0f) == UiCursorKind.default_);
+}
+
+@("UiScreen resolves tooltip text from front-most widgets")
+unittest
+{
+    auto screen = new UiScreen();
+    screen.initialize([]);
+    screen.syncViewport(180.0f, 120.0f);
+
+    auto window = new UiWindow("Tooltip", 10.0f, 10.0f, 120.0f, 80.0f, [0.0f, 0.0f, 0.0f, 1.0f], [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    auto button = new UiButton("Help", 8.0f, 8.0f, 80.0f, 28.0f, [0.0f, 0.0f, 0.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f], [1.0f, 1.0f, 1.0f, 1.0f]);
+    button.tooltipText = "Open help";
+    window.add(button);
+    screen.addWindow(window);
+    auto layoutContext = screen.buildLayoutContext([]);
+    window.layoutWindow(layoutContext);
+
+    assert(screen.tooltipAt(window.x + window.borderThickness + button.x + 2.0f, window.y + window.headerHeight + window.borderThickness + button.y + 2.0f) == "Open help");
+    assert(screen.tooltipAt(170.0f, 110.0f).length == 0);
 }
 
 @("UiScreen resizes windows from edge grips with non-primary buttons")

@@ -38,6 +38,7 @@ abstract class UiWidget
     bool visible = true;
     bool focusable;
     bool focused;
+    string tooltipText;
     UiWidget parent;
     UiWidget[] children;
 
@@ -204,6 +205,28 @@ abstract class UiWidget
         return cursorSelf(localX, localY);
     }
 
+    /** Returns the tooltip text at the given point in parent space, or empty. */
+    string tooltipAt(float localX, float localY)
+    {
+        if (!visible)
+            return "";
+
+        if (width > 0.0f && height > 0.0f && !contains(localX, localY))
+            return "";
+
+        const childX = localX - x - childOffsetX;
+        const childY = localY - y - childOffsetY;
+
+        for (ptrdiff_t index = cast(ptrdiff_t)children.length - 1; index >= 0; --index)
+        {
+            const tooltip = children[cast(size_t)index].tooltipAt(childX, childY);
+            if (tooltip.length != 0)
+                return tooltip;
+        }
+
+        return tooltipSelf(localX, localY);
+    }
+
     /** Updates the widget focus flag. Screens call this when focus ownership changes. */
     void setFocused(bool focused)
     {
@@ -298,6 +321,12 @@ protected:
     UiCursorKind cursorSelf(float localX, float localY)
     {
         return UiCursorKind.default_;
+    }
+
+    /** Returns this widget's own tooltip text after children were checked. */
+    string tooltipSelf(float localX, float localY)
+    {
+        return tooltipText;
     }
 
     /** Handles a pointer event after children had a chance to consume it. */

@@ -11,6 +11,7 @@ module vulkan.ui.ui_context;
 
 import vulkan.font.font_legacy : FontAtlas;
 import vulkan.engine.pipeline : Vertex;
+import vulkan.ui.ui_geometry : UiImageDrawCommand;
 
 /** Selects the font size used by a widget. */
 enum UiTextStyle
@@ -58,6 +59,8 @@ struct UiRenderContext
     const(FontAtlas)*[7] fonts;
     /** Destination vertex list for window and panel quads. */
     Vertex[]* panels;
+    /** Destination list for texture-backed image/icon draw intents. */
+    UiImageDrawCommand[]* images;
     /** Destination vertex lists indexed by UiTextStyle. */
     Vertex[]*[7] textLayers;
 

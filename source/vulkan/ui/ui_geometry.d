@@ -24,6 +24,10 @@ struct UiWindowDrawRange
     uint panelsStart;
     /** Vertex count for panel geometry. */
     uint panelsCount;
+    /** Start index for image/icon draw intents. */
+    uint imagesStart;
+    /** Image/icon intent count. */
+    uint imagesCount;
     /** Start indices for text vertices, indexed by UiTextStyle. */
     uint[7] textStarts;
     /** Vertex counts for text geometry, indexed by UiTextStyle. */
@@ -38,6 +42,23 @@ struct UiWindowDrawRange
     float offsetY;
 }
 
+/** Describes one texture-backed UI image quad requested by a retained widget.
+ *
+ * The renderer resolves `assetId` through its UI image asset registry, rewrites
+ * the quad UVs to the registered atlas region, and draws `vertices` through the
+ * dedicated image overlay layer. The widget may still emit a framed placeholder
+ * panel as fallback styling.
+ */
+struct UiImageDrawCommand
+{
+    /** Application or renderer-owned texture asset id. */
+    string assetId;
+    /** Six vertices that form one textured quad. */
+    Vertex[6] vertices;
+    /** Fallback fill color used by the placeholder widget path. */
+    float[4] fallbackColor;
+}
+
 /** Holds the panel and text geometry for the UI overlay.
  *
  * The renderer uploads each vertex list independently and uses the draw ranges
@@ -47,6 +68,8 @@ struct UiOverlayGeometry
 {
     /** Window body and header quads. */
     Vertex[] panels;
+    /** Texture-backed image/icon draw intents. */
+    UiImageDrawCommand[] images;
     /** Text quads indexed by UiTextStyle. */
     Vertex[][7] textLayers;
     /** Draw ranges that keep each window's render calls contiguous. */
